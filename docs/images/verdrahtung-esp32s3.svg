@@ -58,7 +58,11 @@
   <!-- 3V3 -> LV -->
   <path class="w" d="M250 283 H390" stroke="#e05555"/>
   <!-- B+ -> HV and -> buck IN+ (hop over J1) -->
-  <path class="w" d="M760 163 H720 V195 a 8 8 0 0 0 0 16 V283 H580" stroke="#f0a020"/>
+  <path class="w" d="M760 163 H752" stroke="#f0a020"/>
+  <rect x="727" y="154" width="25" height="18" rx="3" fill="#16181b" stroke="#ff6b6b" stroke-width="2"/>
+  <line x1="731" y1="163" x2="748" y2="163" stroke="#ff6b6b" stroke-width="2"/>
+  <text class="pin" x="739" y="148" text-anchor="middle" style="font-size:11px;fill:#ff6b6b">T 500 mA</text>
+  <path class="w" d="M727 163 H720 V195 a 8 8 0 0 0 0 16 V283 H580" stroke="#f0a020"/>
   <path class="w" d="M720 283 V493 H580" stroke="#f0a020"/>
   <circle cx="720" cy="283" r="5" fill="#f0a020"/>
   <!-- GND: ESP - shifter - battery B-, buck IN- / OUT- -->
@@ -76,6 +80,6 @@
   <text class="pin" x="320" y="109" text-anchor="middle" style="font-size:11px">2,2k</text>
   <text class="s" x="345" y="100">→ GND</text>
 
-  <text class="warn" x="30" y="555">HW-411 vor dem Anschließen ohne ESP auf 5,0 V einstellen – ab Werk kann am Ausgang fast die volle Akkuspannung anliegen!</text>
+  <text class="warn" x="30" y="555">Sicherung direkt hinter B+. HW-411 vor dem Anschließen ohne ESP auf 5,0 V einstellen – ab Werk liegt evtl. fast die Akkuspannung an!</text>
   <text class="note" x="30" y="577">2,2 kΩ von GPIO17 nach GND hält J2 beim Booten auf Low. Lötbrücke „IN-OUT“ am ESP-Board offen lassen (USB und Wandler nicht verbinden).</text>
 </svg>

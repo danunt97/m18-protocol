@@ -31,6 +31,7 @@ from test_bridge import GXX, SimProcess, build_sim  # noqa: E402
 def start_shim(sim, password=None):
     """HTTP front-end like the ESP32 (POST /cmd), optionally with Basic auth."""
     want = "Basic " + base64.b64encode(f"m18:{password}".encode()).decode() if password else None
+    seen = []                                       # (background header?, [command lines]) per request
 
     class H(BaseHTTPRequestHandler):
         def do_POST(self):
@@ -41,7 +42,9 @@ def start_shim(sim, password=None):
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return
-            out = ("\n".join(sim.exec([ln for ln in body.splitlines() if ln.strip()])) + "\n").encode()
+            lines = [ln for ln in body.splitlines() if ln.strip()]
+            seen.append((self.headers.get("X-M18-Background") == "1", lines))
+            out = ("\n".join(sim.exec(lines)) + "\n").encode()
             self.send_response(200)
             self.send_header("Content-Length", str(len(out)))
             self.end_headers()
@@ -51,6 +54,7 @@ def start_shim(sim, password=None):
             pass
 
     srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
+    srv.seen = seen
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv, f"http://127.0.0.1:{srv.server_address[1]}"
 
@@ -161,6 +165,41 @@ class TestHistory(unittest.TestCase):
         finally:
             app.hw.disconnect()
             gsrv.shutdown()
+
+
+    def test_led_result_after_pc_read(self):
+        """A read-out started in the GUI shows its result on the bridge LED (SHOW good|watch|weak)."""
+        app = m18_gui.App(fleet.FleetDB(":memory:"))
+        try:
+            self.assertTrue(app.connect(self.url)["ok"])
+            r = app.live_read()
+            self.assertTrue(r["ok"], r)
+            shows = [ln for _, lines in self.srv.seen for ln in lines if ln.startswith("SHOW ")]
+            self.assertEqual(shows, ["SHOW " + fleet.status_of(r["preview"]["health"])])
+        finally:
+            app.disconnect()
+
+    def test_autosync(self):
+        m = m18_bridge.M18Bridge(self.url)
+        m.scan()                                       # stored on the bridge, not yet in the database
+        m.port.close()
+        self.srv.seen.clear()
+        logs = []
+        from autosync import AutoSync
+        a = AutoSync(self.db, logs.append, default_interval_min=5)
+        a.configure(hosts=self.url)
+        res = a.run_once(discover_timeout=0.2)
+        mine = [r for r in res["results"] if r["target"] == self.url][0]
+        self.assertTrue(mine["ok"], mine)
+        self.assertEqual(mine["imported"], 1)
+        self.assertEqual(len(self.db.readings(self.db.get_battery("306-412877")["id"])), 1)
+        # every request of the automatic sync is marked, so it does not keep the bridge awake
+        self.assertTrue(self.srv.seen and all(bg for bg, _ in self.srv.seen), self.srv.seen[:3])
+        # second pass: nothing new
+        mine = [r for r in a.run_once(discover_timeout=0.2)["results"] if r["target"] == self.url][0]
+        self.assertEqual((mine["ok"], mine["unsynced"], mine["imported"]), (True, 0, 0))
+        self.assertTrue(any("übernommen" in ln for ln in logs))
+        self.assertEqual(a.info()["interval_min"], 5)
 
 
 @unittest.skipUnless(GXX, "g++ not available")

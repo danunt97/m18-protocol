@@ -1,0 +1,10 @@
+.git
+.github
+data
+docs
+hardware
+esp32-bridge
+webflash
+**/__pycache__
+**/*.pyc
+*.db

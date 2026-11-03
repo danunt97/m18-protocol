@@ -305,6 +305,34 @@ uint8_t ledBright = 40;                // 0..255, scaled per colour
 uint32_t ledTestUntil = 0;
 uint32_t lastLedRgb = 0xFFFFFFFF, lastLedWrite = 0;
 
+// Result of the last read-out on the LED for RESULT_SHOW_MS: green = good, yellow = watch,
+// red = weak/critical, red blinking = read-out failed. Also used for read-outs started by the
+// PC (it sends "SHOW <status>" after evaluating the reading against its database).
+enum ResultKind : uint8_t { RES_NONE = 0, RES_GOOD, RES_WATCH, RES_WEAK, RES_FAIL };
+uint8_t resultKind = RES_NONE;
+uint32_t resultUntil = 0;
+#define RESULT_SHOW_MS 30000
+void showResult(uint8_t kind) {
+  resultKind = kind;
+  resultUntil = millis() + (kind == RES_FAIL ? 8000 : RESULT_SHOW_MS);
+}
+uint8_t resultFromStatus(const String& st) {
+  if (st == "good") return RES_GOOD;
+  if (st == "watch") return RES_WATCH;
+  if (st == "weak" || st == "critical") return RES_WEAK;
+  if (st == "fail") return RES_FAIL;
+  return RES_NONE;
+}
+void showScanResult(const String& json, bool ok) {
+  if (!ok) { showResult(RES_FAIL); return; }
+  int p = json.indexOf("\"status\":\"");
+  String st = p >= 0 ? json.substring(p + 10, json.indexOf('"', p + 10)) : String("");
+  bool lowCell = json.indexOf("tiefentladen") >= 0;          // warning: cell < 2.5 V
+  uint8_t k = resultFromStatus(st);
+  if (lowCell) k = RES_WEAK;
+  showResult(k ? k : (uint8_t)RES_GOOD);
+}
+
 static void ledWrite(int pin, uint8_t r, uint8_t g, uint8_t b) {
   if (pin < 0) return;
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
@@ -355,11 +383,16 @@ void ledLoop(uint32_t bootHeldMs) {
   if (bootHeldMs > 1500) { led(fast ? 255 : 0, 0, 0); return; }           // keep holding...
   if (otaRunning) { led(fast ? 160 : 0, 0, fast ? 255 : 0); return; }     // firmware update
   if (scanRunning) { led(255, slow ? 160 : 60, 0); return; }              // reading the battery
-  if (scanDoneAt && now - scanDoneAt < 4000) {                            // result flash
-    if (scanResultOk) led(0, 255, 0); else led(fast ? 255 : 0, 0, 0);
+  if (!batLink.isIdle()) { led(slow ? 200 : 40, slow ? 200 : 40, slow ? 200 : 40); return; }  // PC session
+  if (resultKind && (int32_t)(resultUntil - now) > 0) {                   // result of the last read-out
+    switch (resultKind) {
+      case RES_GOOD: led(0, 255, 0); break;
+      case RES_WATCH: led(255, 150, 0); break;
+      case RES_WEAK: led(255, 0, 0); break;
+      default: led(fast ? 255 : 0, 0, 0);
+    }
     return;
   }
-  if (!batLink.isIdle()) { led(slow ? 200 : 40, slow ? 200 : 40, slow ? 200 : 40); return; }  // PC session
   if (unlockUntil && (int32_t)(unlockUntil - now) > 0) { led(0, slow ? 200 : 40, slow ? 200 : 40); return; }
   if (wstate == WState::CONNECTING) { led(120, 0, 160); return; }
   if (WiFi.status() == WL_CONNECTED && !apActive) { led(0, 70, 0); return; }
@@ -634,8 +667,10 @@ static bool isBatteryCommand(const String& up) {
          up.startsWith("NOTE") || up.startsWith("SCAN");
 }
 
+bool backgroundRequest = false;    // set while an HTTP handler serves an automatic background sync
+
 String runCommand(const String& lineIn, bool physical) {
-  noteActivity();
+  if (!backgroundRequest) noteActivity();
   String line = lineIn;
   line.trim();
   String up = line;
@@ -666,6 +701,15 @@ String runCommand(const String& lineIn, bool physical) {
     savePassword(pw);
     return "OK password set";
   }
+  if (up.startsWith("SHOW ")) {                  // SHOW good|watch|weak|critical|fail - LED result from the PC
+    String st = line.substring(5);
+    st.trim();
+    st.toLowerCase();
+    uint8_t k = resultFromStatus(st);
+    if (!k) return "ERR ARGS (good|watch|weak|critical|fail)";
+    showResult(k);
+    return "OK";
+  }
   if (up == "RESTART") {
     if (!physical) return "ERR LOCKED";
     Serial.println("OK restarting");
@@ -686,6 +730,7 @@ String runCommand(const String& lineIn, bool physical) {
     scanResultOk = reader.ok();
     scanDoneAt = millis();
     scanRunning = false;
+    showScanResult(String(proc.lastScanJson()), reader.ok());
   }
   if (battery) unlockBattery();
   return String(reply.c_str());
@@ -707,6 +752,7 @@ void scanTask(void*) {
   xSemaphoreGive(stateMutex);
   scanResultOk = reader.ok();
   scanDoneAt = millis();
+  showScanResult(result, reader.ok());
   scanRunning = false;
   vTaskDelete(nullptr);
 }
@@ -749,7 +795,13 @@ bool authOk() {
 
 // Wraps a handler with the password check.
 std::function<void()> guarded(std::function<void()> fn) {
-  return [fn]() { noteActivity(); if (authOk()) fn(); };
+  return [fn]() {
+    // Automatic background sync of the PC software must not keep a battery-powered bridge awake.
+    backgroundRequest = server.hasHeader("X-M18-Background");
+    if (!backgroundRequest) noteActivity();
+    if (authOk()) fn();
+    backgroundRequest = false;
+  };
 }
 
 // Runs a history command and sends its JSON (strips "OK ").
@@ -953,6 +1005,8 @@ void setupHttp() {
     if (captiveRedirect()) return;
     server.send(404, "text/plain", "not found");
   });
+  const char* headerKeys[] = {"X-M18-Background"};
+  server.collectHeaders(headerKeys, 1);
   server.begin();
 }
 
@@ -964,7 +1018,7 @@ void discoveryLoop() {
   char buf[32] = {0};
   disc.read(buf, sizeof(buf) - 1);
   if (strncmp(buf, "M18BRIDGE?", 10) != 0) return;
-  noteActivity();                               // a PC is looking for us: stay awake
+  // (a discovery broadcast alone does not count as use - the automatic sync searches regularly)
   String reply = String("M18BRIDGE ") + M18BRIDGE_VERSION + " host=" + hostName + ".local ip=" + ipString() +
                  " http=80 mac=" + WiFi.macAddress() + " auth=" + (webPass.length() ? "1" : "0") +
                  " unsynced=" + String((unsigned)(history.ready() ? history.unsynced() : 0)) + "\n";

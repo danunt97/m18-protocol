@@ -55,6 +55,36 @@ der Akku **C-02** altert dabei sichtbar und löst Warnungen aus.
 
 Tipp: Für vergleichbare Imbalance-Werte immer im gleichen Ladezustand messen, z. B. voll geladen.
 
+## Docker
+
+Für den Dauerbetrieb, z. B. auf einem NAS. Image für amd64 und arm64: `ghcr.io/danunt97/m18-protocol:latest`.
+
+```bash
+docker compose up -d
+```
+
+Die `docker-compose.yml` im Hauptordner des Repos:
+- **`network_mode: host`**, damit die automatische Suche (UDP-Broadcast) die Brücken im LAN findet.
+- **`./data:/data`**: Hier liegt die SQLite-Datenbank. Für ein Backup diesen Ordner sichern.
+- **`--auto-sync 5`**: Messungen der Brücken alle 5 Minuten übernehmen. In der Oberfläche unter **Einstellungen** änderbar.
+- **`M18_HTTP_PORT`**: anderer Port, falls 8018 belegt ist.
+- Optional lässt sich ein USB-Adapter oder eine USB-Brücke per `devices:` durchreichen.
+
+Selbst bauen: In der `docker-compose.yml` `build: .` statt `image:` eintragen.
+
+Die Oberfläche hat keine Anmeldung. Im Heimnetz ist das in Ordnung, für Zugriff von außen gehört ein Reverse-Proxy mit Login davor.
+
+**Image privat?** GitHub legt neue Pakete als „privat“ an. Entweder auf GitHub unter *Packages → m18-protocol →
+Package settings* auf **Public** stellen, oder am NAS einmalig `docker login ghcr.io` mit einem Token ausführen.
+
+## Automatischer Abgleich mit den ESP32-Brücken
+
+Unter **Einstellungen → Automatischer Abgleich** (oder mit `--auto-sync MIN`) sucht die Akku-Verwaltung regelmäßig die Brücken
+im Netz und übernimmt neue Messungen selbst in die Datenbank; der Klick auf „Übernehmen“ entfällt.
+- Brücken in einem anderen Subnetz trägst du dort als Adresse ein.
+- Ein Brücken-Passwort hinterlegst du ebenfalls dort.
+- Diese Abfragen halten eine Brücke im Energiesparmodus **nicht** wach. Eine schlafende Brücke wird beim nächsten Aufwachen abgeglichen.
+
 ## Messungen von der ESP32-Brücke übernehmen
 
 Messungen, die direkt an der [ESP32-Brücke](../esp32-bridge/README.md) gemacht wurden (z. B. mit dem Handy beim Kunden),

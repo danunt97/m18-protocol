@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>M18 Akku-Brücke – Firmware installieren</title>
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <style>
+    :root { --bg:#1b1d20; --panel:#23262a; --line:#34383e; --text:#eceef0; --muted:#959ba3; --accent:#e4002b; --warn:#e7b43a; --good:#3fcf7f; color-scheme: dark; }
+    @media (prefers-color-scheme: light) { :root { --bg:#f3f4f6; --panel:#fff; --line:#dde0e5; --text:#17191c; --muted:#5e646c; --warn:#9a6b00; --good:#12935a; color-scheme: light; } }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui,"Segoe UI",sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 18px 60px; }
+    h1 { font-size: 26px; margin: 0 0 4px; display:flex; align-items:center; gap:10px; }
+    .logo { background:var(--accent); color:#fff; font-weight:800; font-size:14px; border-radius:8px; padding:6px 8px; }
+    .sub { color: var(--muted); margin: 0 0 22px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px; margin-bottom:16px; }
+    .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin:0 0 12px; }
+    ol { margin: 0; padding-left: 22px; } li { margin: 6px 0; }
+    .install { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+    esp-web-install-button button, .btn { background:var(--accent); color:#fff; border:0; border-radius:9px; padding:13px 26px; font:600 16px system-ui,sans-serif; cursor:pointer; text-decoration:none; display:inline-block; }
+    .ver { color: var(--muted); }
+    .warn { color: var(--warn); }
+    .ok { color: var(--good); }
+    code { background: rgba(127,127,127,.15); padding: 2px 6px; border-radius: 5px; }
+    a { color: inherit; }
+    table { border-collapse: collapse; width: 100%; } td { padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    td:first-child { color: var(--muted); white-space: nowrap; padding-right: 14px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1><span class="logo">M18</span> Akku-Brücke – Firmware installieren</h1>
+  <p class="sub">Firmware für den ESP32-S3 (N16R8) direkt aus dem Browser aufspielen – ohne Arduino IDE.</p>
+
+  <div class="card">
+    <h2>Installieren</h2>
+    <div class="install">
+      <esp-web-install-button manifest="manifest.json">
+        <span slot="unsupported" class="warn">Dieser Browser kann nicht auf USB-Geräte zugreifen. Bitte <b>Chrome</b> oder <b>Edge</b> am PC/Mac verwenden.</span>
+        <span slot="not-allowed" class="warn">Die Seite muss über https geöffnet werden.</span>
+      </esp-web-install-button>
+      <span class="ver" id="ver">Firmware wird geladen …</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>So geht's</h2>
+    <ol>
+      <li>ESP32-S3 per USB-C an den PC anschließen (beim Aufsteckgehäuse: die seitliche Buchse).</li>
+      <li>Auf <b>Installieren</b> klicken und im Fenster den Port des Boards wählen
+        (meist „USB JTAG/serial debug unit“ oder „USB-Enhanced-SERIAL CH343“).</li>
+      <li>Bei der <b>ersten Installation</b> „Gerät löschen“ anhaken. Bei einem <b>Update</b> <u>nicht</u> anhaken –
+        sonst gehen WLAN-Einstellungen und die auf der Brücke gespeicherten Messungen verloren.</li>
+      <li>Nach dem Neustart öffnet die Brücke das WLAN <code>M18-Bridge-XXXX</code> (Passwort <code>m18bridge</code>) –
+        mit dem Handy verbinden und das Kunden-WLAN einrichten.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Wenn es nicht klappt</h2>
+    <table>
+      <tr><td>Kein Port in der Liste</td><td>Anderes USB-Kabel (viele Ladekabel haben keine Datenleitungen) oder die andere USB-Buchse des Boards versuchen.</td></tr>
+      <tr><td>„Failed to connect“</td><td>BOOT-Taste gedrückt halten, kurz RESET drücken, BOOT loslassen – dann erneut installieren.</td></tr>
+      <tr><td>Update ohne USB</td><td>Für eine laufende Brücke gibt es das Update auch in ihrer Weboberfläche (<i>Gerät → Firmware-Update</i>, vorher BOOT kurz drücken) mit der Datei
+        <a href="firmware/m18-bruecke-update.bin">m18-bruecke-update.bin</a>.</td></tr>
+    </table>
+  </div>
+
+  <p class="sub">Projekt und Anleitung: <a href="https://github.com/danunt97/m18-protocol">github.com/danunt97/m18-protocol</a> ·
+    Komplettes Image: <a href="firmware/m18-bruecke.bin">m18-bruecke.bin</a> (für <code>esptool</code>, Adresse 0x0)</p>
+</main>
+<script>
+  fetch("manifest.json").then(r => r.json()).then(m => {
+    document.getElementById("ver").innerHTML = `Version <b>${m.version}</b>${m.build ? " · gebaut " + m.build : ""}`;
+  }).catch(() => { document.getElementById("ver").textContent = ""; });
+</script>
+</body>
+</html>

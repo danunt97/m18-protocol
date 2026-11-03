@@ -165,7 +165,8 @@ class SerialLink(_LinkBase):
 class HttpLink(_LinkBase):
     """ESP32 on the network: POST /cmd with one command per line."""
 
-    def __init__(self, target, timeout=10.0, password=None):
+    def __init__(self, target, timeout=10.0, password=None, background=False):
+        self.background = background   # automatic sync: must not keep a battery-powered bridge awake
         t = target.strip().rstrip("/")
         if not t.startswith(("http://", "https://")):
             t = "http://" + t
@@ -191,6 +192,8 @@ class HttpLink(_LinkBase):
         headers = {"Content-Type": "text/plain"}
         if self.auth:
             headers["Authorization"] = self.auth
+        if self.background:
+            headers["X-M18-Background"] = "1"
         req = urllib.request.Request(self.base + "/cmd", data=body, method="POST", headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=timeout or self.timeout) as resp:
@@ -282,9 +285,9 @@ def is_bridge_usb_port(p):
     return getattr(p, "vid", None) == ESPRESSIF_USB_VID
 
 
-def open_link(target, password=None):
+def open_link(target, password=None, background=False):
     if is_network_target(target):
-        return HttpLink(target, password=password)
+        return HttpLink(target, password=password, background=background)
     return SerialLink(target)
 
 
@@ -330,8 +333,8 @@ def registers_from_memory(mem):
 class M18Bridge(m18.M18):
     """m18.M18 that sends its battery commands through the ESP32 bridge."""
 
-    def __init__(self, target, password=None, sync_time=True):
-        self.link = open_link(target, password)
+    def __init__(self, target, password=None, sync_time=True, background=False):
+        self.link = open_link(target, password, background)
         self.port = self.link          # callers use m.port.close()
         self.target = self.link.device
         self.idle()
@@ -376,6 +379,14 @@ class M18Bridge(m18.M18):
 
     def info(self):
         return self._one("INFO")
+
+    def show(self, status):
+        """Show a result on the bridge's LED: good | watch | weak | critical | fail.
+        Returns False on firmware without this command (< 1.5)."""
+        try:
+            return self._one(f"SHOW {status}") == "OK"
+        except BridgeError:
+            return False
 
     def scan(self):
         """Let the bridge read and decode the battery itself; returns a dict."""

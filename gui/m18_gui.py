@@ -198,7 +198,7 @@ class Hardware:
 
 
 class App:
-    def __init__(self, db, demo=None, public_host="127.0.0.1"):
+    def __init__(self, db, demo=None, public_host="127.0.0.1", autosync_min=0):
         self.db = db
         self.demo = demo
         self.public_host = public_host
@@ -207,6 +207,10 @@ class App:
         self.demo_connected = False
         self.pending = {}  # token -> snapshot read but not yet saved
         self.pending_lock = threading.Lock()
+        self.autosync = None
+        if not demo:
+            from autosync import AutoSync
+            self.autosync = AutoSync(db, self.log, autosync_min)
 
     def log(self, msg):
         ts = _dt.datetime.now().strftime("%H:%M:%S")
@@ -267,7 +271,21 @@ class App:
         out["model"] = fleet.battery_type(snap.get("type_code"))[1]
         out["capacity_ah"] = fleet.battery_type(snap.get("type_code"))[0]
         out["preview"] = self.db.preview(snap, bat)
+        self._show_on_bridge(out["preview"])
         return out
+
+    def _show_on_bridge(self, preview):
+        """Show the result on the ESP32 bridge's LED (green / yellow / red)."""
+        if self.demo or not self.hw.is_bridge():
+            return
+        health = preview.get("health")
+        crit = any(a.get("severity") == "crit" for a in preview.get("alerts") or [])
+        status = "weak" if crit else fleet.status_of(health)
+        if status == "unknown":
+            return
+        with self.hw.lock:
+            with contextlib.suppress(Exception):
+                self.hw.m.show(status)
 
     def save_pending(self, token, fields):
         with self.pending_lock:
@@ -321,6 +339,7 @@ class App:
             if req_host and ":" in req_host else None,
             "listen_host": self.public_host,
             "company": self.db.get_setting("company") or "",
+            "has_bridge_password": bool(self.db.get_setting("bridge_password")),
             "db_path": self.db.path,
             "demo": bool(self.demo),
             "thresholds": fleet.THRESHOLDS,
@@ -550,6 +569,8 @@ class Handler(BaseHTTPRequestHandler):
             if r == ["resolve"]:
                 b = db.resolve(qs.get("q", [""])[0])
                 return self._send(200, {"battery": b})
+            if r == ["autosync"]:
+                return self._send(200, app.autosync.info() if app.autosync else {"available": False})
             if r == ["bridge", "history"]:
                 return self._send(200, app.hw.bridge_history() if app.hw else {"available": False})
             if r == ["discover"]:
@@ -575,6 +596,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if r == ["connect"]:
                 return self._send(200, app.connect(data.get("port"), data.get("password")))
+            if r == ["autosync"] and app.autosync:
+                return self._send(200, {"ok": True, **app.autosync.configure(data.get("interval_min"), data.get("hosts"))})
+            if r == ["autosync", "run"] and app.autosync:
+                return self._send(200, app.autosync.run_once())
             if r == ["bridge", "import"]:
                 ids = data.get("ids")
                 return self._send(200, app.hw.bridge_import(db, ids) if app.hw else
@@ -599,7 +624,7 @@ class Handler(BaseHTTPRequestHandler):
             if r == ["save"]:
                 return self._send(200, app.save_pending(data.get("token"), data.get("fields")))
             if r == ["settings"]:
-                for k in ("base_url", "company"):
+                for k in ("base_url", "company", "bridge_password"):
                     if k in data:
                         db.set_setting(k, str(data[k]).strip())
                 return self._send(200, {"ok": True, **app.settings(self.headers.get("Host"))})
@@ -647,8 +672,12 @@ def main():
                                  "im Demo-Modus eine temporäre Datei)")
     ap.add_argument("--host", default="127.0.0.1",
                     help="Adresse, auf der der Server lauscht (0.0.0.0 = im ganzen LAN)")
-    ap.add_argument("--http-port", type=int, default=8018)
+    ap.add_argument("--http-port", type=int, default=int(os.environ.get("M18_HTTP_PORT", "8018")),
+                    help="Port des Webservers (Standard 8018 oder Umgebungsvariable M18_HTTP_PORT)")
     ap.add_argument("--no-browser", action="store_true")
+    ap.add_argument("--auto-sync", type=int, default=0, metavar="MIN",
+                    help="Messungen der ESP32-Brücken alle MIN Minuten automatisch übernehmen "
+                         "(Standard 0 = aus; in den Einstellungen änderbar)")
     args = ap.parse_args()
 
     if args.db:
@@ -667,7 +696,9 @@ def main():
             print("Hinweis: Datenbank enthält bereits Akkus – Demo-Daten werden ergänzt.")
         demo = DemoFleet(db)
 
-    app = App(db, demo=demo, public_host=args.host)
+    app = App(db, demo=demo, public_host=args.host, autosync_min=args.auto_sync)
+    if app.autosync:
+        app.autosync.start()
     if args.port and not demo:
         app.connect(args.port)
     Handler.app = app

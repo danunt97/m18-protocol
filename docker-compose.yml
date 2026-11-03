@@ -1,0 +1,21 @@
+# M18 Akku-Verwaltung auf dem NAS / Server
+#   docker compose up -d
+# danach im Browser: http://<NAS-IP>:8018
+services:
+  m18:
+    image: ghcr.io/danunt97/m18-protocol:latest
+    # oder selbst bauen:  build: .
+    container_name: m18-akku-verwaltung
+    restart: unless-stopped
+    # "host", damit die automatische Suche (UDP-Broadcast) die ESP32-Brücken im LAN findet
+    network_mode: host
+    volumes:
+      - ./data:/data
+    environment:
+      - TZ=Europe/Vienna
+      - M18_HTTP_PORT=8018      # anderer Port, falls 8018 auf dem NAS belegt ist
+    # Abgleich-Intervall in Minuten (0 = aus); in der Oberfläche unter Einstellungen änderbar
+    command: ["--auto-sync", "5"]
+    # Optional: USB-Seriell-Adapter oder ESP32-Brücke per USB an den NAS durchreichen
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0

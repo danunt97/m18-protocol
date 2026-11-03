@@ -1,0 +1,96 @@
+name: Firmware & Web-Flasher
+
+# Baut die ESP32-S3-Firmware, veröffentlicht den Web-Flasher (ESP Web Tools) auf GitHub Pages
+# und hängt die .bin-Dateien an Releases an.
+# Einmalig nötig: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+
+on:
+  push:
+    branches: [master]
+    paths: ["esp32-bridge/**", "webflash/**", ".github/workflows/firmware.yml"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  FQBN: esp32:esp32:esp32s3:PSRAM=opi,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,CDCOnBoot=cdc
+  CORE: "3.0.7"
+  INDEX: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: ESP32-Core installieren
+        run: |
+          arduino-cli core update-index --additional-urls "$INDEX"
+          arduino-cli core install "esp32:esp32@$CORE" --additional-urls "$INDEX"
+      - name: Firmware bauen
+        run: arduino-cli compile --fqbn "$FQBN" --export-binaries --output-dir build esp32-bridge/m18_bridge
+      - name: Web-Flasher zusammenstellen
+        run: |
+          set -e
+          ls -la build
+          mkdir -p site/firmware
+          cp webflash/index.html site/
+          cp build/m18_bridge.ino.bin site/firmware/m18-bruecke-update.bin
+          if [ -f build/m18_bridge.ino.merged.bin ]; then
+            cp build/m18_bridge.ino.merged.bin site/firmware/m18-bruecke.bin
+          else
+            # Fallback: Bootloader + Partitionen + boot_app0 + App selbst zusammenfügen
+            ESPTOOL=$(find ~/.arduino15/packages/esp32/tools -name 'esptool' -type f -perm -u+x | head -1)
+            BOOTAPP=$(find ~/.arduino15/packages/esp32/hardware -name boot_app0.bin | head -1)
+            "$ESPTOOL" --chip esp32s3 merge_bin -o site/firmware/m18-bruecke.bin --flash_mode keep --flash_size 16MB \
+              0x0 build/m18_bridge.ino.bootloader.bin 0x8000 build/m18_bridge.ino.partitions.bin \
+              0xe000 "$BOOTAPP" 0x10000 build/m18_bridge.ino.bin
+          fi
+          VERSION=$(grep -oP '#define M18BRIDGE_VERSION "\K[^"]+' esp32-bridge/m18_bridge/m18_proto.h)
+          cat > site/manifest.json <<JSON
+          {
+            "name": "M18 Akku-Brücke",
+            "version": "$VERSION",
+            "build": "$(date -u +%Y-%m-%d) (${GITHUB_SHA::7})",
+            "new_install_prompt_erase": true,
+            "new_install_improv_wait_time": 0,
+            "builds": [
+              { "chipFamily": "ESP32-S3", "parts": [ { "path": "firmware/m18-bruecke.bin", "offset": 0 } ] }
+            ]
+          }
+          JSON
+          cat site/manifest.json
+          ls -la site site/firmware
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m18-bruecke-firmware
+          path: site/firmware/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: An das Release anhängen
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" site/firmware/*.bin --clobber
+
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    # schlägt fehl, solange GitHub Pages nicht auf "GitHub Actions" gestellt ist (siehe oben)
+    continue-on-error: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

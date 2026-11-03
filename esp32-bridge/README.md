@@ -95,6 +95,16 @@ Akku-Test und LED-Einstellung bleiben frei.
 Die Partition „16M Flash (3MB APP/9.9MB FATFS)“ hat zwei App-Bereiche. Ein abgebrochenes Update lässt die alte Firmware
 lauffähig.
 
+## Flashen im Browser (ohne Arduino IDE)
+
+**[danunt97.github.io/m18-protocol](https://danunt97.github.io/m18-protocol/)** in Chrome oder Edge öffnen, das Board per USB-C anstecken und auf
+**Installieren** klicken.
+- Bei der ersten Installation „Gerät löschen“ anhaken.
+- **Bei Updates nicht** anhaken, sonst gehen WLAN-Daten und gespeicherte Messungen verloren.
+
+Die Seite baut GitHub Actions bei jeder Firmware-Änderung neu (`.github/workflows/firmware.yml`). Die `.bin`-Dateien
+hängen zusätzlich an jedem Release.
+
 ## Flashen (Arduino IDE 2)
 
 1. *Datei → Einstellungen → Zusätzliche Boardverwalter-URLs*:
@@ -117,7 +127,7 @@ lauffähig.
 Mit „USB CDC On Boot: Enabled“ funktionieren **beide** USB-Buchsen des DevKits für die PC-Software:
 „USB“ (nativ) und „UART“ (CH343). Zusätzliche Bibliotheken sind nicht nötig.
 
-Im seriellen Monitor (115200 Baud) erscheint `M18BRIDGE READY 1.4 host=m18-bridge-xxxx.local …`.
+Im seriellen Monitor (115200 Baud) erscheint `M18BRIDGE READY 1.5 host=m18-bridge-xxxx.local …`.
 Ein Schnelltest: `PING`, dann `SCAN` (liest den Akku komplett aus und gibt JSON zurück).
 
 ## WLAN einrichten (beim Kunden)
@@ -152,13 +162,27 @@ Das Alter rechnet die Brücke mit der Internetzeit (NTP), ohne Internet mit der 
 
 Für den **Verlauf und die Alterung über Zeit** gehört der Akku in die PC-Datenbank. Die Brücke zeigt nur die aktuelle Messung.
 
+## Ergebnis auf der LED
+
+Nach jedem Auslesen zeigt die LED **30 Sekunden** das Ergebnis:
+
+| LED | Bedeutung |
+|---|---|
+| Grün | Zustand gut |
+| Gelb | beobachten |
+| Rot | schwach, kritische Warnung oder eine Zelle unter 2,5 V |
+| Rot blinkend | Auslesen fehlgeschlagen |
+
+Das gilt auch, wenn der **PC** über die Brücke ausliest: Die Akku-Verwaltung schickt dann `SHOW <status>`, bewertet mit ihrer Datenbank inklusive der Warnungen.
+
 ## Energiesparmodus
 
 Wird die Brücke aus dem Akku versorgt (Aufsteckgehäuse), zieht sie wach ca. 30–40 mA bei 18 V. Ein 5-Ah-Akku wäre damit in etwa
 einer Woche leer. Deshalb geht sie nach einer einstellbaren Ruhezeit in den **Tiefschlaf**: Standard 30 min, einstellbar unter
 *Gerät → Energiesparen* von „nie“ bis 4 Stunden.
 
-- Als Benutzung zählen Webseite, USB-Befehle, die Suche der PC-Software und ein Handy im Einrichtungs-WLAN.
+- Als Benutzung zählen Webseite, USB-Befehle und ein Handy im Einrichtungs-WLAN. **Nicht** dazu zählen die UDP-Suche und Anfragen mit dem Header
+  `X-M18-Background: 1`; den setzt der automatische Abgleich der PC-Software.
 - Im Schlaf bleibt **J2 per Pin-Hold auf Low**, WLAN und LED sind aus.
 - **Aufwecken:** BOOT-Taste drücken oder den Akku ab- und wieder anstecken. Unter *Gerät → Letzter Neustart* steht dann „Aufgewacht aus dem Energiesparmodus“.
 - Step-down-Wandler und der Pull-up des Pegelwandlers an B+ ziehen auch im Schlaf noch einige mA. Nach Gebrauch abziehen oder einen Schalter einbauen.
@@ -250,7 +274,7 @@ Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus.
 
 | Befehl | Antwort | Bedeutung |
 |---|---|---|
-| `PING` | `OK M18BRIDGE 1.4` | Erkennung |
+| `PING` | `OK M18BRIDGE 1.5` | Erkennung |
 | `RESET` | `OK ACK` / `ERR NOACK [xx]` | TX 300 ms Low, 300 ms High, Sync 0xAA |
 | `IDLE` / `HIGH` | `OK` | TX auf Low halten / UART aktiv |
 | `READ <addr> <len>` | `OK <Antwortrahmen hex>` | Register lesen (wie `M18.cmd`) |
@@ -262,6 +286,7 @@ Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus.
 | `HGET <id>` | `OK {"meta":{…},"scan":{…}}` | Eine Messung komplett |
 | `HACK <id>` / `HDEL <id>` / `HCLEAR [all]` | `OK` | Als übernommen markieren / löschen / übernommene löschen |
 | `PASS <pw>` / `PASS OFF` | `OK` | Passwort setzen (nur USB oder entsperrt) |
+| `SHOW good\|watch\|weak\|critical\|fail` | `OK` | Ergebnis 30 s auf der LED zeigen |
 | `INFO` | `OK {json}` | Version, WLAN, IP, Speicher … |
 | `WIFI ssid\|pass`, `WIFI OFF`, `HOST name`, `RESTART` | `OK …` | Einstellungen |
 
@@ -288,7 +313,7 @@ Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus.
 
 **Auffinden:**
 
-- UDP-Broadcast `M18BRIDGE?` an Port 18018 → Antwort `M18BRIDGE 1.4 host=… ip=… http=80 mac=… auth=0|1 unsynced=N`
+- UDP-Broadcast `M18BRIDGE?` an Port 18018 → Antwort `M18BRIDGE 1.5 host=… ip=… http=80 mac=… auth=0|1 unsynced=N`
 - mDNS `<name>.local`, Dienste `_http._tcp` und `_m18bridge._tcp`
 
 Bewusst eingeschränkt: Die Brücke kann nur **lesen** und die **Notiz** schreiben – so wie `m18.py` mit

@@ -36,6 +36,8 @@ Maße: Gehäuse 75 × 70 × 44 mm, Deckel 72,5 × 77,6 × 10,8 mm.
 |---|---|---|
 | 1 | ESP32-S3-Board **N16R8** mit 2× USB-C | Layout wie ESP32-S3-DevKitC-1 (z. B. „YD-ESP32-S3“) |
 | 1 | Pegelwandler 4 Kanal (BSS138) | LV = 3,3 V, HV = B+ |
+| 1 | **Inline-Sicherungshalter** mit Litze | z. B. [diesen](https://amzn.eu/d/0akQsFbS), in die B+-Leitung direkt hinter dem Kontakt |
+| 1 | **Feinsicherung T 500 mA (träge)** | Bauform passend zum Halter (meist 5 × 20 mm) |
 | 1 | Step-down **HW-411** (LM2596) | Eingang 4,5–40 V, **auf 5,0 V einstellen** |
 | 3 | Gewindeeinsatz **ruthex RX-M4x8.1** | mit dem Lötkolben einpressen |
 | 3 | Schraube **M4 × 12, Senkkopf** | z. B. DIN 7991 / ISO 10642, in die Gewindeeinsätze |
@@ -71,7 +73,8 @@ Gehäuse und Deckel so drucken, wie sie im Projekt liegen.
 
    - GPIO17 → Pegelwandler LV1, HV1 → **J2**; 2,2 kΩ von GPIO17 nach GND
    - **J1** → 1 kΩ → GPIO18
-   - 3V3 → LV, **B+** → HV und HW-411 IN+
+   - **B+ → Sicherung (T 500 mA)** → HV und HW-411 IN+. Die Sicherung sitzt so nah wie möglich am B+-Kontakt; alles dahinter ist geschützt.
+   - 3V3 → LV
    - **B−** → GND (Pegelwandler, HW-411 IN− und OUT−, ESP)
    - HW-411 OUT+ (5,0 V) → **5V-Pin** des ESP
 6. **Erster Test ohne Akku** über USB: Weboberfläche öffnen, unter *Gerät → Status-LED* auf „Testen“ drücken.
@@ -80,6 +83,10 @@ Gehäuse und Deckel so drucken, wie sie im Projekt liegen.
    und liegt über der RGB-LED des Boards. Optional kann man es mit einem Tropfen klarem Heißkleber füllen, als Lichtleiter und Staubschutz.
 
 ## Wichtig
+
+- **Sicherung nicht weglassen.** Ein M18-Akku liefert weit über 100 A. Ohne Sicherung kann eine durchgescheuerte
+  Litze oder ein verrutschtes Modul im Gehäuse sofort glühen oder brennen. Die Elektronik braucht nur ca. 50 mA;
+  eine **träge 500-mA-Sicherung** übersteht den Einschaltstrom des Wandlers und löst bei einem Kurzschluss sicher aus.
 
 - **Stromverbrauch aus dem Akku:** Solange das Gehäuse steckt, versorgt der Akku die Elektronik.
 

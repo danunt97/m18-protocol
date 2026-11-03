@@ -39,6 +39,10 @@ Das Projekt baut auf der Protokoll-Forschung von [mnh-jansson/m18-protocol](http
   - J2 bleibt im Ruhezustand sicher auf Low, damit der Akku keine „Dumb Charge“ zählt
 - **Optionaler Passwortschutz.** Einstellungen ändern geht nur nach einem Druck auf die BOOT-Taste.
 - **Aufsteckgehäuse zum 3D-Drucken**, Versorgung aus dem Akku, **Energiesparmodus** (Tiefschlaf nach Ruhezeit).
+- **Ergebnis auf der LED:** Nach jedem Auslesen leuchtet sie 30 s grün, gelb oder rot, auch wenn der PC ausliest.
+- **Firmware im Browser installieren** (ESP Web Tools), ganz ohne Arduino IDE.
+
+**Betrieb auf dem NAS:** Docker-Image mit **automatischem Abgleich**. Die Messungen der Brücken landen von selbst in der Datenbank.
 
 ## Bilder
 
@@ -91,6 +95,16 @@ Die Datenbank liegt in `data/m18_fleet.db`.
 
 Alle Optionen (`--host 0.0.0.0` für Handy-Scans im WLAN, `--db`, `--port` …) stehen in [gui/README.md](gui/README.md).
 
+**Dauerhaft auf dem NAS / Server (Docker):**
+
+```bash
+docker compose up -d
+```
+
+Dann ist die Oberfläche unter `http://<NAS-IP>:8018` erreichbar. Die Datenbank liegt in `./data`, und Messungen der ESP32-Brücken
+werden **automatisch alle 5 Minuten übernommen**. Das Image (`ghcr.io/danunt97/m18-protocol`) gibt es für amd64 und arm64;
+Details stehen in [gui/README.md](gui/README.md#docker).
+
 ## Hardware
 
 Es gibt zwei Möglichkeiten, den Akku anzuschließen:
@@ -108,7 +122,10 @@ Es gibt zwei Möglichkeiten, den Akku anzuschließen:
 
 ![Verdrahtung ESP32-S3](docs/images/verdrahtung-esp32s3.svg)
 
-Flashen mit der Arduino IDE 2. Ins Werkzeuge-Menü gehören diese Einstellungen:
+**Firmware ohne Arduino IDE installieren:** Die Seite **[danunt97.github.io/m18-protocol](https://danunt97.github.io/m18-protocol/)**
+öffnen (Chrome oder Edge), das Board per USB anstecken und auf **Installieren** klicken.
+
+Oder mit der Arduino IDE 2 flashen. Ins Werkzeuge-Menü gehören diese Einstellungen:
 - Board: **ESP32S3 Dev Module**
 - Flash: **16MB**
 - PSRAM: **OPI**
@@ -118,7 +135,7 @@ Flashen mit der Arduino IDE 2. Ins Werkzeuge-Menü gehören diese Einstellungen:
 Danach `esp32-bridge/m18_bridge/m18_bridge.ino` hochladen. Alles Weitere zu WLAN-Einrichtung, LED, Passwort und Update
 steht in [esp32-bridge/README.md](esp32-bridge/README.md).
 
-> ⚠️ **Step-down vor dem ersten Anschließen auf 5,0 V einstellen.** Solange das Gehäuse steckt, versorgt der Akku die Elektronik.
+> ⚠️ **Sicherung (T 500 mA) direkt hinter B+ einbauen** und den **Step-down vor dem ersten Anschließen auf 5,0 V einstellen.** Solange das Gehäuse steckt, versorgt der Akku die Elektronik.
 > Die Brücke schläft deshalb nach 30 min Ruhe (BOOT-Taste weckt sie); nach Gebrauch abziehen.
 >
 > ⚠️ **Sicherheit:** Arbeiten an Li-Ion-Akkus auf eigene Gefahr. Die ESP32-Brücke kann nur lesen und die

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5 – Sicherung, LED-Ergebnis, Web-Flasher, Docker
+- Aufsteckgehäuse: Sicherung T 500 mA im B+-Pfad (Stückliste, Verdrahtungsplan, Anleitung).
+- LED zeigt nach dem Auslesen das Ergebnis 30 s lang (grün/gelb/rot), auch bei Messungen vom PC (`SHOW`).
+- Firmware im Browser installieren (ESP Web Tools auf GitHub Pages); Firmware-Dateien hängen an jedem Release.
+- Docker-Image (amd64/arm64, ghcr.io) und `docker-compose.yml` für den NAS.
+- Automatischer Abgleich: Die Akku-Verwaltung übernimmt neue Messungen der Brücken selbstständig. Diese Abfragen halten die Brücke nicht wach.
+
 ## 1.4 – Aufsteckgehäuse und Energiesparen
 - 3D-druckbares Aufsteckgehäuse (Bambu-3MF, STL, Fusion 360) mit Stückliste und Zusammenbau in `hardware/aufsteckgehaeuse/`.
 - Versorgung aus dem Akku über einen Step-down-Wandler (HW-411/LM2596); der Verdrahtungsplan ist entsprechend ergänzt.

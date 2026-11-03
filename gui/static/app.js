@@ -702,6 +702,24 @@ async function viewSettings() {
             <a class="btn" href="/export/fleet.csv">${ICON.dl} Flotte als CSV (Excel)</a>
             <a class="btn" href="/export/fleet.csv?format=intl">${ICON.dl} CSV (international)</a>
           </div></div>
+        <div class="card" id="ascard" ${s.demo ? "hidden" : ""}><h2>Automatischer Abgleich mit den ESP32-Brücken</h2>
+          <p class="hint" style="margin-bottom:10px">Findet die Brücken im Netz und übernimmt neue Messungen selbstständig in die Datenbank –
+            ideal, wenn dieses Programm dauerhaft läuft (z. B. als Docker-Container auf dem NAS). Eine Brücke im Energiesparmodus wird
+            dadurch nicht wach gehalten.</p>
+          <form class="form" id="asform">
+            <div class="row2">
+              <label class="field">Abgleich alle<select name="interval_min">
+                <option value="0">aus</option><option value="2">2 Minuten</option><option value="5">5 Minuten</option>
+                <option value="15">15 Minuten</option><option value="60">1 Stunde</option></select></label>
+              <label class="field">Brücken-Passwort<input name="bridge_password" type="password" autocomplete="off"
+                placeholder="${s.has_bridge_password ? "gespeichert – leer lassen = unverändert" : "nur falls gesetzt"}"></label>
+            </div>
+            <label class="field">Zusätzliche Adressen (falls die automatische Suche sie nicht findet, z. B. anderes Subnetz)
+              <input name="hosts" placeholder="m18-bridge-ab12.local, 192.168.1.50"></label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="submit">Speichern</button>
+              <button class="btn" type="button" id="asrun">Jetzt abgleichen</button></div>
+          </form>
+          <div id="asstate" style="margin-top:10px"></div></div>
         <div class="card"><h2>Messungen der ESP32-Brücke importieren</h2>
           <p class="hint" style="margin-bottom:10px">Export-Datei aus der Weboberfläche der Brücke (Verlauf → „Alle als JSON exportieren“).
             Bereits vorhandene Messungen werden erkannt und übersprungen. Ist die Brücke erreichbar, geht es direkter über
@@ -731,6 +749,39 @@ async function viewSettings() {
           Die Schwellen stehen in <span class="code">gui/fleet.py</span>.</div>
       </div>
     </div>`;
+  const asRender = (a) => {
+    if (!a || a.available === false) { $("#ascard").hidden = true; return; }
+    $("#asform [name=interval_min]").value = String(a.interval_min);
+    if (![...$("#asform [name=interval_min]").options].some((o) => o.value === String(a.interval_min))) {
+      const o = document.createElement("option"); o.value = o.textContent = a.interval_min; $("#asform [name=interval_min]").appendChild(o);
+      $("#asform [name=interval_min]").value = String(a.interval_min);
+    }
+    $("#asform [name=hosts]").value = a.hosts || "";
+    const res = a.last_results || [];
+    $("#asstate").innerHTML = `<div class="hint">${a.running ? "Abgleich läuft …" : a.last_run ? "Zuletzt: " + fmtDateTime(a.last_run) : "Noch nicht gelaufen"}
+      ${a.next_run ? " · nächster: " + fmtDateTime(a.next_run) : ""}</div>
+      ${res.length ? `<table class="cmp" style="margin-top:6px"><thead><tr><th>Brücke</th><th>Ergebnis</th></tr></thead><tbody>${res.map((r) =>
+        `<tr><td class="mono" style="text-align:left">${h(r.target)}</td><td style="text-align:left">${r.ok
+          ? `${r.imported ? `<b>${r.imported} übernommen</b>` : "nichts Neues"}${r.created ? `, ${r.created} neue Akkus` : ""}`
+          : `<span class="c-crit">${h(r.error || "Fehler")}</span>`}</td></tr>`).join("")}</tbody></table>`
+        : a.last_run ? '<p class="hint">Keine Brücke gefunden (eingeschaltet? im selben Netz? sonst Adresse oben eintragen).</p>' : ""}`;
+  };
+  if (!s.demo) asRender(await api("/api/autosync"));
+  $("#asform").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.target).entries());
+    if (f.bridge_password) await api("/api/settings", "POST", { bridge_password: f.bridge_password });
+    const r = await api("/api/autosync", "POST", { interval_min: +f.interval_min, hosts: f.hosts });
+    toast(r.ok ? "Gespeichert" : "Fehler", r.ok ? "" : "err");
+    asRender(r);
+  };
+  $("#asrun").onclick = async () => {
+    const b = $("#asrun"); b.disabled = true; b.innerHTML = '<span class="spinner"></span> Gleiche ab …';
+    await api("/api/autosync/run", "POST", {});
+    b.disabled = false; b.textContent = "Jetzt abgleichen";
+    asRender(await api("/api/autosync"));
+    refreshAlertCount();
+  };
   $("#bfilebtn").onclick = async () => {
     const f = $("#bfile").files[0];
     if (!f) { toast("Bitte zuerst die Datei wählen", "err"); return; }
