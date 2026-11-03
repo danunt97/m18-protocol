@@ -12,6 +12,13 @@ Seitlich ist eine USB-C-Buchse für den PC zugänglich. Ein Kabel zum Akku brauc
 
 ![USB-C-Öffnung](bilder/gehaeuse-usb-c.png)
 
+## Grundlage
+
+Die Akku-Aufnahme (Schienen und Kontaktblock) basiert auf dem Modell
+**[„Milwaukee M18 All Pins“ auf Printables](https://www.printables.com/model/1425816-milwaukee-m18-all-pins)**.
+Darauf aufgebaut sind der Elektronikraum für ESP32-S3, Pegelwandler und Step-down, die USB-C-Öffnung, die Gewindeeinsätze und der Deckel.
+Für die Akku-Aufnahme gelten die Lizenzbedingungen des Originalmodells (siehe Printables-Seite).
+
 ## Dateien
 
 | Datei | Inhalt |
