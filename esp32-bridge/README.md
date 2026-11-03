@@ -66,7 +66,8 @@ nichts, ist der andere Pin der richtige.
 | Plausibilitätsprüfung | Unplausible Zellspannungen, fehlende Blöcke und Prüfsummenabweichungen erscheinen als Warnung |
 | Auslesen über die Webseite in eigenem Task | Webserver, LED, USB und BOOT-Taste bleiben bedienbar |
 | Mutex auf der Akku-Leitung | PC und Webseite können nie gleichzeitig senden. Der andere bekommt `ERR BUSY`, die PC-Software wartet automatisch. |
-| Task-Watchdog | Hängt die Hauptschleife, startet der ESP neu. Der Grund steht unter Gerät → „Letzter Neustart“. |
+| Task-Watchdog (30 s) | Hängt die Hauptschleife, startet der ESP neu. Der Grund steht unter Gerät → „Letzter Neustart“. 30 s statt der üblichen 5 s, weil ein Handy, das mitten in einer Anfrage hängen bleibt, den Webserver bis zu ~10 s in einem Socket-Zugriff blockieren kann. |
+| Unterspannungs-Erkennung | Nach einem Brownout-Neustart läuft das WLAN mit reduzierter Sendeleistung (8,5 statt 15 dBm), damit der ESP hochkommt statt in einer Neustart-Schleife zu hängen. Gerät → „Stromversorgung“ zeigt die Anzahl. |
 | Heap-Wächter | Bei Speicherknappheit kontrollierter Neustart, wenn gerade nichts läuft |
 | WLAN-Stromsparmodus aus, mDNS-Neustart bei neuer IP | Zuverlässige Erreichbarkeit und Suche |
 | Asynchrone WLAN-Suche | Der WLAN-Scan blockiert nichts |
@@ -84,6 +85,17 @@ interaktiven Shell zwischen `m.reset()` und `m.cmd(...)` länger wartet, bekommt
 
 So kann niemand aus dem Kunden-WLAN die Brücke umkonfigurieren oder fremde Firmware aufspielen. Auslesen,
 Akku-Test und LED-Einstellung bleiben frei.
+
+### Neustart-Schleife, „Unterspannung (Brownout)“
+
+Startet der ESP immer wieder neu und meldet `reset=Unterspannung (Brownout)` (im Log viele Zeilen `rst:0x3 (RTC_SW_SYS_RST)`),
+bricht beim WLAN-Start die Versorgung ein. Der ESP32-S3 zieht dabei kurz mehrere 100 mA.
+
+- Anderes, kurzes **USB-Kabel** und einen USB-Anschluss **direkt am PC** (kein passiver Hub, keine Frontbuchse) verwenden.
+- Im Aufsteckgehäuse: Ausgang des HW-411 nachmessen, er muss **5,0 V** liefern (nicht 3,3 V). Sitzt die Sicherung fest?
+- Lötbrücke „IN-OUT“ am Board offen lassen, sonst arbeiten USB und Wandler gegeneinander.
+
+Die Firmware fängt das so weit wie möglich ab (reduzierte Sendeleistung nach einem Brownout), eine schwache Versorgung bleibt aber ein Risiko für das Auslesen.
 
 ## Firmware-Update ohne Arduino IDE
 

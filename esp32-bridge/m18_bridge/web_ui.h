@@ -259,6 +259,7 @@ $("#forget").onclick=async()=>{if(!confirm("WLAN-Daten löschen und neu starten?
 async function devInfo(){const i=await info();if(!i)return;ledInit();sleepInit();
   $("#devinfo").innerHTML=[["Firmware",i.version],["Gerätename",i.host],["IP",i.ip||"–"],["WLAN",i.wifi=="sta"?i.ssid+" ("+i.rssi+" dBm)":"Einrichtungsmodus ("+i.ap+")"],
    ["MAC",i.mac],["Akku-Leitung",i.line=="idle"?"Ruhe (J2 low)":"aktiv"],["Laufzeit",hms(i.uptime_s)],["Letzter Neustart",i.reset_reason],
+   ["Stromversorgung",i.brownouts?"⚠ "+i.brownouts+"× Unterspannung seit dem Einschalten"+(i.tx_low?", WLAN-Sendeleistung reduziert":"")+" – USB-Kabel/-Anschluss bzw. Step-down prüfen":"in Ordnung"],
    ["Freier Speicher",nf(i.heap_kb)+" KB (min. "+nf(i.min_heap_kb)+") · PSRAM "+nf(i.psram_kb)+" KB"],
    ["Uhrzeit",i.time||"nicht synchronisiert"],["Build",i.build]].map(r=>`<div class="row"><span>${r[0]}</span><span class="mono">${esc(r[1])}</span></div>`).join("");}
 async function cmd(text){return (await fetch("/cmd",{method:"POST",headers:{"Content-Type":"text/plain"},body:text})).text();}

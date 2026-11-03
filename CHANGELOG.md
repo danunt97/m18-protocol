@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6 – Stabilität auf echter Hardware
+- Watchdog-Neustart behoben: Ein Handy, das mitten in einer Anfrage hängen blieb, konnte den Webserver länger als die 5 s des Watchdogs blockieren. Der Watchdog der Hauptschleife steht jetzt auf 30 s.
+- Unterspannung beim WLAN-Start: Die Brücke zählt Brownout-Neustarts, fährt danach das WLAN mit reduzierter Sendeleistung hoch und zeigt eine Warnung unter Gerät → „Stromversorgung“. Normale Sendeleistung jetzt 15 dBm (geringere Stromspitzen).
+
 ## 1.5 – Sicherung, LED-Ergebnis, Web-Flasher, Docker
 - Aufsteckgehäuse: Sicherung T 500 mA im B+-Pfad (Stückliste, Verdrahtungsplan, Anleitung).
 - LED zeigt nach dem Auslesen das Ergebnis 30 s lang (grün/gelb/rot), auch bei Messungen vom PC (`SHOW`).

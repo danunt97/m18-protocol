@@ -37,6 +37,7 @@
 #include <driver/uart.h>
 #include <driver/gpio.h>
 #include <esp_sleep.h>
+#include <esp_task_wdt.h>
 #include <time.h>
 #include "m18_commands.h"
 #include "web_ui.h"
@@ -68,6 +69,10 @@
 #define BUSY_WAIT_MS 25000             // max wait for the battery line (PC vs. web)
 #define MAX_CMD_BODY 16384
 #define LOW_HEAP_BYTES 30000
+#define LOOP_WDT_S 30                  // loop() watchdog. Not the 5 s default: a phone that stalls mid-request
+                                       // can block the web server inside a socket read/write for ~10 s.
+#define TX_POWER_NORMAL WIFI_POWER_15dBm   // plenty for a bridge next to the phone/router, lower peak current
+#define TX_POWER_LOW WIFI_POWER_8_5dBm     // after a brownout: weak USB port/cable or step-down
 
 #define BAT_UART_NUM UART_NUM_1
 HardwareSerial BatSerial(1);          // UART1 = BAT_UART_NUM
@@ -282,6 +287,50 @@ bool otaRunning = false;
 uint32_t lowHeapSince = 0;
 
 String infoExtra;
+
+// ------------------------------------------------------- power supply
+// Wi-Fi start-up (RF calibration, first beacons) pulls current peaks of several 100 mA. On a weak
+// USB port/cable or a step-down set too low the voltage dips and the brownout detector resets the
+// chip - often several times in a row. We count those resets (RTC memory survives them) and run
+// Wi-Fi with lower transmit power after one, so the bridge comes up instead of boot-looping.
+RTC_NOINIT_ATTR uint32_t rtcBrownMagic;
+RTC_NOINIT_ATTR uint32_t rtcBrownouts;
+uint32_t brownouts = 0;                 // since power-on
+bool lowTxPower = false;
+
+void powerCheck() {
+  esp_reset_reason_t r = esp_reset_reason();
+  if (rtcBrownMagic != 0x4D313842UL || r == ESP_RST_POWERON) { rtcBrownMagic = 0x4D313842UL; rtcBrownouts = 0; }
+  if (r == ESP_RST_BROWNOUT) rtcBrownouts++;
+  brownouts = rtcBrownouts;
+  lowTxPower = (r == ESP_RST_BROWNOUT);
+}
+
+// Every Wi-Fi mode change goes through here so the transmit power is applied to the running driver.
+void wifiMode(wifi_mode_t m) {
+  WiFi.mode(m);
+  if (m != WIFI_OFF) WiFi.setTxPower(lowTxPower ? TX_POWER_LOW : TX_POWER_NORMAL);
+}
+
+// Task watchdog for loop(): longer timeout than the core's 5 s (see LOOP_WDT_S).
+void setupWatchdog() {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  uint32_t idleMask = 0;
+#if CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0
+  idleMask |= 1;
+#endif
+#if CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1
+  idleMask |= 2;
+#endif
+  esp_task_wdt_config_t cfg = {};
+  cfg.timeout_ms = LOOP_WDT_S * 1000;
+  cfg.idle_core_mask = idleMask;
+  cfg.trigger_panic = true;
+  if (esp_task_wdt_reconfigure(&cfg) != ESP_OK) esp_task_wdt_init(&cfg);
+#else
+  esp_task_wdt_init(LOOP_WDT_S, true);    // ESP-IDF 4.4: re-init just changes timeout/panic
+#endif
+}
 
 // --------------------------------------------------------- energy saving
 // In the slide-on housing the bridge is powered from the battery (B+ -> step-down -> 5V).
@@ -536,7 +585,7 @@ void onWifiEvent(arduino_event_id_t event) {
 
 void startAP() {
   if (apActive) return;
-  WiFi.mode(savedSsid.length() ? WIFI_AP_STA : WIFI_AP);
+  wifiMode(savedSsid.length() ? WIFI_AP_STA : WIFI_AP);
   WiFi.softAP(apName.c_str(), apPassword().c_str());
   WiFi.setSleep(false);
   apActive = true;
@@ -554,14 +603,14 @@ void stopAP() {
   if (!apActive) return;
   if (dnsActive) { dns.stop(); dnsActive = false; }
   WiFi.softAPdisconnect(true);
-  WiFi.mode(WIFI_STA);
+  wifiMode(WIFI_STA);
   WiFi.setSleep(false);
   apActive = false;
   apCloseAt = 0;
 }
 
 void beginConnect(const String& ssid, const String& pass) {
-  WiFi.mode(apActive ? WIFI_AP_STA : WIFI_STA);
+  wifiMode(apActive ? WIFI_AP_STA : WIFI_STA);
   WiFi.setSleep(false);                // no modem sleep: reliable web server + discovery
   WiFi.setHostname(hostName.c_str());
   WiFi.begin(ssid.c_str(), pass.c_str());
@@ -648,7 +697,8 @@ void updateInfo() {
               ",\"setup_client\":" + (clientOnSetupAp() ? "true" : "false") +
               ",\"reading\":" + (scanRunning ? "true" : "false") + ",\"auth\":" + (webPass.length() ? "true" : "false") +
               ",\"storage\":\"" + storage.kind + "\",\"time_src\":\"" + (unixNow() ? timeSource : String("none")) + "\",\"boot\":" + String((unsigned long)bootId) +
-              ",\"sleep_min\":" + String((unsigned long)sleepMin) + ",\"sleep_in_s\":" + String((long)sleepInSeconds());
+              ",\"sleep_min\":" + String((unsigned long)sleepMin) + ",\"sleep_in_s\":" + String((long)sleepInSeconds()) +
+              ",\"brownouts\":" + String((unsigned long)brownouts) + ",\"tx_low\":" + (lowTxPower ? "true" : "false");
   uint32_t now = unixNow();
   if (now) {
     char b[32];
@@ -1065,6 +1115,7 @@ void setup() {
   batMutex = xSemaphoreCreateMutex();
   stateMutex = xSemaphoreCreateMutex();
   histMutex = xSemaphoreCreateMutex();
+  powerCheck();
   bootId = (uint32_t)random(1, 0x7FFFFFFF);   // hardware RNG (Arduino random() uses esp_random)
   bridgeLoopTask = xTaskGetCurrentTaskHandle();
 
@@ -1082,6 +1133,11 @@ void setup() {
   if (storage.mount() && history.begin()) proc.setHistory(&history);
   else Serial.println("WARNUNG: kein Dateisystem - Messungen werden nicht gespeichert (Partition Scheme prüfen)");
 
+  if (lowTxPower) {
+    Serial.printf("WARNUNG: Neustart wegen Unterspannung (%lu seit dem Einschalten) - WLAN mit reduzierter Sendeleistung. "
+                  "USB-Kabel/-Anschluss bzw. Step-down (5,0 V) prüfen.\n", (unsigned long)brownouts);
+    delay(300);                                 // let the supply recover before the Wi-Fi current peak
+  }
   WiFi.persistent(false);
   WiFi.onEvent(onWifiEvent, ARDUINO_EVENT_WIFI_STA_GOT_IP);
   loadPrefs();
@@ -1090,7 +1146,7 @@ void setup() {
   // Non-blocking: USB answers immediately while Wi-Fi connects in the background
   // (wifiLoop opens the setup AP if the saved network is not reachable).
   if (savedSsid.length()) {
-    WiFi.mode(WIFI_STA);
+    wifiMode(WIFI_STA);
     beginConnect(savedSsid, savedPass);
   } else {
     wstate = WState::AP;
@@ -1100,6 +1156,7 @@ void setup() {
   startMdns();
   disc.begin(DISCOVERY_PORT);
   setupHttp();
+  setupWatchdog();
   enableLoopWDT();                              // loop() must come back within the watchdog timeout
   Serial.printf("\nM18BRIDGE READY %s host=%s.local ip=%s reset=%s\n", M18BRIDGE_VERSION, hostName.c_str(),
                 ipString().c_str(), resetReason());
