@@ -70,6 +70,33 @@ jobs:
           JSON
           cat site/manifest.json
           ls -la site site/firmware
+      - name: Image prüfen (Bootloader, Partitionen, App)
+        run: |
+          python3 - <<'PY'
+          import struct, sys
+          d = open("site/firmware/m18-bruecke.bin", "rb").read()
+          app = open("site/firmware/m18-bruecke-update.bin", "rb").read()
+          ok = True
+          def check(cond, msg):
+              global ok
+              print(("OK   " if cond else "FAIL ") + msg)
+              ok &= cond
+          check(d[0] == 0xE9, "Bootloader-Kennung 0xE9 bei 0x0")
+          check(d[0x8000:0x8002] == b"\xaa\x50", "Partitionstabelle bei 0x8000")
+          parts = {}
+          for i in range(0, 0xC00, 32):
+              e = d[0x8000 + i:0x8000 + i + 32]
+              if e[:2] != b"\xaa\x50":
+                  break
+              off, size = struct.unpack("<II", e[4:12])
+              name = e[12:28].rstrip(b"\0").decode()
+              parts[name] = (e[2], e[3], off, size)
+              print(f"     {name:10} typ {e[2]} sub {e[3]:3} 0x{off:06x} {size // 1024} KB")
+          check(any(t == 1 and st == 0x81 for t, st, _, _ in parts.values()), "FAT-Partition (Messungsspeicher) vorhanden")
+          check(sum(1 for t, *_ in parts.values() if t == 0) >= 2, "zwei App-Partitionen (OTA)")
+          check(d[0x10000:0x10000 + len(app)] == app, "App bei 0x10000 = Update-Datei")
+          sys.exit(0 if ok else 1)
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: m18-bruecke-firmware
