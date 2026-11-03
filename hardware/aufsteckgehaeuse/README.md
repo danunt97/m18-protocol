@@ -39,7 +39,7 @@ Maße: Gehäuse 75 × 70 × 44 mm, Deckel 72,5 × 77,6 × 10,8 mm.
 | 1 | Step-down **HW-411** (LM2596) | Eingang 4,5–40 V, **auf 5,0 V einstellen** |
 | 3 | Gewindeeinsatz **ruthex RX-M4x8.1** | mit dem Lötkolben einpressen |
 | 3 | Schraube M4 | Länge an Deckel + Einsatz anpassen |
-| 4 | Kontakte für B+, J1, J2, B− | im Kontaktblock des Gehäuses |
+| 4 | Flachstecker, isoliert, **rot** (für 0,5–1,5 mm²) als Kontakte für B+, J1, J2, B− | z. B. [Hornbach „Flachstecker 1,5 mm² rot“, Art.-Nr. 10656287](https://www.hornbach.at/p/flachstecker-1-5-mm-rot-25-stk/10656287/); werden im Kontaktblock eingesetzt |
 | 1 | Widerstand 1 kΩ | J1 → GPIO18 |
 | 1 | Widerstand 2,2 kΩ | GPIO17 → GND (J2 beim Booten auf Low) |
 | – | Litze 0,25–0,5 mm² | B+/B− zum Wandler etwas dicker |
@@ -62,8 +62,10 @@ Gehäuse und Deckel so drucken, wie sie im Projekt liegen.
 1. **Gewindeeinsätze** mit dem Lötkolben einsetzen (für PLA ca. 220–240 °C, gerade und bündig).
 2. **Step-down zuerst allein einstellen:** HW-411 an den Akku (oder ein Netzteil 12–20 V) anschließen, **ohne ESP**.
    Mit dem Multimeter am Poti auf **5,0 V** drehen. Ab Werk kann am Ausgang fast die volle Eingangsspannung anliegen, und die zerstört den ESP.
-3. **Firmware vorher flashen** über USB (Einstellungen siehe [esp32-bridge/README.md](../../esp32-bridge/README.md)).
-4. **Verdrahten** nach Plan:
+3. **Kontakte:** Litzen an die vier Flachstecker crimpen und die Stecker von unten in den Kontaktblock schieben.
+   Reihenfolge wie am Akku: **B+, J1, J2, B−**. Vor dem ersten Aufstecken mit dem Multimeter prüfen, dass kein Kontakt mit dem Nachbarn verbunden ist.
+4. **Firmware vorher flashen** über USB (Einstellungen siehe [esp32-bridge/README.md](../../esp32-bridge/README.md)).
+5. **Verdrahten** nach Plan:
 
    ![Verdrahtung](../../docs/images/verdrahtung-esp32s3.svg)
 
@@ -72,9 +74,9 @@ Gehäuse und Deckel so drucken, wie sie im Projekt liegen.
    - 3V3 → LV, **B+** → HV und HW-411 IN+
    - **B−** → GND (Pegelwandler, HW-411 IN− und OUT−, ESP)
    - HW-411 OUT+ (5,0 V) → **5V-Pin** des ESP
-5. **Erster Test ohne Akku** über USB: Weboberfläche öffnen, unter *Gerät → Status-LED* auf „Testen“ drücken.
-6. **Mit Akku:** Gehäuse aufschieben und mit dem Multimeter prüfen: **J2 gegen B− unter 1 V**. Danach in der Weboberfläche *Gerät → Akku testen*.
-7. Deckel aufschrauben.
+6. **Erster Test ohne Akku** über USB: Weboberfläche öffnen, unter *Gerät → Status-LED* auf „Testen“ drücken.
+7. **Mit Akku:** Gehäuse aufschieben und mit dem Multimeter prüfen: **J2 gegen B− unter 1 V**. Danach in der Weboberfläche *Gerät → Akku testen*.
+8. Deckel aufschrauben.
 
 ## Wichtig
 
