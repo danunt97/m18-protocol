@@ -2,7 +2,7 @@
 
 Das Gehäuse wird **wie ein Werkzeug auf den M18-Akku geschoben**. Vier Kontakte greifen B+, J1, J2 und B− ab.
 Im Gehäuse sitzen ESP32-S3, Pegelwandler und ein Step-down-Wandler, der den ESP **aus dem Akku versorgt**.
-Seitlich ist eine USB-C-Buchse für den PC zugänglich. Ein Kabel zum Akku braucht man so nicht mehr: aufstecken, Handy oder PC verbinden, auslesen.
+Seitlich ist eine USB-C-Buchse für den PC zugänglich. Die Status-LED leuchtet durch das **Senkloch im Deckel**. Ein Kabel zum Akku braucht man so nicht mehr: aufstecken, Handy oder PC verbinden, auslesen.
 
 | Akku-Seite mit Schienen und Kontaktblock | Elektronikraum |
 |---|---|
@@ -38,7 +38,7 @@ Maße: Gehäuse 75 × 70 × 44 mm, Deckel 72,5 × 77,6 × 10,8 mm.
 | 1 | Pegelwandler 4 Kanal (BSS138) | LV = 3,3 V, HV = B+ |
 | 1 | Step-down **HW-411** (LM2596) | Eingang 4,5–40 V, **auf 5,0 V einstellen** |
 | 3 | Gewindeeinsatz **ruthex RX-M4x8.1** | mit dem Lötkolben einpressen |
-| 3 | Schraube M4 | Länge an Deckel + Einsatz anpassen |
+| 3 | Schraube **M4 × 12, Senkkopf** | z. B. DIN 7991 / ISO 10642, in die Gewindeeinsätze |
 | 4 | Flachstecker, isoliert, **rot** (für 0,5–1,5 mm²) als Kontakte für B+, J1, J2, B− | z. B. [Hornbach „Flachstecker 1,5 mm² rot“, Art.-Nr. 10656287](https://www.hornbach.at/p/flachstecker-1-5-mm-rot-25-stk/10656287/); werden im Kontaktblock eingesetzt |
 | 1 | Widerstand 1 kΩ | J1 → GPIO18 |
 | 1 | Widerstand 2,2 kΩ | GPIO17 → GND (J2 beim Booten auf Low) |
@@ -76,7 +76,8 @@ Gehäuse und Deckel so drucken, wie sie im Projekt liegen.
    - HW-411 OUT+ (5,0 V) → **5V-Pin** des ESP
 6. **Erster Test ohne Akku** über USB: Weboberfläche öffnen, unter *Gerät → Status-LED* auf „Testen“ drücken.
 7. **Mit Akku:** Gehäuse aufschieben und mit dem Multimeter prüfen: **J2 gegen B− unter 1 V**. Danach in der Weboberfläche *Gerät → Akku testen*.
-8. Deckel aufschrauben.
+8. Deckel mit den 3 Senkkopfschrauben M4 × 12 aufschrauben. Das einzelne Senkloch im Deckel ist das **Lichtfenster für die Status-LED**
+   und liegt über der RGB-LED des Boards. Optional kann man es mit einem Tropfen klarem Heißkleber füllen, als Lichtleiter und Staubschutz.
 
 ## Wichtig
 
