@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+data/
+*.db
+*.db-wal
+*.db-shm
+sim_bridge
+build/
+.DS_Store

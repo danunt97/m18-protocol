@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>M18 Akku-Verwaltung</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="/fleet" data-link>
+      <span class="logo">M18</span>
+      <span>Akku-Verwaltung<small>Milwaukee M18 · Zustand &amp; Alterung</small></span>
+    </a>
+    <nav>
+      <a href="/fleet" data-link data-nav="fleet">Flotte</a>
+      <a href="/read" data-link data-nav="read">Auslesen</a>
+      <a href="/alerts" data-link data-nav="alerts">Warnungen <span id="alertcount" class="count" hidden></span></a>
+      <a href="/settings" data-link data-nav="settings">Einstellungen</a>
+    </nav>
+    <span class="spacer"></span>
+    <span id="demopill" class="demo-pill" hidden>DEMO-MODUS</span>
+    <form class="search" id="search" autocomplete="off">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="M11 11l4 4"/></svg>
+      <input id="searchq" type="search" placeholder="Akku suchen / QR scannen …" aria-label="Akku suchen">
+    </form>
+  </header>
+
+  <main id="view"></main>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/charts.js"></script>
+  <script src="/static/widgets.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
