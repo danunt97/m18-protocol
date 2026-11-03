@@ -35,6 +35,8 @@
 #include <sys/time.h>
 #include <esp_system.h>
 #include <driver/uart.h>
+#include <driver/gpio.h>
+#include <esp_sleep.h>
 #include <time.h>
 #include "m18_commands.h"
 #include "web_ui.h"
@@ -93,6 +95,10 @@ class EspPort : public m18::Port {
   void begin() {
     pinMode(PIN_TX, OUTPUT);
     digitalWrite(PIN_TX, LOW);         // J2 low as early as possible
+    // After waking from the energy-saving deep sleep the pin is still held low: release the hold
+    // only now that the output latch is low too, so J2 never goes high in between.
+    gpio_hold_dis((gpio_num_t)PIN_TX);
+    gpio_deep_sleep_hold_dis();
   }
   void startUart() {                   // right after begin(); TX is high for a few µs only
     BatSerial.setRxBufferSize(512);
@@ -277,6 +283,21 @@ uint32_t lowHeapSince = 0;
 
 String infoExtra;
 
+// --------------------------------------------------------- energy saving
+// In the slide-on housing the bridge is powered from the battery (B+ -> step-down -> 5V).
+// Awake it draws ~30-40 mA at 18 V, which would empty a pack in about a week, so after
+// `sleepMin` minutes without any use it goes to deep sleep (0 = never). J2 stays held low,
+// the BOOT button wakes it up again. The step-down and the level shifter's pull-up still
+// draw a few mA while asleep - a power switch (or unplugging) is the real cure.
+uint32_t sleepMin = 30;
+uint32_t lastUserActivity = 0;
+void noteActivity() { lastUserActivity = millis(); }
+long sleepInSeconds() {
+  if (!sleepMin) return -1;
+  long left = (long)(sleepMin * 60000UL) - (long)(millis() - lastUserActivity);
+  return left > 0 ? left / 1000 : 0;
+}
+
 // --------------------------------------------------------------------- LED
 // On-board WS2812. Pin and brightness are stored in Preferences (web UI: Gerät).
 int ledPin = DEFAULT_LED_PIN;
@@ -345,6 +366,24 @@ void ledLoop(uint32_t bootHeldMs) {
   led(0, 0, slow ? 255 : 30);                                            // setup mode
 }
 
+void goToSleep() {
+  Serial.println("Energiesparmodus: Tiefschlaf. Aufwecken mit der BOOT-Taste.");
+  if (lockBattery(3000)) { batLink.idle(); unlockBattery(); }
+  BatSerial.flush();
+  BatSerial.end();
+  pinMode(PIN_TX, OUTPUT);
+  digitalWrite(PIN_TX, LOW);                    // J2 low ...
+  gpio_hold_en((gpio_num_t)PIN_TX);             // ... and held low during deep sleep
+  gpio_deep_sleep_hold_en();
+  ledWrite(ledPin, 0, 0, 0);
+  MDNS.end();
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_BOOT, 0);   // BOOT pressed = low
+  delay(100);
+  esp_deep_sleep_start();
+}
+
 // ------------------------------------------------------------------ helpers
 String jsonEsc(String v) {
   v.replace("\\", "\\\\");
@@ -380,7 +419,7 @@ const char* resetReason() {
     case ESP_RST_TASK_WDT:
     case ESP_RST_WDT: return "Watchdog";
     case ESP_RST_BROWNOUT: return "Unterspannung (Brownout)";
-    case ESP_RST_DEEPSLEEP: return "Deep Sleep";
+    case ESP_RST_DEEPSLEEP: return "Aufgewacht aus dem Energiesparmodus";
     case ESP_RST_EXT: return "Reset-Taste";
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
     case ESP_RST_USB: return "USB";          // not in ESP-IDF 4.4 (Arduino core 2.0.x)
@@ -403,6 +442,7 @@ void loadPrefs() {
   ledPin = prefs.getInt("ledpin", DEFAULT_LED_PIN);
   if (!ledPinAllowed(ledPin)) ledPin = DEFAULT_LED_PIN;
   ledBright = (uint8_t)prefs.getInt("ledbright", 40);
+  sleepMin = (uint32_t)prefs.getInt("sleepmin", 30);
   webPass = prefs.getString("webpass", "");
   prefs.end();
   uint8_t mac[6];
@@ -434,6 +474,12 @@ void savePassword(const String& pw) {
 }
 
 String apPassword() { return webPass.length() >= 8 ? webPass : String(AP_PASSWORD); }
+
+void saveSleep() {
+  prefs.begin("m18", false);
+  prefs.putInt("sleepmin", (int)sleepMin);
+  prefs.end();
+}
 
 void saveLed() {
   prefs.begin("m18", false);
@@ -568,7 +614,8 @@ void updateInfo() {
               ",\"unlocked\":" + (unlocked() ? "true" : "false") + ",\"unlock_s\":" + String(unlockS) +
               ",\"setup_client\":" + (clientOnSetupAp() ? "true" : "false") +
               ",\"reading\":" + (scanRunning ? "true" : "false") + ",\"auth\":" + (webPass.length() ? "true" : "false") +
-              ",\"storage\":\"" + storage.kind + "\",\"time_src\":\"" + (unixNow() ? timeSource : String("none")) + "\",\"boot\":" + String((unsigned long)bootId);
+              ",\"storage\":\"" + storage.kind + "\",\"time_src\":\"" + (unixNow() ? timeSource : String("none")) + "\",\"boot\":" + String((unsigned long)bootId) +
+              ",\"sleep_min\":" + String((unsigned long)sleepMin) + ",\"sleep_in_s\":" + String((long)sleepInSeconds());
   uint32_t now = unixNow();
   if (now) {
     char b[32];
@@ -588,6 +635,7 @@ static bool isBatteryCommand(const String& up) {
 }
 
 String runCommand(const String& lineIn, bool physical) {
+  noteActivity();
   String line = lineIn;
   line.trim();
   String up = line;
@@ -701,7 +749,7 @@ bool authOk() {
 
 // Wraps a handler with the password check.
 std::function<void()> guarded(std::function<void()> fn) {
-  return [fn]() { if (authOk()) fn(); };
+  return [fn]() { noteActivity(); if (authOk()) fn(); };
 }
 
 // Runs a history command and sends its JSON (strips "OK ").
@@ -720,6 +768,7 @@ bool requireSettings() {
 
 void setupHttp() {
   server.on("/", HTTP_GET, []() {
+    noteActivity();
     if (captiveRedirect()) return;
     if (!authOk()) return;
     server.sendHeader("Cache-Control", "no-store");
@@ -830,6 +879,13 @@ void setupHttp() {
     saveLed();
     sendJson("{\"ok\":true}");
   }));
+  server.on("/api/power", HTTP_POST, guarded([]() {
+    long m = server.arg("sleep_min").toInt();
+    if (m < 0 || m > 1440) { sendJson("{\"ok\":false,\"error\":\"0–1440 Minuten\"}", 400); return; }
+    sleepMin = (uint32_t)m;
+    saveSleep();
+    sendJson("{\"ok\":true}");
+  }));
   server.on("/api/led/test", HTTP_POST, guarded([]() {
     if (server.hasArg("pin")) {
       int pin = server.arg("pin").toInt();
@@ -908,6 +964,7 @@ void discoveryLoop() {
   char buf[32] = {0};
   disc.read(buf, sizeof(buf) - 1);
   if (strncmp(buf, "M18BRIDGE?", 10) != 0) return;
+  noteActivity();                               // a PC is looking for us: stay awake
   String reply = String("M18BRIDGE ") + M18BRIDGE_VERSION + " host=" + hostName + ".local ip=" + ipString() +
                  " http=80 mac=" + WiFi.macAddress() + " auth=" + (webPass.length() ? "1" : "0") +
                  " unsynced=" + String((unsigned)(history.ready() ? history.unsynced() : 0)) + "\n";
@@ -925,6 +982,7 @@ struct LineInput {
     int budget = 256;                            // never starve the rest of loop()
     while (budget-- > 0 && s->available()) {
       char ch = (char)s->read();
+      noteActivity();
       if (ch == '\n' || ch == '\r') {
         if (overflow) s->println("ERR TOOLONG");
         else if (buf.length()) s->println(runCommand(buf, true));   // USB = physical access
@@ -1026,8 +1084,18 @@ void loop() {
     bootPressedSince = 0;
     if (pressed > 50 && pressed < 1500) {
       unlockUntil = millis() + UNLOCK_MS;
+      noteActivity();
       Serial.println("Einstellungen 2 Minuten entsperrt");
     }
+  }
+
+  // Energy saving: nobody used the bridge for sleepMin minutes -> deep sleep.
+  if (apActive && WiFi.softAPgetStationNum() > 0) noteActivity();   // phone on the setup AP
+  if (sleepMin && !scanRunning && !otaRunning && wstate != WState::CONNECTING && !held &&
+      millis() - lastUserActivity > sleepMin * 60000UL) {
+    bool idleLine = false;
+    if (xSemaphoreTake(batMutex, 0) == pdTRUE) { idleLine = batLink.isIdle(); xSemaphoreGive(batMutex); }
+    if (idleLine) goToSleep();
   }
 
   // Heap guard: restart cleanly (when idle) instead of failing in odd ways.

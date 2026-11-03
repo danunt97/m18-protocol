@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4 – Aufsteckgehäuse und Energiesparen
+- 3D-druckbares Aufsteckgehäuse (Bambu-3MF, STL, Fusion 360) mit Stückliste und Zusammenbau in `hardware/aufsteckgehaeuse/`.
+- Versorgung aus dem Akku über einen Step-down-Wandler (HW-411/LM2596); der Verdrahtungsplan ist entsprechend ergänzt.
+- Energiesparmodus der Brücke: Tiefschlaf nach einstellbarer Ruhezeit. J2 wird dabei per Pin-Hold auf Low gehalten, die BOOT-Taste weckt.
+
 ## 1.3 – Offline-Messungen und Passwort
 - ESP32-Brücke speichert jede Messung im Flash: Zeit, Standort/Kunde, Kommentar und alle Rohregister.
 - Neuer Tab „Verlauf“ auf der Brücke: Liste, Ansicht, Löschen, JSON-Export.

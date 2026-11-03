@@ -38,6 +38,7 @@ Das Projekt baut auf der Protokoll-Forschung von [mnh-jansson/m18-protocol](http
   - Watchdog
   - J2 bleibt im Ruhezustand sicher auf Low, damit der Akku keine „Dumb Charge“ zählt
 - **Optionaler Passwortschutz.** Einstellungen ändern geht nur nach einem Druck auf die BOOT-Taste.
+- **Aufsteckgehäuse zum 3D-Drucken**, Versorgung aus dem Akku, **Energiesparmodus** (Tiefschlaf nach Ruhezeit).
 
 ## Bilder
 
@@ -97,7 +98,13 @@ Es gibt zwei Möglichkeiten, den Akku anzuschließen:
 ![Übersicht](docs/images/architektur.svg)
 
 1. **3,3-V-USB-Seriell-Adapter** wie im ursprünglichen Projekt. Verdrahtung und Fehlersuche stehen in [docs/m18-protocol.md](docs/m18-protocol.md).
-2. **ESP32-S3-DevKitC-1 (N16R8) als Brücke.** Das bringt WLAN, Messen ohne PC und eine eigene Weboberfläche.
+2. **ESP32-S3 (N16R8) als Brücke.** Das bringt WLAN, Messen ohne PC und eine eigene Weboberfläche. Am bequemsten ist das
+   **3D-gedruckte Aufsteckgehäuse**: Es wird wie ein Werkzeug auf den Akku geschoben und versorgt die Elektronik über einen
+   Step-down-Wandler aus dem Akku. Druckdateien, Stückliste und Zusammenbau stehen in [hardware/aufsteckgehaeuse/](hardware/aufsteckgehaeuse/README.md).
+
+| Aufsteckgehäuse | Elektronik im Gehäuse |
+|---|---|
+| ![Aufsteckgehäuse](hardware/aufsteckgehaeuse/bilder/gehaeuse-geschlossen.png) | ![Elektronik](hardware/aufsteckgehaeuse/bilder/gehaeuse-elektronik.png) |
 
 ![Verdrahtung ESP32-S3](docs/images/verdrahtung-esp32s3.svg)
 
@@ -111,6 +118,9 @@ Flashen mit der Arduino IDE 2. Ins Werkzeuge-Menü gehören diese Einstellungen:
 Danach `esp32-bridge/m18_bridge/m18_bridge.ino` hochladen. Alles Weitere zu WLAN-Einrichtung, LED, Passwort und Update
 steht in [esp32-bridge/README.md](esp32-bridge/README.md).
 
+> ⚠️ **Step-down vor dem ersten Anschließen auf 5,0 V einstellen.** Solange das Gehäuse steckt, versorgt der Akku die Elektronik.
+> Die Brücke schläft deshalb nach 30 min Ruhe (BOOT-Taste weckt sie); nach Gebrauch abziehen.
+>
 > ⚠️ **Sicherheit:** Arbeiten an Li-Ion-Akkus auf eigene Gefahr. Die ESP32-Brücke kann nur lesen und die
 > 20-Zeichen-Notiz im Akku schreiben. Zähler, Kalibrierung oder Firmware des Akkus fasst sie nicht an.
 
@@ -142,6 +152,7 @@ gui/                    Akku-Verwaltung: Webserver, Datenbank, Alterung, QR, Ber
 esp32-bridge/
   m18_bridge/           Arduino-Sketch + reine C++-Header (Protokoll, Auslesen, Speicher)
   test/                 Simulator und Ende-zu-Ende-Tests
+hardware/aufsteckgehaeuse/  3D-Druck-Gehäuse (3MF, STL, Fusion 360), Stückliste, Zusammenbau
 docs/                   Bilder, ursprüngliche Protokoll-Doku, Register-Tabelle
 ```
 

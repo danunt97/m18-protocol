@@ -108,6 +108,13 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
     <input type="file" id="fwfile" accept=".bin"><button class="btn primary" id="fwbtn" style="margin-top:10px">Firmware hochladen</button>
     <div class="prog" id="fwprog" hidden><i></i></div><div id="fwres"></div>
     <p class="hint">.bin aus der Arduino IDE: <i>Sketch → Kompilierte Binärdatei exportieren</i> (die Datei ohne „bootloader“/„merged“ im Namen).</p></div></div>
+  <div class="card"><h2>Energiesparen</h2><div id="sleepstate"></div>
+    <label>Tiefschlaf nach Ruhe von</label><select id="sleepmin"><option value="0">nie</option><option value="10">10 Minuten</option>
+      <option value="30">30 Minuten</option><option value="60">1 Stunde</option><option value="240">4 Stunden</option></select>
+    <button class="btn" id="sleepsave" style="margin-top:10px">Speichern</button>
+    <p class="hint">Im Aufsteckgehäuse wird die Brücke aus dem Akku versorgt. Wach zieht sie ca. 30–40 mA – nach der eingestellten
+      Ruhezeit schläft sie (J2 bleibt auf Low). <b>Aufwecken: BOOT-Taste drücken.</b> Der Spannungswandler zieht auch im Schlaf noch
+      einige mA – Gehäuse nach Gebrauch abziehen oder einen Schalter einbauen.</p></div>
   <div class="card"><h2>Zugriffsschutz</h2><div id="passstate"></div>
     <label>Neues Passwort (leer lassen = Schutz aus)</label><input id="newpass" type="password" autocomplete="new-password" maxlength="63">
     <label>Wiederholen</label><input id="newpass2" type="password" autocomplete="new-password" maxlength="63">
@@ -249,7 +256,7 @@ $("#forget").onclick=async()=>{if(!confirm("WLAN-Daten löschen und neu starten?
   $("#wifistate").innerHTML='<div class="box info">Gelöscht – das Gerät startet im Einrichtungsmodus neu.</div>';};
 
 /* ---------- Gerät ---------- */
-async function devInfo(){const i=await info();if(!i)return;ledInit();
+async function devInfo(){const i=await info();if(!i)return;ledInit();sleepInit();
   $("#devinfo").innerHTML=[["Firmware",i.version],["Gerätename",i.host],["IP",i.ip||"–"],["WLAN",i.wifi=="sta"?i.ssid+" ("+i.rssi+" dBm)":"Einrichtungsmodus ("+i.ap+")"],
    ["MAC",i.mac],["Akku-Leitung",i.line=="idle"?"Ruhe (J2 low)":"aktiv"],["Laufzeit",hms(i.uptime_s)],["Letzter Neustart",i.reset_reason],
    ["Freier Speicher",nf(i.heap_kb)+" KB (min. "+nf(i.min_heap_kb)+") · PSRAM "+nf(i.psram_kb)+" KB"],
@@ -297,6 +304,12 @@ $("#passbtn").onclick=async()=>{const a=$("#newpass").value,b=$("#newpass2").val
   const r=await fetch("/api/password",{method:"POST",body:new URLSearchParams({pass:a})});const e=await r.json().catch(()=>({}));
   if(!r.ok){alert("Fehler: "+(e.error||r.status));return;}
   alert(a?"Passwort gesetzt. Der Browser fragt gleich danach (Benutzer „m18“).":"Passwortschutz ausgeschaltet.");$("#newpass").value=$("#newpass2").value="";location.reload();};
+/* Energiesparen */
+function sleepInit(){if(INFO.sleep_min==null)return;$("#sleepmin").value=String(INFO.sleep_min);
+  if(![...$("#sleepmin").options].some(o=>o.value==String(INFO.sleep_min))){const o=document.createElement("option");o.value=o.textContent=INFO.sleep_min;$("#sleepmin").appendChild(o);$("#sleepmin").value=String(INFO.sleep_min);}
+  $("#sleepstate").innerHTML=INFO.sleep_min?`<p class="hint" style="margin:0 0 6px">Schläft in ca. ${Math.ceil(INFO.sleep_in_s/60)} min, wenn niemand die Brücke benutzt.</p>`:"";}
+$("#sleepsave").onclick=async()=>{const r=await fetch("/api/power",{method:"POST",body:new URLSearchParams({sleep_min:$("#sleepmin").value})});
+  alert(r.ok?"Gespeichert":"Fehler");devInfo();};
 /* LED */
 function ledPinValue(){const v=$("#ledpin").value;return v=="custom"?$("#ledcustom").value:v;}
 function ledInit(){if(INFO.led_pin==null)return;const p=String(INFO.led_pin);

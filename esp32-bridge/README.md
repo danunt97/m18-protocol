@@ -31,7 +31,8 @@ Ein **ESP32-S3-N16R8** sitzt zwischen dem Akku und der PC-Software und ersetzt d
   Der 2,2-kΩ-Pull-Down überbrückt die Bootphase. Er muss kleiner sein als der 10-kΩ-Pull-Up auf der LV-Seite des Pegelwandlers.
 - Beim **N16R8** belegt der Octal-PSRAM die Pins GPIO35–37, und GPIO26–32 gehören dem Flash. Diese Pins nicht verwenden.
   17/18 sind frei. Andere Pins stellst du oben im Sketch ein (`PIN_TX`, `PIN_RX`).
-- Den ESP über USB versorgen, **nicht** direkt aus B+ (18–21 V).
+- **Versorgung:** über USB, oder im [Aufsteckgehäuse](../hardware/aufsteckgehaeuse/README.md) aus dem Akku über einen
+  Step-down-Wandler (HW-411/LM2596, **auf 5,0 V eingestellt**) an den 5V-Pin. **Nie** B+ (18–21 V) direkt anschließen.
 
 ## Status-LED (Onboard-RGB-LED)
 
@@ -116,7 +117,7 @@ lauffähig.
 Mit „USB CDC On Boot: Enabled“ funktionieren **beide** USB-Buchsen des DevKits für die PC-Software:
 „USB“ (nativ) und „UART“ (CH343). Zusätzliche Bibliotheken sind nicht nötig.
 
-Im seriellen Monitor (115200 Baud) erscheint `M18BRIDGE READY 1.3 host=m18-bridge-xxxx.local …`.
+Im seriellen Monitor (115200 Baud) erscheint `M18BRIDGE READY 1.4 host=m18-bridge-xxxx.local …`.
 Ein Schnelltest: `PING`, dann `SCAN` (liest den Akku komplett aus und gibt JSON zurück).
 
 ## WLAN einrichten (beim Kunden)
@@ -150,6 +151,17 @@ Die letzte Messung bleibt bis zum Neustart erhalten und ist als JSON abrufbar (`
 Das Alter rechnet die Brücke mit der Internetzeit (NTP), ohne Internet mit der Uhr im Akku.
 
 Für den **Verlauf und die Alterung über Zeit** gehört der Akku in die PC-Datenbank. Die Brücke zeigt nur die aktuelle Messung.
+
+## Energiesparmodus
+
+Wird die Brücke aus dem Akku versorgt (Aufsteckgehäuse), zieht sie wach ca. 30–40 mA bei 18 V. Ein 5-Ah-Akku wäre damit in etwa
+einer Woche leer. Deshalb geht sie nach einer einstellbaren Ruhezeit in den **Tiefschlaf**: Standard 30 min, einstellbar unter
+*Gerät → Energiesparen* von „nie“ bis 4 Stunden.
+
+- Als Benutzung zählen Webseite, USB-Befehle, die Suche der PC-Software und ein Handy im Einrichtungs-WLAN.
+- Im Schlaf bleibt **J2 per Pin-Hold auf Low**, WLAN und LED sind aus.
+- **Aufwecken:** BOOT-Taste drücken oder den Akku ab- und wieder anstecken. Unter *Gerät → Letzter Neustart* steht dann „Aufgewacht aus dem Energiesparmodus“.
+- Step-down-Wandler und der Pull-up des Pegelwandlers an B+ ziehen auch im Schlaf noch einige mA. Nach Gebrauch abziehen oder einen Schalter einbauen.
 
 ## Messungen speichern und in die PC-Datenbank übernehmen
 
@@ -238,7 +250,7 @@ Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus.
 
 | Befehl | Antwort | Bedeutung |
 |---|---|---|
-| `PING` | `OK M18BRIDGE 1.3` | Erkennung |
+| `PING` | `OK M18BRIDGE 1.4` | Erkennung |
 | `RESET` | `OK ACK` / `ERR NOACK [xx]` | TX 300 ms Low, 300 ms High, Sync 0xAA |
 | `IDLE` / `HIGH` | `OK` | TX auf Low halten / UART aktiv |
 | `READ <addr> <len>` | `OK <Antwortrahmen hex>` | Register lesen (wie `M18.cmd`) |
@@ -263,6 +275,7 @@ Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus.
 | `GET /api/history/item?id=`, `GET /api/history/stats` | Eine Messung / Speicherstand |
 | `POST /api/history/delete` (id), `POST /api/history/clear` | Löschen |
 | `POST /api/password` (pass) | Passwort setzen (nur entsperrt) |
+| `POST /api/power` (sleep_min) | Ruhezeit bis zum Tiefschlaf (0 = nie) |
 | `GET /api/last` | Letzte Messung (JSON) |
 | `GET /api/info` | Gerätestatus |
 | `GET /api/status` | Läuft ein Auslesen? Fortschritt in % |
@@ -275,7 +288,7 @@ Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus.
 
 **Auffinden:**
 
-- UDP-Broadcast `M18BRIDGE?` an Port 18018 → Antwort `M18BRIDGE 1.3 host=… ip=… http=80 mac=… auth=0|1 unsynced=N`
+- UDP-Broadcast `M18BRIDGE?` an Port 18018 → Antwort `M18BRIDGE 1.4 host=… ip=… http=80 mac=… auth=0|1 unsynced=N`
 - mDNS `<name>.local`, Dienste `_http._tcp` und `_m18bridge._tcp`
 
 Bewusst eingeschränkt: Die Brücke kann nur **lesen** und die **Notiz** schreiben – so wie `m18.py` mit
