@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7 – Ältere Akkus (5 Ah XC) direkt auf der Brücke
+- Ältere Akkus kennen die 13 Forge-Registerblöcke (0x4000–0x401F, 0x6000–0x600C) nicht und lehnen sie ab bzw. antworten nicht. Die Brücke hat das bisher nach drei Blöcken als „Verbindung zum Akku abgebrochen“ gewertet. Jetzt gilt: Antwortet der Akku noch auf den Sync, ist der Block nur „nicht unterstützt“ und das Auslesen läuft weiter (wie bei m18.py, das „------“ zeigt).
+- Nicht unterstützte Blöcke werden im zweiten Durchlauf nicht noch einmal mit Wiederholungen abgefragt; das spart Zeit. Neu im Ergebnis: `blocks_unsupported`.
+- Liefert ein Akku keine Zellspannungen, erscheint ein Hinweis statt „Zellspannungen unplausibel“.
+- PC: Zeitlimit für `SCAN` über die Brücke auf 90 s erhöht.
+
 ## 1.6 – Stabilität auf echter Hardware
 - Watchdog-Neustart behoben: Ein Handy, das mitten in einer Anfrage hängen blieb, konnte den Webserver länger als die 5 s des Watchdogs blockieren. Der Watchdog der Hauptschleife steht jetzt auf 30 s.
 - Unterspannung beim WLAN-Start: Die Brücke zählt Brownout-Neustarts, fährt danach das WLAN mit reduzierter Sendeleistung hoch und zeigt eine Warnung unter Gerät → „Stromversorgung“. Normale Sendeleistung jetzt 15 dBm (geringere Stromspitzen).

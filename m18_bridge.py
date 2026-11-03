@@ -390,7 +390,7 @@ class M18Bridge(m18.M18):
 
     def scan(self):
         """Let the bridge read and decode the battery itself; returns a dict."""
-        r = self.link.exec(["SCAN"], timeout=30)[0]
+        r = self.link.exec(["SCAN"], timeout=90)[0]   # older packs: unsupported blocks cost time
         return json.loads(r[r.index("{"):]) if "{" in r else {"ok": False, "error": r}
 
     # -- measurement history stored on the bridge ---------------------------

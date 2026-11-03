@@ -62,7 +62,8 @@ nichts, ist der andere Pin der richtige.
 | Ruhezustand über TX-Invertierung im UART statt UART aus/an | Kein Umhängen von Pins, gleiches Verhalten auf Core 2.x und 3.x |
 | WLAN-Aufbau im Hintergrund | USB antwortet sofort nach dem Einschalten, auch während das WLAN verbindet |
 | Bis zu 3 Reset-Versuche, Wiederholung und Resync pro Block | Ein verlorenes Byte bricht das Auslesen nicht ab |
-| Abbruch nach 3 Blöcken ohne Antwort | Gezogener Akku → Fehlermeldung nach wenigen Sekunden statt Hängen |
+| Abbruch nach 3 Blöcken ohne Antwort, wenn auch der Sync ausbleibt | Gezogener Akku → Fehlermeldung nach wenigen Sekunden statt Hängen |
+| Nicht unterstützte Register überspringen | Ältere Akkus (z. B. 5 Ah XC) haben die Forge-Register 0x4000–0x401F / 0x6000–0x600C nicht. Die Brücke liest trotzdem alles andere aus (`blocks_unsupported` im Ergebnis). |
 | Plausibilitätsprüfung | Unplausible Zellspannungen, fehlende Blöcke und Prüfsummenabweichungen erscheinen als Warnung |
 | Auslesen über die Webseite in eigenem Task | Webserver, LED, USB und BOOT-Taste bleiben bedienbar |
 | Mutex auf der Akku-Leitung | PC und Webseite können nie gleichzeitig senden. Der andere bekommt `ERR BUSY`, die PC-Software wartet automatisch. |

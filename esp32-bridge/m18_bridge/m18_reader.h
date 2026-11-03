@@ -80,6 +80,11 @@ class Reader {
   // Full read like m18.py read_id(): dummy pass, idle, reset, real pass, idle.
   // Hardened: several reset attempts, one retry + resync per block, abort as soon
   // as the battery stops answering (unplugged) instead of waiting for every timeout.
+  //
+  // Not every pack knows every register: older packs (e.g. 5Ah XC) reject or ignore the
+  // Forge blocks 0x4000-0x401F / 0x6000-0x600C - 13 blocks in a row. m18.py shows those as
+  // "------" and carries on, so do we: a block the battery rejects (0x82 reply) or ignores
+  // while it still answers the sync byte counts as "not supported", not as a lost connection.
   // Returns the number of blocks that answered in the real pass.
   int read() {
     mem_.clear();
@@ -87,6 +92,7 @@ class Reader {
     uint8_t buf[MAX_FRAME];
     ok_ = false;
     answered_ = 0;
+    unsupported_ = 0;
     retries_ = 0;
     cksumMismatch_ = 0;
     error_ = nullptr;
@@ -95,31 +101,53 @@ class Reader {
       fail("Akku antwortet nicht (kein Sync) – Akku aufgesteckt, Verkabelung J1/J2/B- ok?", t0);
       return 0;
     }
-    int fails = 0;
-    for (int i = 0; i < NUM_BLOCKS; i++) {           // dummy pass: refreshes the 0x9000 RAM copy
-      fails = readBlock(BLOCKS[i], buf, false) ? 0 : fails + 1;
+    // dummy pass: refreshes the 0x9000 RAM copy and finds out which blocks this pack supports
+    Res first[NUM_BLOCKS];
+    int silentRun = 0;
+    for (int i = 0; i < NUM_BLOCKS; i++) {
+      first[i] = readBlock(BLOCKS[i], buf, false);
       progress_ = progress_ + 1;
-      if (fails >= ABORT_AFTER_FAILS) { fail("Verbindung zum Akku abgebrochen", t0); return 0; }
+      if (first[i] != Res::SILENT) { silentRun = 0; continue; }
+      if (++silentRun >= ABORT_AFTER_FAILS) {         // gone, or just registers it does not have?
+        if (!resetWithRetry(2)) { fail("Verbindung zum Akku abgebrochen", t0); return 0; }
+        silentRun = 0;                                // still there: carry on
+      }
     }
     link_.idle();
     port_.delayMs(100);
     if (!resetWithRetry()) { fail("Akku antwortet nach dem ersten Durchlauf nicht mehr", t0); return 0; }
-    fails = 0;
+    int fails = 0;
+    silentRun = 0;
     for (int i = 0; i < NUM_BLOCKS; i++) {
-      bool okb = readBlock(BLOCKS[i], buf, true);
-      if (!okb) {                                     // retry once, then resync with a reset
-        retries_++;
-        port_.delayMs(40);
-        okb = readBlock(BLOCKS[i], buf, true);
-        if (!okb) {
+      Res r;
+      bool silentBefore = first[i] == Res::SILENT;
+      bool silentRegion = silentBefore && ((i > 0 && first[i - 1] == Res::SILENT) ||
+                                           (i + 1 < NUM_BLOCKS && first[i + 1] == Res::SILENT));
+      if (silentRegion) {
+        r = Res::SILENT;                              // whole region ignored in the dummy pass: skip
+      } else if (first[i] == Res::REJECTED) {
+        r = readBlock(BLOCKS[i], buf, true);          // rejected before: one attempt, no retries
+        if (r == Res::SILENT && ++silentRun >= ABORT_AFTER_FAILS) {
           if (!resetWithRetry(2)) { fail("Verbindung zum Akku abgebrochen", t0); return answered_; }
-          retries_++;
-          okb = readBlock(BLOCKS[i], buf, true);
+          silentRun = 0;
         }
+      } else {                                        // answered (or a single lost reply) before
+        r = readBlock(BLOCKS[i], buf, true);
+        if (r != Res::OK) {                           // lost/garbled reply: retry once, then resync
+          retries_++;
+          port_.delayMs(40);
+          r = readBlock(BLOCKS[i], buf, true);
+          if (r == Res::SILENT) {
+            if (!resetWithRetry(2)) { fail("Verbindung zum Akku abgebrochen", t0); return answered_; }
+            retries_++;
+            r = readBlock(BLOCKS[i], buf, true);
+          }
+        }
+        if (r == Res::SILENT && ++fails >= ABORT_AFTER_FAILS) { fail("Verbindung zum Akku abgebrochen", t0); return answered_; }
       }
       progress_ = progress_ + 1;
-      if (okb) { answered_++; fails = 0; }
-      else if (++fails >= ABORT_AFTER_FAILS) { fail("Verbindung zum Akku abgebrochen", t0); return answered_; }
+      if (r == Res::OK) { answered_++; fails = 0; silentRun = 0; }
+      else if (r == Res::REJECTED || silentRegion) unsupported_++;
     }
     link_.idle();
     durationMs_ = port_.millis() - t0;
@@ -139,7 +167,8 @@ class Reader {
     Json j(out, cap);
     j.raw("{");
     j.kv("ok", ok_);
-    j.kvn("blocks_ok", answered_); j.kvn("blocks_total", NUM_BLOCKS); j.kvn("duration_ms", durationMs_);
+    j.kvn("blocks_ok", answered_); j.kvn("blocks_total", NUM_BLOCKS); j.kvn("blocks_unsupported", unsupported_);
+    j.kvn("duration_ms", durationMs_);
     j.kvn("retries", retries_); j.kvn("checksum_mismatch", cksumMismatch_);
     if (!ok_) { j.kvs("error", error_ ? error_ : "Akku antwortet nicht", false); j.raw("}"); return j.len(); }
 
@@ -183,13 +212,14 @@ class Reader {
       }
     }
     // Plausibility: Li-ion cells are 2.0-4.4 V; anything else means a bad read or a broken pack.
-    bool cellsPlausible = ncell == 5;
+    bool cellsPlausible = ncell == 5 || ncell == 0;   // 0 = pack does not report them
     for (int i = 0; i < ncell; i++) if (cells[i] < 2000 || cells[i] > 4400) cellsPlausible = false;
     j.key("warnings"); j.raw("[");
     bool firstW = true;
     auto warn = [&](const char* w) { if (!firstW) j.raw(","); firstW = false; j.str(w); };
     if (!cellsPlausible) warn("Zellspannungen unplausibel – Messung wiederholen");
-    if (answered_ < NUM_BLOCKS) warn("Nicht alle Registerblöcke gelesen");
+    if (!ncell) warn("Zellspannungen von diesem Akku nicht abrufbar");
+    if (answered_ + unsupported_ < NUM_BLOCKS) warn("Nicht alle Registerblöcke gelesen");
     if (cksumMismatch_) warn("Prüfsummen-Abweichungen – Verkabelung/Störungen prüfen");
     for (int i = 0; i < ncell; i++) if (cells[i] >= 2000 && cells[i] < 2500) { warn("Zelle unter 2,5 V – tiefentladen"); break; }
     if (u(0x902E, 2) > 0) warn("Wurde schon mit einer Zelle < 2,5 V geladen");
@@ -300,18 +330,23 @@ class Reader {
     durationMs_ = port_.millis() - t0;
   }
 
-  bool readBlock(const Block& b, uint8_t* buf, bool store) {
+  // OK = data; REJECTED = the battery answered with an error reply (0x82: register not
+  // supported); SILENT = no or a garbled answer (unplugged, noise, or register ignored).
+  enum class Res : uint8_t { OK, REJECTED, SILENT };
+
+  Res readBlock(const Block& b, uint8_t* buf, bool store) {
     size_t want = (size_t)b.len + 5;
     size_t n = link_.command(0x01, 0x04, 0x03, (uint8_t)(b.addr >> 8), (uint8_t)b.addr, b.len,
                              buf, want, MAX_FRAME);
-    if (n < (size_t)b.len + 3 || buf[0] != 0x81) return false;      // too short / error reply
+    if (n >= 1 && buf[0] == 0x82) return Res::REJECTED;
+    if (n < (size_t)b.len + 3 || buf[0] != 0x81) return Res::SILENT;
     if (n == want) {                                                  // full frame: check the sum
       uint16_t sum = 0;
       for (size_t i = 0; i < n - 2; i++) sum += buf[i];
       if (((sum >> 8) & 0xFF) != buf[n - 2] || (sum & 0xFF) != buf[n - 1]) cksumMismatch_++;
     }
     if (store) mem_.store(b.addr, buf + 3, b.len);
-    return true;
+    return Res::OK;
   }
   long u(uint16_t a, size_t n) const { return mem_.has(a, n) ? (long)mem_.be(a, n) : -1; }
   uint32_t date(uint16_t a) const {
@@ -380,6 +415,7 @@ class Reader {
   Memory mem_;
   bool ok_ = false;
   int answered_ = 0;
+  int unsupported_ = 0;          // blocks this pack does not have (e.g. Forge registers on a 5Ah XC)
   int retries_ = 0;
   int cksumMismatch_ = 0;
   volatile int progress_ = 0;

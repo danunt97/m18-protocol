@@ -32,6 +32,7 @@ class SimBattery : public m18::Port {
   int dropEvery = 0;      // swallow every n-th command reply
   int failResets = 0;     // ignore the first n sync bytes
   int dieAfter = 0;       // battery "unplugged" after n commands
+  int oldPack = 0;        // older pack without the Forge registers: 1 = rejects them (0x82), 2 = ignores them
   int commands = 0;
   uint32_t clock = 0;
   std::map<uint16_t, uint8_t> mem;
@@ -75,6 +76,11 @@ class SimBattery : public m18::Port {
     for (int i = 0; i < 6; i++) sum += p[i];
     if (((sum >> 8) & 0xFF) != p[6] || (sum & 0xFF) != p[7]) { reply({0x82, 0x01}); return; }
     uint16_t addr = (uint16_t)(p[3] << 8 | p[4]);
+    bool forgeReg = (addr >= 0x4000 && addr < 0x4020) || (addr >= 0x6000 && addr < 0x600E);
+    if (oldPack && forgeReg && p[0] == 0x01 && p[1] == 0x04 && p[2] == 0x03) {
+      if (oldPack == 1) reply({0x82, 0x03});
+      return;
+    }
     if (p[0] == 0x01 && p[1] == 0x04 && p[2] == 0x03) {
       std::vector<uint8_t> r = {0x81, 0x04, p[5]};
       for (int i = 0; i < p[5]; i++) r.push_back(mem.count(addr + i) ? mem[addr + i] : 0);
@@ -208,6 +214,23 @@ int selftest() {
     expect(sc.find("Verbindung zum Akku abgebrochen") != std::string::npos ? "unplug: error" : sc.substr(0, 120), "unplug: error");
     expect(b3.clock < 15000 ? "unplug: fast" : "unplug: slow " + std::to_string(b3.clock), "unplug: fast");
     expect(b3.idle ? "idle" : "high", "idle");
+  }
+  for (int mode = 1; mode <= 2; mode++) {  // older 5Ah pack: 13 Forge blocks rejected / ignored
+    SimBattery b5;
+    b5.oldPack = mode;
+    m18::Link l5(b5);
+    m18::Reader r5(l5, b5);
+    m18::CommandProcessor p5(l5, r5);
+    std::string sc = run(p5, "SCAN");
+    std::string tag = mode == 1 ? "old pack (rejects): " : "old pack (silent): ";
+    expect(sc.rfind("OK {\"ok\":true", 0) == 0 ? tag + "ok" : sc.substr(0, 160), tag + "ok");
+    expect(sc.find("\"blocks_ok\":19,") != std::string::npos ? tag + "19 blocks" : sc.substr(0, 160), tag + "19 blocks");
+    expect(sc.find("\"blocks_unsupported\":13,") != std::string::npos ? tag + "13 unsupported" : sc.substr(0, 160), tag + "13 unsupported");
+    expect(sc.find("\"eserial\":\"306-412877\"") != std::string::npos ? tag + "serial" : sc.substr(0, 200), tag + "serial");
+    expect(sc.find("Nicht alle Registerblöcke") == std::string::npos ? tag + "no missing-block warning" : tag + "warned", tag + "no missing-block warning");
+    expect(sc.find("\"total_charges\":260") != std::string::npos ? tag + "counters" : tag + "no counters", tag + "counters");
+    expect(b5.clock < 45000 ? tag + "fast enough" : tag + "slow " + std::to_string(b5.clock), tag + "fast enough");
+    expect(b5.idle ? "idle" : "high", "idle");
   }
   {  // implausible cell voltages are flagged
     SimBattery b4;
