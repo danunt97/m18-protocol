@@ -3,6 +3,8 @@
 ## 1.6 – Stabilität auf echter Hardware
 - Watchdog-Neustart behoben: Ein Handy, das mitten in einer Anfrage hängen blieb, konnte den Webserver länger als die 5 s des Watchdogs blockieren. Der Watchdog der Hauptschleife steht jetzt auf 30 s.
 - Unterspannung beim WLAN-Start: Die Brücke zählt Brownout-Neustarts, fährt danach das WLAN mit reduzierter Sendeleistung hoch und zeigt eine Warnung unter Gerät → „Stromversorgung“. Normale Sendeleistung jetzt 15 dBm (geringere Stromspitzen).
+- Web-Flasher: Das Image ist nur noch ~1,3 MB statt 16 MB groß (leere Bytes am Ende abgeschnitten). Das Flashen dauert Sekunden statt Minuten und hängt nicht mehr lange bei 98 %.
+- Statusmeldungen („Setup-WLAN …“, „M18BRIDGE READY …“) erscheinen auf beiden USB-Buchsen.
 
 ## 1.5 – Sicherung, LED-Ergebnis, Web-Flasher, Docker
 - Aufsteckgehäuse: Sicherung T 500 mA im B+-Pfad (Stückliste, Verdrahtungsplan, Anleitung).

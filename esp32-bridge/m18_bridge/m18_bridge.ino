@@ -38,6 +38,7 @@
 #include <driver/gpio.h>
 #include <esp_sleep.h>
 #include <esp_task_wdt.h>
+#include <stdarg.h>
 #include <time.h>
 #include "m18_commands.h"
 #include "web_ui.h"
@@ -84,6 +85,22 @@ SemaphoreHandle_t batMutex;            // one user of the battery line at a time
 SemaphoreHandle_t stateMutex;          // protects lastScan
 SemaphoreHandle_t histMutex;           // protects the history store
 TaskHandle_t bridgeLoopTask = nullptr;
+
+// ------------------------------------------------------------ console log
+// Status lines go to both USB sockets: native USB (Serial) and, with "USB CDC On Boot", the
+// UART socket (Serial0). The boot ROM prints on both, so whichever socket a terminal or the
+// web flasher's log window uses, it also sees "Setup-WLAN ..." and "M18BRIDGE READY ...".
+void logf(const char* fmt, ...) {
+  char buf[256];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  Serial.print(buf);
+#if ARDUINO_USB_CDC_ON_BOOT
+  Serial0.print(buf);
+#endif
+}
 
 // ---------------------------------------------------------- watchdog helper
 static inline void feedWdt() {
@@ -449,7 +466,7 @@ void ledLoop(uint32_t bootHeldMs) {
 }
 
 void goToSleep() {
-  Serial.println("Energiesparmodus: Tiefschlaf. Aufwecken mit der BOOT-Taste.");
+  logf("Energiesparmodus: Tiefschlaf. Aufwecken mit der BOOT-Taste.\n");
   if (lockBattery(3000)) { batLink.idle(); unlockBattery(); }
   BatSerial.flush();
   BatSerial.end();
@@ -594,7 +611,7 @@ void startAP() {
   dnsActive = true;
   apCloseAt = 0;
   if (wstate != WState::CONNECTING) wstate = WState::AP;
-  Serial.printf("Setup-WLAN \"%s\" (Passwort %s) -> http://%s\n", apName.c_str(),
+  logf("Setup-WLAN \"%s\" (Passwort %s) -> http://%s\n", apName.c_str(),
                 webPass.length() >= 8 ? "= Web-Passwort" : AP_PASSWORD,
                 WiFi.softAPIP().toString().c_str());
 }
@@ -629,7 +646,7 @@ void onConnected() {
     portalConnect = false;
   }
   if (apActive) apCloseAt = millis() + AP_CLOSE_AFTER_MS;
-  Serial.printf("WLAN verbunden: %s, http://%s.local (%s)\n", WiFi.SSID().c_str(), hostName.c_str(),
+  logf("WLAN verbunden: %s, http://%s.local (%s)\n", WiFi.SSID().c_str(), hostName.c_str(),
                 WiFi.localIP().toString().c_str());
 }
 
@@ -1131,10 +1148,10 @@ void setup() {
   proc.setMetaProvider(recordMeta);
   history.setLock(histLock, histUnlock);
   if (storage.mount() && history.begin()) proc.setHistory(&history);
-  else Serial.println("WARNUNG: kein Dateisystem - Messungen werden nicht gespeichert (Partition Scheme prüfen)");
+  else logf("WARNUNG: kein Dateisystem - Messungen werden nicht gespeichert (Partition Scheme prüfen)\n");
 
   if (lowTxPower) {
-    Serial.printf("WARNUNG: Neustart wegen Unterspannung (%lu seit dem Einschalten) - WLAN mit reduzierter Sendeleistung. "
+    logf("WARNUNG: Neustart wegen Unterspannung (%lu seit dem Einschalten) - WLAN mit reduzierter Sendeleistung. "
                   "USB-Kabel/-Anschluss bzw. Step-down (5,0 V) prüfen.\n", (unsigned long)brownouts);
     delay(300);                                 // let the supply recover before the Wi-Fi current peak
   }
@@ -1158,7 +1175,7 @@ void setup() {
   setupHttp();
   setupWatchdog();
   enableLoopWDT();                              // loop() must come back within the watchdog timeout
-  Serial.printf("\nM18BRIDGE READY %s host=%s.local ip=%s reset=%s\n", M18BRIDGE_VERSION, hostName.c_str(),
+  logf("\nM18BRIDGE READY %s host=%s.local ip=%s reset=%s\n", M18BRIDGE_VERSION, hostName.c_str(),
                 ipString().c_str(), resetReason());
 }
 
@@ -1196,7 +1213,7 @@ void loop() {
     if (pressed > 50 && pressed < 1500) {
       unlockUntil = millis() + UNLOCK_MS;
       noteActivity();
-      Serial.println("Einstellungen 2 Minuten entsperrt");
+      logf("Einstellungen 2 Minuten entsperrt\n");
     }
   }
 
