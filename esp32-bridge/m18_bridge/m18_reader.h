@@ -86,7 +86,28 @@ class Reader {
   // "------" and carries on, so do we: a block the battery rejects (0x82 reply) or ignores
   // while it still answers the sync byte counts as "not supported", not as a lost connection.
   // Returns the number of blocks that answered in the real pass.
+  //
+  // A failed read is repeated once by itself after a longer pause with J2 low: some packs
+  // occasionally miss the wake-up/sync right after the previous session. The reason of the
+  // first attempt stays in the result ("first_error") for diagnosis.
   int read() {
+    uint32_t t0 = port_.millis();
+    attempts_ = 1;
+    firstError_ = nullptr;
+    int n = readOnce();
+    if (!ok_) {
+      firstError_ = error_;
+      link_.idle();
+      port_.delayMs(RETRY_PAUSE_MS);
+      attempts_ = 2;
+      n = readOnce();
+    }
+    durationMs_ = port_.millis() - t0;
+    return n;
+  }
+
+ private:
+  int readOnce() {
     mem_.clear();
     uint32_t t0 = port_.millis();
     uint8_t buf[MAX_FRAME];
@@ -156,6 +177,8 @@ class Reader {
     return answered_;
   }
 
+
+ public:
   // Progress of a running read() in percent (safe to poll from another task).
   int progressPercent() const { return progress_ * 100 / (2 * NUM_BLOCKS); }
 
@@ -169,7 +192,8 @@ class Reader {
     j.kv("ok", ok_);
     j.kvn("blocks_ok", answered_); j.kvn("blocks_total", NUM_BLOCKS); j.kvn("blocks_unsupported", unsupported_);
     j.kvn("duration_ms", durationMs_);
-    j.kvn("retries", retries_); j.kvn("checksum_mismatch", cksumMismatch_);
+    j.kvn("retries", retries_); j.kvn("checksum_mismatch", cksumMismatch_); j.kvn("attempts", attempts_);
+    if (firstError_) j.kvs("first_error", firstError_);
     if (!ok_) { j.kvs("error", error_ ? error_ : "Akku antwortet nicht", false); j.raw("}"); return j.len(); }
 
     uint16_t type = (uint16_t)mem_.be(0x0004, 2);
@@ -313,6 +337,7 @@ class Reader {
 
  private:
   static const int ABORT_AFTER_FAILS = 3;
+  static const uint32_t RETRY_PAUSE_MS = 1500;   // J2 low before the automatic second attempt
 
   bool resetWithRetry(int attempts = 3) {
     for (int attempt = 0; attempt < attempts; attempt++) {
@@ -420,6 +445,8 @@ class Reader {
   int cksumMismatch_ = 0;
   volatile int progress_ = 0;
   const char* error_ = nullptr;
+  const char* firstError_ = nullptr;
+  int attempts_ = 0;
   uint32_t durationMs_ = 0;
 };
 

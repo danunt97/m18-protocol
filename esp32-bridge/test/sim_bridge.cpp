@@ -212,8 +212,19 @@ int selftest() {
     m18::CommandProcessor p3(l3, r3);
     std::string sc = run(p3, "SCAN");
     expect(sc.find("Verbindung zum Akku abgebrochen") != std::string::npos ? "unplug: error" : sc.substr(0, 120), "unplug: error");
-    expect(b3.clock < 15000 ? "unplug: fast" : "unplug: slow " + std::to_string(b3.clock), "unplug: fast");
+    expect(b3.clock < 25000 ? "unplug: fast" : "unplug: slow " + std::to_string(b3.clock), "unplug: fast");
     expect(b3.idle ? "idle" : "high", "idle");
+  }
+  {  // pack misses the wake-up of one session: the bridge repeats the read by itself
+    SimBattery b6;
+    b6.failResets = 3;                                  // the whole first attempt gets no sync
+    m18::Link l6(b6);
+    m18::Reader r6(l6, b6);
+    m18::CommandProcessor p6(l6, r6);
+    std::string sc = run(p6, "SCAN");
+    expect(sc.rfind("OK {\"ok\":true", 0) == 0 ? "auto retry: ok" : sc.substr(0, 160), "auto retry: ok");
+    expect(sc.find("\"attempts\":2,\"first_error\":\"Akku antwortet nicht (kein Sync)") != std::string::npos ? "auto retry: reported" : sc.substr(0, 220), "auto retry: reported");
+    expect(sc.find("\"blocks_ok\":32,") != std::string::npos ? "auto retry: 32 blocks" : sc.substr(0, 160), "auto retry: 32 blocks");
   }
   for (int mode = 1; mode <= 2; mode++) {  // older 5Ah pack: 13 Forge blocks rejected / ignored
     SimBattery b5;

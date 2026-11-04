@@ -5,6 +5,7 @@
 - Nicht unterstützte Blöcke werden im zweiten Durchlauf nicht noch einmal mit Wiederholungen abgefragt; das spart Zeit. Neu im Ergebnis: `blocks_unsupported`.
 - Liefert ein Akku keine Zellspannungen, erscheint ein Hinweis statt „Zellspannungen unplausibel“.
 - PC: Zeitlimit für `SCAN` über die Brücke auf 90 s erhöht.
+- Schlägt das Auslesen fehl, versucht es die Brücke nach 1,5 s Pause (J2 low) automatisch ein zweites Mal. Der Grund des ersten Fehlversuchs steht im Ergebnis (`attempts`, `first_error`) und auf der Webseite.
 
 ## 1.6 – Stabilität auf echter Hardware
 - Watchdog-Neustart behoben: Ein Handy, das mitten in einer Anfrage hängen blieb, konnte den Webserver länger als die 5 s des Watchdogs blockieren. Der Watchdog der Hauptschleife steht jetzt auf 30 s.

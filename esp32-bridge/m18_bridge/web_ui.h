@@ -167,10 +167,11 @@ function hms(s){if(s==null)return"–";const h=Math.floor(s/3600),m=Math.floor(s
 function render(d,when){
   if(!d){$("#result").innerHTML="";return;}
   if(!d.ok){$("#result").innerHTML=`<div class="card"><div class="box err"><b>Auslesen fehlgeschlagen:</b> ${esc(d.error||"unbekannt")}<br>
-    <span class="hint">Akku richtig aufgesteckt? Verkabelung J1/J2/B− prüfen. (${d.blocks_ok||0}/${d.blocks_total||0} Blöcke)</span></div></div>`;return;}
+    <span class="hint">Akku richtig aufgesteckt? Verkabelung J1/J2/B− prüfen. (${d.blocks_ok||0}/${d.blocks_total||0} Blöcke${d.attempts>1?", 2 Versuche":""}${d.first_error&&d.first_error!=d.error?", 1. Versuch: "+esc(d.first_error):""})</span></div></div>`;return;}
   const c=d.counters||{},cells=d.cells_mv||[],lo=Math.min(...cells),hi=Math.max(...cells);
   const warns=(d.warnings||[]).length?`<div class="card"><div class="box err" style="margin:0">${d.warnings.map(w=>"⚠ "+esc(w)).join("<br>")}</div></div>`:"";
-  $("#result").innerHTML=warns+`
+  const retryNote=d.attempts>1?`<div class="card"><div class="box info" style="margin:0">Erst im 2. Versuch gelesen. 1. Versuch: ${esc(d.first_error||"?")}</div></div>`:"";
+  $("#result").innerHTML=warns+retryNote+`
   <div class="card"><div class="hero">${gauge(d.health,d.status)}
     <div class="title"><b>${esc(d.model)}</b><span class="mono">E-Seriennr. ${esc(d.eserial)}</span>${d.note?`<br><span>Notiz: „${esc(d.note)}“</span>`:""}
     <br><span class="badge ${d.status}">${STL[d.status]||d.status}</span> <span class="hint">Zustand (Schätzung)</span></div></div>
