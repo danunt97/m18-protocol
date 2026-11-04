@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8 – Alle Werte auch auf dem Handy
+- Die Weboberfläche der Brücke zeigt nach dem Auslesen **alle 185 Werte**, die der Akku liefert (dieselben Register wie die PC-Software): Grunddaten, aktuelle Messwerte, Zähler, Entladezeit nach Strom (10-A- und 5-A-Stufen), Ladungen nach Spannung und Temperatur, Ladedauer-Histogramme, unbekannte Register. Histogramme als Balken, deutsche Bezeichnungen, Registeradresse dazu.
+- Werte, die ein Akku nicht liefert, stehen als „nicht verfügbar“.
+- Export direkt vom Handy: „Alle Werte als CSV“ (Excel, mit Rohwerten) und „Rohdaten (JSON)“; auch für gespeicherte Messungen im Tab „Verlauf“.
+- Die Tabelle wird aus `m18.py` erzeugt (`esp32-bridge/tools/gen_regs.py`); die Tests prüfen, dass sie aktuell ist.
+
 ## 1.7 – Ältere Akkus (5 Ah XC) direkt auf der Brücke
 - Ältere Akkus kennen die 13 Forge-Registerblöcke (0x4000–0x401F, 0x6000–0x600C) nicht und lehnen sie ab bzw. antworten nicht. Die Brücke hat das bisher nach drei Blöcken als „Verbindung zum Akku abgebrochen“ gewertet. Jetzt gilt: Antwortet der Akku noch auf den Sync, ist der Block nur „nicht unterstützt“ und das Auslesen läuft weiter (wie bei m18.py, das „------“ zeigt).
 - Nicht unterstützte Blöcke werden im zweiten Durchlauf nicht noch einmal mit Wiederholungen abgefragt; das spart Zeit. Neu im Ergebnis: `blocks_unsupported`.

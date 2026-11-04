@@ -175,6 +175,17 @@ Das Alter rechnet die Brücke mit der Internetzeit (NTP), ohne Internet mit der 
 
 Für den **Verlauf und die Alterung über Zeit** gehört der Akku in die PC-Datenbank. Die Brücke zeigt nur die aktuelle Messung.
 
+### Alle Werte
+
+Unter dem Ergebnis steht die Karte **„Alle Werte aus dem Akku“**: jeder der 185 Werte, die auch die PC-Software liest, nach Gruppen sortiert.
+Die Histogramme (Entladezeit nach Strom, Ladungen nach Spannung und Temperatur, Ladedauer) sind als Balken dargestellt.
+Werte, die ein Akku nicht hat (z. B. Forge-Register bei älteren 5-Ah-Akkus), stehen als „nicht verfügbar“.
+<img src="../docs/images/esp-alle-werte.png" alt="Alle Werte auf dem Handy" width="320">
+
+Mit **„Alle Werte als CSV“** bzw. **„Rohdaten (JSON)“** lässt sich alles direkt auf dem Handy speichern, auch bei gespeicherten Messungen im Tab „Verlauf“.
+
+Die Bezeichnungen kommen aus `m18.py` und werden mit `python esp32-bridge/tools/gen_regs.py` in `web_ui.h` übernommen.
+
 ## Ergebnis auf der LED
 
 Nach jedem Auslesen zeigt die LED **30 Sekunden** das Ergebnis:
