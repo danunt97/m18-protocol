@@ -9,6 +9,7 @@ bridge's energy-saving timer: a battery-powered bridge still falls asleep.
 """
 
 import datetime as _dt
+import logging
 import threading
 import time
 
@@ -59,7 +60,7 @@ class AutoSync:
                 for b in m18_bridge.discover(timeout=discover_timeout):
                     targets.append(b.get("ip"))
             except OSError as e:
-                self.log(f"Abgleich: Suche fehlgeschlagen ({e})")
+                self.log(f"Abgleich: Suche fehlgeschlagen ({e})", logging.WARNING)
             for h in self.hosts():
                 if h not in targets:
                     targets.append(h)
@@ -85,8 +86,13 @@ class AutoSync:
                     entry["error"] = "Passwort fehlt oder falsch (Einstellungen → Brücken-Passwort)"
                 except Exception as e:  # unreachable, asleep, old firmware ...
                     entry["error"] = str(e)
+                if entry.get("error"):
+                    self.log(f"Automatischer Abgleich {t}: {entry['error']}", logging.WARNING)
                 results.append(entry)
             self.status.update(last_run=iso(utcnow()), last_results=results)
+            self.log(f"Automatischer Abgleich: {len(targets)} Brücke(n) geprüft"
+                     + (": " + ", ".join(f"{e['target']} {'ok' if e['ok'] else 'Fehler'}" for e in results) if results else ""),
+                     logging.DEBUG)
             return {"ok": True, "results": results}
         finally:
             self.status["running"] = False

@@ -401,7 +401,13 @@ async function viewRead() {
     <div id="bridgehist" style="margin-top:16px"></div>
     <div id="readresult" style="margin-top:16px"></div>
     <div class="grid g2" style="margin-top:16px">
-      <details class="card"><summary>Protokoll</summary><pre class="log" id="log"></pre></details>
+      <details class="card" id="logcard"><summary>Protokoll</summary><pre class="log" id="log"></pre>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <a class="btn small" href="/api/log/download">${ICON.dl} PC-Protokoll</a>
+          <button class="btn small" id="bridgelog" ${st.connected ? "" : "disabled"} title="mit verbundener ESP32-Brücke">Brücken-Protokoll anzeigen</button>
+          <a class="btn small" href="/api/diagnose">${ICON.dl} Diagnose-Datei</a></div>
+        <p class="hint" style="margin-top:6px">Die Diagnose-Datei enthält PC-Protokoll, Einstellungen (ohne Passwörter) und – wenn verbunden – Status und Protokoll der Brücke.</p>
+        <pre class="log" id="blog" hidden></pre></details>
       <details class="card"><summary>Erweitert: Notiz in den Akku schreiben</summary>
         <p class="hint" style="margin-bottom:8px">Schreibt bis zu 20 Zeichen in den Notizspeicher des Akkus (Register 0x0023).</p>
         <div class="conn"><input id="notetext" maxlength="20" placeholder="z. B. A-07 Firma" style="flex:1">
@@ -412,9 +418,18 @@ async function viewRead() {
     $("#cdot").classList.toggle("on", on);
     $("#connect").textContent = on ? "Trennen" : "Verbinden";
     $("#connect").classList.toggle("primary", !on);
-    ["#read", "#idle", "#writenote"].forEach((s) => $(s).disabled = !on);
+    ["#read", "#idle", "#writenote", "#bridgelog"].forEach((s) => $(s).disabled = !on);
     $("#readhint").textContent = on ? "Das Auslesen dauert ca. 10–20 Sekunden." : "Zuerst verbinden.";
   };
+  const showBridgeLog = async () => {
+    const el = $("#blog");
+    el.hidden = false;
+    el.textContent = "…";
+    const d = await api("/api/bridge/log?n=250");
+    el.textContent = d.ok ? (d.lines || []).join("\n") || "(leer)" : (d.error || "nicht abrufbar");
+    el.scrollTop = el.scrollHeight;
+  };
+  if ($("#bridgelog")) $("#bridgelog").onclick = showBridgeLog;
   const refreshLog = async () => {
     const d = await api("/api/log");
     const el = $("#log");

@@ -225,6 +225,9 @@ int selftest() {
     expect(sc.rfind("OK {\"ok\":true", 0) == 0 ? "auto retry: ok" : sc.substr(0, 160), "auto retry: ok");
     expect(sc.find("\"attempts\":2,\"first_error\":\"Akku antwortet nicht (kein Sync)") != std::string::npos ? "auto retry: reported" : sc.substr(0, 220), "auto retry: reported");
     expect(sc.find("\"blocks_ok\":32,") != std::string::npos ? "auto retry: 32 blocks" : sc.substr(0, 160), "auto retry: 32 blocks");
+    expect(sc.find("Wecken 1/3: keine Antwort auf Sync") != std::string::npos ? "trace: wake-up" : sc.substr(0, 400), "trace: wake-up");
+    expect(sc.find("Versuch 1 fehlgeschlagen: Akku antwortet nicht") != std::string::npos ? "trace: attempt 1" : "no attempt trace", "trace: attempt 1");
+    expect(sc.find("Fertig: Typ 306 Nr. 412877, 32/32") != std::string::npos ? "trace: done" : "no done trace", "trace: done");
   }
   for (int mode = 1; mode <= 2; mode++) {  // older 5Ah pack: 13 Forge blocks rejected / ignored
     SimBattery b5;
@@ -242,6 +245,53 @@ int selftest() {
     expect(sc.find("\"total_charges\":260") != std::string::npos ? tag + "counters" : tag + "no counters", tag + "counters");
     expect(b5.clock < 45000 ? tag + "fast enough" : tag + "slow " + std::to_string(b5.clock), tag + "fast enough");
     expect(b5.idle ? "idle" : "high", "idle");
+    const char* list = mode == 1 ? "abgelehnt: 4000 400A 4014 4016 4019 401B 401D 401F 6000 6002 6004 6008 600C"
+                                 : "ohne Antwort: 4000 400A 4014 4016 4019 401B 401D 401F 6000 6002 6004 6008 600C";
+    expect(sc.find(list) != std::string::npos ? tag + "trace lists blocks" : sc.substr(sc.find("trace"), 300), tag + "trace lists blocks");
+  }
+  {  // event log: RAM ring, flash chunks, rotation, recovery after a crash, LOG command
+    std::string dir = (fs::temp_directory_path() / ("m18log_" + std::to_string(::getpid()))).string();
+    fs::remove_all(dir);
+    HostStorage st(dir);
+    std::string mirrored;
+    static std::string* mir = nullptr;
+    mir = &mirrored;
+    m18::EventLog lg;
+    lg.setMirror([](const std::string& p) { *mir = p; });
+    lg.add("SYS", 0, "vor begin %d", 1);                // before the flash is attached
+    lg.begin(&st, 7);
+    lg.add("AKKU", 0, "Sync ok");
+    expect(mirrored.find("AKKU Sync ok") != std::string::npos ? "log: mirror pending" : mirrored, "log: mirror pending");
+    lg.add("WLAN", 1, "Verbindung verloren");          // warning: flushed at once
+    expect(mirrored.empty() ? "log: flushed" : "pending: " + mirrored, "log: flushed");
+    std::string all = lg.all();
+    expect(all.find("B7 +") != std::string::npos && all.find("WLAN WARNUNG: Verbindung verloren") != std::string::npos ? "log: format" : all, "log: format");
+    for (int i = 0; i < 2000; i++) lg.add("PC", 0, "Zeile %d", i);
+    lg.flush();
+    std::vector<std::string> chunks;
+    st.list("/log", chunks);
+    expect(chunks.size() <= 60 ? "log: rotation" : "chunks " + std::to_string(chunks.size()), "log: rotation");
+    all = lg.all();
+    expect(all.find("Zeile 1999") != std::string::npos && all.find("Zeile 0\n") == std::string::npos ? "log: newest kept" : "bad rotation", "log: newest kept");
+    m18::EventLog lg2;                                  // "after a restart": continues numbering, recovers lost lines
+    lg2.begin(&st, 8);
+    lg2.recover("B7 +0000012.3s - AKKU nicht gespeichert\n", "Watchdog");
+    std::string a2 = lg2.all();
+    expect(a2.find("wiederhergestellt") != std::string::npos && a2.find("  B7 +0000012.3s - AKKU nicht gespeichert") != std::string::npos ? "log: recover" : a2.substr(a2.size() > 300 ? a2.size() - 300 : 0), "log: recover");
+    expect(a2.find("Zeile 1999") != std::string::npos ? "log: survives restart" : "lost", "log: survives restart");
+    SimBattery b7;
+    m18::Link l7(b7);
+    m18::Reader r7(l7, b7);
+    m18::CommandProcessor p7(l7, r7);
+    p7.setLog(&lg2);
+    static m18::EventLog* tl = &lg2;
+    r7.setTrace([](void*, const char* line) { tl->addText("AKKU", 0, line); }, nullptr);
+    run(p7, "SCAN NOSTORE");
+    std::string lr = run(p7, "LOG 5");
+    expect(lr.rfind("OK {\"boot\":8,", 0) == 0 && lr.find("AKKU Fertig: Typ 306") != std::string::npos ? "LOG command" : lr.substr(0, 300), "LOG command");
+    lg2.clear();
+    expect(lg2.all().empty() ? "log: clear" : "not cleared", "log: clear");
+    fs::remove_all(dir);
   }
   {  // implausible cell voltages are flagged
     SimBattery b4;
@@ -330,6 +380,11 @@ int serve(const char* histDir) {
   p.setTimeSetter(simSetTime);
   p.setMetaProvider(simMeta);
   p.setInfoExtra("\"boot\":4242,\"uptime_s\":200");
+  static m18::EventLog evlog;                      // same event log + battery trace as the firmware
+  evlog.begin(&st, 42);
+  evlog.add("SYS", 0, "Simulator gestartet, Firmware %s", M18BRIDGE_VERSION);
+  p.setLog(&evlog);
+  reader.setTrace([](void*, const char* line) { evlog.addText("AKKU", 0, line); }, nullptr);
   std::printf("M18BRIDGE READY %s wifi=off ip=\n", M18BRIDGE_VERSION);
   std::fflush(stdout);
   std::string line;

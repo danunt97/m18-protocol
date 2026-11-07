@@ -15,6 +15,7 @@
 //   HACK <id>               -> OK            (record imported by the PC)
 //   HDEL <id>               -> OK
 //   HCLEAR [synced|all]     -> OK <n deleted>
+//   LOG [n]                 -> OK {"boot","total","lines":[...]}  (event log of the bridge)
 // Numbers may be decimal or 0x-prefixed hex.
 
 #pragma once
@@ -23,6 +24,7 @@
 #include "m18_proto.h"
 #include "m18_reader.h"
 #include "m18_history.h"
+#include "m18_log.h"
 
 namespace m18 {
 
@@ -36,6 +38,7 @@ class CommandProcessor {
   void setTimeSetter(bool (*setter)(uint32_t)) { setTime_ = setter; }
   // History store and the meta (time, location, ...) for records created by SCAN.
   void setHistory(History* h) { history_ = h; }
+  void setLog(EventLog* l) { log_ = l; }
   void setMetaProvider(void (*fn)(RecordMeta&)) { meta_ = fn; }
   // Optional extra info for INFO (set by the sketch, e.g. Wi-Fi state as JSON fields).
   void setInfoExtra(const char* json) { infoExtra_ = json; }
@@ -64,6 +67,16 @@ class CommandProcessor {
       out += scanBuf_;
       if (id) out.insert(out.size() - 1, ",\"history_id\":" + std::to_string(id));
       return out;
+    }
+    if (!strcmp(cmd, "LOG")) {                  // LOG [n]: last n lines of the event log as JSON
+      if (!log_) return "ERR NOLOG";
+      size_t n = argc > 1 ? (size_t)strtoul(argv[1], nullptr, 10) : 100;
+      if (n == 0 || n > EventLog::RAM_LINES) n = EventLog::RAM_LINES;
+      std::string out = "OK {\"boot\":" + std::to_string(log_->boot()) + ",\"total\":" +
+                        std::to_string(log_->total()) + ",\"lines\":[";
+      auto lines = log_->tail(n);
+      for (size_t i = 0; i < lines.size(); i++) { if (i) out += ","; out += EventLog::jsonStr(lines[i]); }
+      return out + "]}";
     }
     if (!strcmp(cmd, "PING")) { snprintf(r, sizeof(r), "OK M18BRIDGE %s", M18BRIDGE_VERSION); return r; }
     if (!strcmp(cmd, "IDLE")) { link_.idle(); return "OK"; }
@@ -163,11 +176,12 @@ class CommandProcessor {
   Link& link_;
   Reader& reader_;
   History* history_ = nullptr;
+  EventLog* log_ = nullptr;
   uint32_t (*clock_)() = NULL;
   bool (*setTime_)(uint32_t) = NULL;
   void (*meta_)(RecordMeta&) = NULL;
   const char* infoExtra_ = NULL;
-  char scanBuf_[4608] = "{}";
+  char scanBuf_[8192] = "{}";   // decoded read-out + raw blocks + trace
 };
 
 }  // namespace m18

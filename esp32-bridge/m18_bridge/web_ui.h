@@ -126,6 +126,14 @@ details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;pa
     <button class="btn primary" id="passbtn" style="margin-top:10px">Speichern</button>
     <p class="hint">Schützt Weboberfläche und PC-Zugriff (Benutzer „m18“). Ab 8 Zeichen gilt es auch für das Einrichtungs-WLAN.
       Vergessen? BOOT-Taste 5 s halten setzt WLAN und Passwort zurück.</p></div>
+  <div class="card"><h2>Protokoll</h2>
+    <p class="hint" style="margin-top:0">Was Brücke und Akku getan haben: Start, WLAN, Befehle vom PC, jedes Auslesen mit Ablauf
+      (Wecken, abgelehnte Register, Wiederholungen), Updates, Neustarts. Bleibt nach einem Neustart erhalten.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+      <button class="btn" id="logref">Aktualisieren</button><a class="btn" href="/api/log.txt" download>Komplett herunterladen</a>
+      <button class="btn" id="logclr">Löschen</button>
+      <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="logwarn" style="width:auto"> nur Warnungen/Fehler</label></div>
+    <pre id="logbox" style="max-height:420px">…</pre></div>
   <div class="card"><h2>Befehle</h2><textarea id="cmd" rows="4">PING
 RESET
 READ 0x400A 10
@@ -185,9 +193,12 @@ function regCsv(k){const d=regStore[k];if(!d)return;const b=regBytes(d.mem),q=v=
   regSave("m18-"+d.eserial+"-alle-werte.csv","\ufeff"+lines.join("\r\n"),"text/csv");}
 function regJson(k){const d=regStore[k];if(d)regSave("m18-"+d.eserial+".json",JSON.stringify(d,null,1),"application/json");}
 let INFO={};
+async function logLoad(){const el=$("#logbox");if(!el)return;try{const d=await j("/api/log?n=250");
+  let l=d.lines||[];if($("#logwarn").checked)l=l.filter(x=>/WARNUNG|FEHLER/.test(x));
+  el.textContent=l.length?l.join("\n"):"(keine Einträge)";el.scrollTop=el.scrollHeight;}catch(e){el.textContent="Protokoll nicht abrufbar";}}
 async function j(url,opt){const r=await fetch(url,opt);return r.json();}
 function tab(name){$$("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab==name));$$("main>section").forEach(s=>s.hidden=s.id!="tab-"+name);
-  if(name=="wlan")wifiState();if(name=="geraet")devInfo();if(name=="verlauf"){histStats();histLoad(true);}}
+  if(name=="wlan")wifiState();if(name=="geraet"){devInfo();logLoad();}if(name=="verlauf"){histStats();histLoad(true);}}
 $$("nav button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 
 async function info(){try{INFO=await j("/api/info");}catch(e){return;}
@@ -215,10 +226,13 @@ function gauge(v,st){const r=48,c=2*Math.PI*r,f=v==null||v<0?0:Math.min(100,v)/1
   <text x="60" y="84" text-anchor="middle" font-size="10" fill="#959ba3">von 100</text></svg>`;}
 const STL={good:"Gut",watch:"Beobachten",weak:"Schwach",unknown:"Unbekannt"};
 function hms(s){if(s==null)return"–";const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h+" h "+String(m).padStart(2,"0")+" min";}
+function traceBox(d,open){const t=d&&d.trace||[];if(!t.length)return"";
+  return `<details class="card"${open?" open":""}><summary style="cursor:pointer;font-weight:600">Ablauf beim Auslesen (${t.length} Schritte)</summary>
+    <pre style="margin-top:10px">${esc(t.join("\n"))}</pre></details>`;}
 function render(d,when){
   if(!d){$("#result").innerHTML="";return;}
   if(!d.ok){$("#result").innerHTML=`<div class="card"><div class="box err"><b>Auslesen fehlgeschlagen:</b> ${esc(d.error||"unbekannt")}<br>
-    <span class="hint">Akku richtig aufgesteckt? Verkabelung J1/J2/B− prüfen. (${d.blocks_ok||0}/${d.blocks_total||0} Blöcke${d.attempts>1?", 2 Versuche":""}${d.first_error&&d.first_error!=d.error?", 1. Versuch: "+esc(d.first_error):""})</span></div></div>`;return;}
+    <span class="hint">Akku richtig aufgesteckt? Verkabelung J1/J2/B− prüfen. (${d.blocks_ok||0}/${d.blocks_total||0} Blöcke${d.attempts>1?", 2 Versuche":""}${d.first_error&&d.first_error!=d.error?", 1. Versuch: "+esc(d.first_error):""})</span></div></div>`+traceBox(d,true);return;}
   const c=d.counters||{},cells=d.cells_mv||[],lo=Math.min(...cells),hi=Math.max(...cells);
   const warns=(d.warnings||[]).length?`<div class="card"><div class="box err" style="margin:0">${d.warnings.map(w=>"⚠ "+esc(w)).join("<br>")}</div></div>`:"";
   const retryNote=d.attempts>1?`<div class="card"><div class="box info" style="margin:0">Erst im 2. Versuch gelesen. 1. Versuch: ${esc(d.first_error||"?")}</div></div>`:"";
@@ -257,7 +271,7 @@ function render(d,when){
       <div class="row"><span>Entladen (Energie)</span><span>${nf(d.discharge_wh)} Wh</span></div>
       <div class="row"><span>Leer gefahren / Überstrom</span><span>${nf(c.discharge_to_empty)} / ${nf(c.overcurrent)}</span></div></div>
   </div>
-  ${allRegs(d)}
+  ${allRegs(d)}${traceBox(d,false)}
   <p class="hint">${when?"Ausgelesen "+when+" · ":""}${d.blocks_ok}/${d.blocks_total} Blöcke in ${nf(d.duration_ms/1000,1)} s${d.retries?` · ${d.retries} Wiederholungen`:""} ·
     <a href="/api/last" download="m18-${esc(d.eserial)}.json" style="color:inherit">JSON</a></p>`;}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -385,6 +399,9 @@ $("#fwbtn").onclick=()=>{const f=$("#fwfile").files[0];if(!f){alert("Bitte zuers
   x.onerror=()=>{$("#fwres").innerHTML='<div class="box err">Verbindung abgebrochen.</div>';};
   x.open("POST","/api/update");x.send(fd);};
 $("#cmdbtn").onclick=async()=>{const p=$("#cmdres");p.hidden=false;p.textContent="…";p.textContent=await cmd($("#cmd").value);};
+$("#logref").onclick=logLoad;$("#logwarn").onchange=logLoad;
+$("#logclr").onclick=async()=>{if(!confirm("Protokoll der Brücke löschen?"))return;const r=await fetch("/api/log/clear",{method:"POST"});
+  if(!r.ok){const e=await r.json().catch(()=>({}));alert(e.error||"Fehler");}logLoad();};
 
 try{$("#loc").value=localStorage.getItem("m18.loc")||"";}catch(e){}
 (async()=>{await info();try{const d=await j("/api/last");if(d&&d.eserial!==undefined)render(d,"zuletzt");}catch(e){}

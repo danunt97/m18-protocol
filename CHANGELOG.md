@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.10 – Protokolle für Akku und System
+- **Brücke:** Ereignisprotokoll im Flash. Es enthält Start mit Neustartgrund, Einstellungen, WLAN-Ereignisse, Befehle vom PC und von der Webseite (mit Absender),
+  falsche Passwörter, Updates, Neustarts, Tiefschlaf und alle 30 min eine Statuszeile. Es übersteht Neustarts.
+  Zeilen, die vor einem Absturz, Watchdog oder Brownout noch nicht im Flash waren, kommen aus dem RTC-Speicher zurück.
+  Anzeige und Download unter Gerät → Protokoll, `LOG [n]`, `/api/log`, `/api/log.txt`.
+- **Akku-Ablauf:** Jedes Auslesen protokolliert Weckversuche (mit der Antwort des Akkus), abgelehnte und fehlende Register,
+  Wiederholungen und das Ergebnis. Steht im Protokoll, im Ergebnis (`trace`) und auf der Webseite („Ablauf beim Auslesen“).
+- **PC-Software:** Protokolldatei `m18_protokoll.log` neben der Datenbank (rotierend). Der Akku-Ablauf der Brücke wird übernommen,
+  Fehler stehen mit vollständiger Meldung drin. Neu: PC-Protokoll herunterladen, Brücken-Protokoll anzeigen, Diagnose-Datei.
+
 ## 1.9 – Auslesen vom PC über die Brücke robust und schnell
 - Die PC-Software liest über die ESP32-Brücke jetzt mit **einem** Befehl (`SCAN NOSTORE`) statt mit rund 220 einzelnen Registerabfragen.
   Damit gelten auch beim Auslesen vom PC alle Härtungen der Brücke: mehrere Weckversuche, automatischer zweiter Durchlauf, Wiederholungen pro Block, nicht unterstützte Register (ältere 5-Ah-Akkus) werden übersprungen.

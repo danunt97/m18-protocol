@@ -41,6 +41,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include "m18_commands.h"
+#include "m18_log.h"
 #include "web_ui.h"
 
 #define FW_BUILD __DATE__ " " __TIME__
@@ -90,7 +91,45 @@ TaskHandle_t bridgeLoopTask = nullptr;
 // Status lines go to both USB sockets: native USB (Serial) and, with "USB CDC On Boot", the
 // UART socket (Serial0). The boot ROM prints on both, so whichever socket a terminal or the
 // web flasher's log window uses, it also sees "Setup-WLAN ..." and "M18BRIDGE READY ...".
-void logf(const char* fmt, ...) {
+//
+// Every status line also goes into the event log (see m18_log.h): WLAN, PC commands, web page,
+// updates, restarts and the battery trace of each read-out. ev() only logs (any task);
+// logc() logs and prints (loop task only - console replies must not be interleaved).
+m18::EventLog evlog;
+SemaphoreHandle_t logMutex = nullptr;
+static void logLock() { if (logMutex) xSemaphoreTake(logMutex, portMAX_DELAY); }
+static void logUnlock() { if (logMutex) xSemaphoreGive(logMutex); }
+
+// Lines not yet written to flash are mirrored into RTC memory: it survives watchdog resets,
+// crashes and brownouts (not a power cut), so the last lines before such a restart are recovered.
+#define RTC_LOG_SIZE 1536
+#define RTC_LOG_MAGIC 0x4C4F4731UL
+RTC_NOINIT_ATTR uint32_t rtcLogMagic;
+RTC_NOINIT_ATTR uint32_t rtcLogLen;
+RTC_NOINIT_ATTR char rtcLog[RTC_LOG_SIZE];
+static void rtcMirror(const std::string& pending) {
+  size_t n = pending.size(), from = n > RTC_LOG_SIZE ? n - RTC_LOG_SIZE : 0;
+  memcpy(rtcLog, pending.data() + from, n - from);
+  rtcLogLen = n - from;
+  rtcLogMagic = RTC_LOG_MAGIC;
+}
+
+static void evv(const char* cat, int level, const char* fmt, va_list ap) {
+  char buf[200];
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  size_t l = strlen(buf);
+  while (l && (buf[l - 1] == '\n' || buf[l - 1] == '\r')) buf[--l] = 0;
+  const char* t = buf;
+  while (*t == '\n') t++;
+  evlog.addText(cat, level, t);
+}
+void ev(const char* cat, int level, const char* fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  evv(cat, level, fmt, ap);
+  va_end(ap);
+}
+void logc(const char* cat, int level, const char* fmt, ...) {
   char buf[256];
   va_list ap;
   va_start(ap, fmt);
@@ -100,6 +139,23 @@ void logf(const char* fmt, ...) {
 #if ARDUINO_USB_CDC_ON_BOOT
   Serial0.print(buf);
 #endif
+  ev(cat, level, "%s", buf);
+}
+void logf(const char* fmt, ...) {
+  char buf[256];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  logc("SYS", 0, "%s", buf);
+}
+
+// Restart with the reason in the log (flushed to flash first).
+void restartNow(const char* why) {
+  ev("SYS", 1, "Neustart: %s", why);
+  evlog.flush();
+  delay(200);
+  ESP.restart();
 }
 
 // ---------------------------------------------------------- watchdog helper
@@ -259,6 +315,7 @@ static bool setClockFrom(uint32_t t, const char* source) {
   struct timeval tv = {(time_t)t, 0};
   settimeofday(&tv, nullptr);
   timeSource = source;
+  ev("SYS", 0, "Uhr gestellt (Quelle: %s)", source);
   return true;
 }
 static bool setClockFromPc(uint32_t t) { return setClockFrom(t, "pc"); }
@@ -466,7 +523,8 @@ void ledLoop(uint32_t bootHeldMs) {
 }
 
 void goToSleep() {
-  logf("Energiesparmodus: Tiefschlaf. Aufwecken mit der BOOT-Taste.\n");
+  logf("Energiesparmodus: Tiefschlaf nach %u min ohne Nutzung. Aufwecken mit der BOOT-Taste.\n", (unsigned)sleepMin);
+  evlog.flush();
   if (lockBattery(3000)) { batLink.idle(); unlockBattery(); }
   BatSerial.flush();
   BatSerial.end();
@@ -563,6 +621,7 @@ void saveWifi(const String& ssid, const String& pass) {
   prefs.end();
   savedSsid = ssid;
   savedPass = pass;
+  ev("WLAN", 0, ssid.length() ? "WLAN-Zugang gespeichert: \"%s\"" : "WLAN-Zugang gelöscht%s", ssid.c_str());
 }
 
 void savePassword(const String& pw) {
@@ -570,6 +629,7 @@ void savePassword(const String& pw) {
   prefs.putString("webpass", pw);
   prefs.end();
   webPass = pw;
+  ev("SYS", 0, pw.length() ? "Passwortschutz eingeschaltet/geändert" : "Passwortschutz ausgeschaltet");
 }
 
 String apPassword() { return webPass.length() >= 8 ? webPass : String(AP_PASSWORD); }
@@ -578,6 +638,7 @@ void saveSleep() {
   prefs.begin("m18", false);
   prefs.putInt("sleepmin", (int)sleepMin);
   prefs.end();
+  ev("SYS", 0, "Energiesparen: Tiefschlaf nach %u min (0 = aus)", (unsigned)sleepMin);
 }
 
 void saveLed() {
@@ -585,6 +646,7 @@ void saveLed() {
   prefs.putInt("ledpin", ledPin);
   prefs.putInt("ledbright", ledBright);
   prefs.end();
+  ev("SYS", 0, "Status-LED: GPIO%d, Helligkeit %d", ledPin, ledBright);
 }
 
 void startMdns() {
@@ -611,7 +673,7 @@ void startAP() {
   dnsActive = true;
   apCloseAt = 0;
   if (wstate != WState::CONNECTING) wstate = WState::AP;
-  logf("Setup-WLAN \"%s\" (Passwort %s) -> http://%s\n", apName.c_str(),
+  logc("WLAN", 0, "Setup-WLAN \"%s\" (Passwort %s) -> http://%s\n", apName.c_str(),
                 webPass.length() >= 8 ? "= Web-Passwort" : AP_PASSWORD,
                 WiFi.softAPIP().toString().c_str());
 }
@@ -624,6 +686,7 @@ void stopAP() {
   WiFi.setSleep(false);
   apActive = false;
   apCloseAt = 0;
+  ev("WLAN", 0, "Einrichtungs-WLAN geschlossen");
 }
 
 void beginConnect(const String& ssid, const String& pass) {
@@ -631,6 +694,7 @@ void beginConnect(const String& ssid, const String& pass) {
   WiFi.setSleep(false);                // no modem sleep: reliable web server + discovery
   WiFi.setHostname(hostName.c_str());
   WiFi.begin(ssid.c_str(), pass.c_str());
+  ev("WLAN", 0, "Verbinde mit \"%s\"%s", ssid.c_str(), portalConnect ? " (über die Einrichtungsseite)" : "");
   wstate = WState::CONNECTING;
   connectStart = millis();
   wifiError = "";
@@ -646,8 +710,8 @@ void onConnected() {
     portalConnect = false;
   }
   if (apActive) apCloseAt = millis() + AP_CLOSE_AFTER_MS;
-  logf("WLAN verbunden: %s, http://%s.local (%s)\n", WiFi.SSID().c_str(), hostName.c_str(),
-                WiFi.localIP().toString().c_str());
+  logc("WLAN", 0, "WLAN verbunden: %s, http://%s.local (%s), %d dBm, Kanal %d\n", WiFi.SSID().c_str(), hostName.c_str(),
+       WiFi.localIP().toString().c_str(), (int)WiFi.RSSI(), (int)WiFi.channel());
 }
 
 void wifiLoop() {
@@ -663,6 +727,8 @@ void wifiLoop() {
       wstate = fromPortal ? WState::FAILED : WState::AP;
       if (fromPortal)
         wifiError = (st == WL_NO_SSID_AVAIL) ? "Netzwerk nicht gefunden" : "Verbindung fehlgeschlagen – Passwort prüfen";
+      ev("WLAN", 1, "Verbindung mit \"%s\" fehlgeschlagen (Status %d%s)", WiFi.SSID().c_str(), (int)st,
+         st == WL_NO_SSID_AVAIL ? ", Netzwerk nicht gefunden" : st == WL_CONNECT_FAILED ? ", Passwort?" : "");
       WiFi.setAutoReconnect(false);
       WiFi.disconnect();
       portalConnect = false;
@@ -671,14 +737,16 @@ void wifiLoop() {
     }
   } else if (wstate == WState::STA) {
     if (st != WL_CONNECTED) {
-      if (!lostSince) lostSince = millis();
+      if (!lostSince) { lostSince = millis(); ev("WLAN", 1, "WLAN-Verbindung verloren (Status %d)", (int)st); }
       if (millis() - lostSince > AP_FALLBACK_MS && !apActive) {   // network gone: allow reconfiguration
+        ev("WLAN", 1, "seit %lu s kein WLAN – Einrichtungs-WLAN wird geöffnet", (unsigned long)(AP_FALLBACK_MS / 1000));
         WiFi.setAutoReconnect(false);
         startAP();
         wstate = WState::AP;
         lastStaRetry = millis();
       }
     } else {
+      if (lostSince) ev("WLAN", 0, "WLAN wieder verbunden nach %lu s, %d dBm", (unsigned long)((millis() - lostSince) / 1000), (int)WiFi.RSSI());
       lostSince = 0;
     }
   } else if (savedSsid.length() && apActive && WiFi.softAPgetStationNum() == 0 &&
@@ -735,8 +803,41 @@ static bool isBatteryCommand(const String& up) {
 }
 
 bool backgroundRequest = false;    // set while an HTTP handler serves an automatic background sync
+String cmdSource = "USB";          // who sent the command (for the event log)
 
+String runCommandInner(const String& lineIn, bool physical);
+
+// Runs a command and writes it to the event log (passwords masked; frequent polling commands only on errors).
 String runCommand(const String& lineIn, bool physical) {
+  String r = runCommandInner(lineIn, physical);
+  String line = lineIn;
+  line.trim();
+  int sp = line.indexOf(' ');
+  String cmd = sp < 0 ? line : line.substring(0, sp);
+  cmd.toUpperCase();
+  bool err = r.startsWith("ERR");
+  static const char* quiet[] = {"PING", "INFO", "LOG", "HSTAT", "HLIST", "HGET", "HACK", "IDLE", "HIGH", "TIME", "SHOW", "READ"};
+  bool isQuiet = false;
+  for (const char* q : quiet) if (cmd == q) isQuiet = true;
+  if (isQuiet && !err) return r;
+  String shown = line;
+  if (cmd == "WIFI") { int bar = shown.indexOf('|'); if (bar >= 0) shown = shown.substring(0, bar) + "|***"; }
+  if (cmd == "PASS") shown = "PASS ***";
+  String res = r.length() > 90 ? r.substring(0, 90) + "…" : r;
+  if (cmd == "SCAN") {                       // just the essentials, the battery trace is logged separately
+    auto field = [&](const char* k) {
+      int a = r.indexOf(String("\"") + k + "\":\"");
+      if (a < 0) return String("");
+      a += strlen(k) + 4;
+      return r.substring(a, r.indexOf('"', a));
+    };
+    res = err ? "ERR " + field("error") : "OK " + field("eserial") + " " + field("model");
+  }
+  ev("PC", err ? 1 : 0, "%s: %s -> %s", cmdSource.c_str(), shown.c_str(), res.c_str());
+  return r;
+}
+
+String runCommandInner(const String& lineIn, bool physical) {
   if (!backgroundRequest) noteActivity();
   String line = lineIn;
   line.trim();
@@ -780,8 +881,7 @@ String runCommand(const String& lineIn, bool physical) {
   if (up == "RESTART") {
     if (!physical) return "ERR LOCKED";
     Serial.println("OK restarting");
-    delay(200);
-    ESP.restart();
+    restartNow((String("Befehl RESTART (") + cmdSource + ")").c_str());
     return "OK";
   }
   updateInfo();
@@ -854,6 +954,7 @@ bool authOk() {
   if (server.authenticate("m18", webPass.c_str())) { authFails = 0; return true; }
   if (server.header("Authorization").length()) {
     authFails++;
+    ev("WEB", 1, "Falsches Passwort von %s (%d. Versuch)", server.client().remoteIP().toString().c_str(), authFails);
     delay(authFails * 250 > 2000 ? 2000 : authFails * 250);
   }
   server.requestAuthentication(BASIC_AUTH, "M18-Bruecke", "Passwort erforderlich");
@@ -865,6 +966,7 @@ std::function<void()> guarded(std::function<void()> fn) {
   return [fn]() {
     // Automatic background sync of the PC software must not keep a battery-powered bridge awake.
     backgroundRequest = server.hasHeader("X-M18-Background");
+    cmdSource = String("Webseite ") + server.client().remoteIP().toString();
     if (!backgroundRequest) noteActivity();
     if (authOk()) fn();
     backgroundRequest = false;
@@ -897,6 +999,7 @@ void setupHttp() {
     String body = server.arg("plain"), out;
     if (body.length() > MAX_CMD_BODY) { server.send(413, "text/plain", "ERR TOO LARGE\n"); return; }
     bool physical = settingsAllowed();
+    cmdSource = String("PC ") + server.client().remoteIP().toString() + (backgroundRequest ? " (autom. Abgleich)" : "");
     int start = 0, count = 0;
     while (start <= (int)body.length() && count < 400) {
       int nl = body.indexOf('\n', start);
@@ -919,8 +1022,13 @@ void setupHttp() {
       scanLoc = server.arg("loc").substring(0, 60);
       scanComment = server.arg("comment").substring(0, 200);
     }
-    if (startScan()) sendJson("{\"ok\":true,\"started\":true}");
-    else sendJson("{\"ok\":false,\"busy\":true}", 409);
+    if (startScan()) {
+      ev("WEB", 0, "Auslesen über die Webseite gestartet (%s)%s%s", server.client().remoteIP().toString().c_str(),
+         scanLoc.length() ? ", Standort: " : "", scanLoc.c_str());
+      sendJson("{\"ok\":true,\"started\":true}");
+    } else {
+      sendJson("{\"ok\":false,\"busy\":true}", 409);
+    }
   }));
   server.on("/api/status", HTTP_GET, guarded([]() {
     sendJson(String("{\"reading\":") + (scanRunning ? "true" : "false") + ",\"progress\":" +
@@ -982,7 +1090,7 @@ void setupHttp() {
     saveWifi("", "");
     sendJson("{\"ok\":true}");
     delay(500);
-    ESP.restart();
+    restartNow("WLAN-Daten über die Webseite gelöscht");
   }));
   server.on("/api/led", HTTP_POST, guarded([]() {
     if (server.hasArg("pin")) {
@@ -1021,7 +1129,8 @@ void setupHttp() {
     sendJson(ok ? String("{\"ok\":true}") : String("{\"ok\":false,\"error\":\"") + jsonEsc(Update.errorString()) + "\"}",
              ok ? 200 : 500);
     otaRunning = false;
-    if (ok) { delay(800); ESP.restart(); }
+    if (ok) { delay(800); restartNow("Firmware-Update installiert"); }
+    else ev("SYS", 2, "Firmware-Update fehlgeschlagen: %s", Update.errorString());
   }, []() {
     HTTPUpload& up = server.upload();
     if (!settingsAllowed() || (webPass.length() && !server.authenticate("m18", webPass.c_str()))) return;
@@ -1030,6 +1139,7 @@ void setupHttp() {
       batLink.idle();                              // J2 low during the update
       unlockBattery();
       otaRunning = true;
+      ev("SYS", 0, "Firmware-Update gestartet: %s (von %s)", up.filename.c_str(), server.client().remoteIP().toString().c_str());
       Update.begin(UPDATE_SIZE_UNKNOWN);
     } else if (up.status == UPLOAD_FILE_WRITE) {
       if (Update.isRunning()) Update.write(up.buf, up.currentSize);
@@ -1039,8 +1149,33 @@ void setupHttp() {
     } else if (up.status == UPLOAD_FILE_ABORTED) {
       Update.abort();
       otaRunning = false;
+      ev("SYS", 1, "Firmware-Update abgebrochen (Verbindung unterbrochen)");
     }
   });
+  // Event log: last lines as JSON, the whole log (flash) as a text file, clear
+  server.on("/api/log", HTTP_GET, guarded([]() {
+    String n = server.hasArg("n") ? server.arg("n") : String("150");
+    sendCmdJson("LOG " + n);
+  }));
+  server.on("/api/log.txt", HTTP_GET, guarded([]() {
+    evlog.flush();
+    std::string all = evlog.all();
+    char name[64];
+    snprintf(name, sizeof(name), "attachment; filename=\"%s-protokoll.txt\"", hostName.c_str());
+    server.sendHeader("Content-Disposition", name);
+    server.setContentLength(all.size());
+    server.send(200, "text/plain; charset=utf-8", "");
+    for (size_t off = 0; off < all.size(); off += 2048) {
+      server.sendContent(all.data() + off, std::min((size_t)2048, all.size() - off));
+      feedWdt();
+    }
+  }));
+  server.on("/api/log/clear", HTTP_POST, guarded([]() {
+    if (!requireSettings()) return;
+    evlog.clear();
+    ev("SYS", 0, "Protokoll gelöscht (%s)", cmdSource.c_str());
+    sendJson("{\"ok\":true}");
+  }));
   // Measurement history (offline read-outs, imported by the PC software)
   server.on("/api/history", HTTP_GET, guarded([]() {
     String after = server.hasArg("after") ? server.arg("after") : String("0");
@@ -1106,7 +1241,7 @@ struct LineInput {
       noteActivity();
       if (ch == '\n' || ch == '\r') {
         if (overflow) s->println("ERR TOOLONG");
-        else if (buf.length()) s->println(runCommand(buf, true));   // USB = physical access
+        else if (buf.length()) { cmdSource = "PC USB"; s->println(runCommand(buf, true)); }   // USB = physical access
         buf = "";
         overflow = false;
       } else if (buf.length() < 120) {
@@ -1132,6 +1267,11 @@ void setup() {
   batMutex = xSemaphoreCreateMutex();
   stateMutex = xSemaphoreCreateMutex();
   histMutex = xSemaphoreCreateMutex();
+  logMutex = xSemaphoreCreateMutex();
+  evlog.setClock([]() -> uint32_t { return millis(); }, unixNow);
+  evlog.setLock(logLock, logUnlock);
+  reader.setTrace([](void*, const char* line) { evlog.addText("AKKU", 0, line); }, nullptr);
+  proc.setLog(&evlog);
   powerCheck();
   bootId = (uint32_t)random(1, 0x7FFFFFFF);   // hardware RNG (Arduino random() uses esp_random)
   bridgeLoopTask = xTaskGetCurrentTaskHandle();
@@ -1147,17 +1287,36 @@ void setup() {
   proc.setTimeSetter(setClockFromPc);
   proc.setMetaProvider(recordMeta);
   history.setLock(histLock, histUnlock);
-  if (storage.mount() && history.begin()) proc.setHistory(&history);
-  else logf("WARNUNG: kein Dateisystem - Messungen werden nicht gespeichert (Partition Scheme prüfen)\n");
+  bool fsOk = storage.mount();
+  prefs.begin("m18", false);                    // boot counter: "B12" in every log line
+  uint32_t bootNo = prefs.getUInt("bootno", 0) + 1;
+  prefs.putUInt("bootno", bootNo);
+  prefs.end();
+  evlog.begin(fsOk ? &storage : nullptr, bootNo);
+  esp_reset_reason_t rr = esp_reset_reason();
+  if (rtcLogMagic == RTC_LOG_MAGIC && rtcLogLen > 0 && rtcLogLen <= RTC_LOG_SIZE && rr != ESP_RST_POWERON)
+    evlog.recover(std::string(rtcLog, rtcLogLen), resetReason());
+  rtcLogLen = 0;
+  rtcLogMagic = RTC_LOG_MAGIC;
+  evlog.setMirror(rtcMirror);
+  ev("SYS", (rr == ESP_RST_PANIC || rr == ESP_RST_INT_WDT || rr == ESP_RST_TASK_WDT || rr == ESP_RST_WDT || rr == ESP_RST_BROWNOUT) ? 1 : 0,
+     "Start: Firmware %s (Build %s), Grund: %s, Unterspannungs-Neustarts: %lu, Speicher %u KB, PSRAM %u KB, Dateisystem: %s",
+     M18BRIDGE_VERSION, FW_BUILD, resetReason(), (unsigned long)brownouts, (unsigned)(ESP.getFreeHeap() / 1024),
+     (unsigned)(ESP.getFreePsram() / 1024), fsOk ? storage.kind : "keins");
+  if (fsOk && history.begin()) proc.setHistory(&history);
+  else logc("SYS", 2, "WARNUNG: kein Dateisystem - Messungen werden nicht gespeichert (Partition Scheme prüfen)\n");
 
   if (lowTxPower) {
-    logf("WARNUNG: Neustart wegen Unterspannung (%lu seit dem Einschalten) - WLAN mit reduzierter Sendeleistung. "
+    logc("SYS", 1, "WARNUNG: Neustart wegen Unterspannung (%lu seit dem Einschalten) - WLAN mit reduzierter Sendeleistung. "
                   "USB-Kabel/-Anschluss bzw. Step-down (5,0 V) prüfen.\n", (unsigned long)brownouts);
     delay(300);                                 // let the supply recover before the Wi-Fi current peak
   }
   WiFi.persistent(false);
   WiFi.onEvent(onWifiEvent, ARDUINO_EVENT_WIFI_STA_GOT_IP);
   loadPrefs();
+  ev("SYS", 0, "Gerätename %s, WLAN %s, Passwortschutz %s, LED GPIO%d, Energiesparen %u min", hostName.c_str(),
+     savedSsid.length() ? ("\"" + savedSsid + "\"").c_str() : "nicht eingerichtet", webPass.length() ? "an" : "aus", ledPin,
+     (unsigned)sleepMin);
   led(0, 0, 255);
   WiFi.setHostname(hostName.c_str());
   // Non-blocking: USB answers immediately while Wi-Fi connects in the background
@@ -1180,6 +1339,15 @@ void setup() {
 }
 
 void loop() {
+  static uint32_t lastStatusLog = 0;            // a status line every 30 min helps to place problems in time
+  if (millis() - lastStatusLog > 1800000UL) {
+    lastStatusLog = millis();
+    ev("SYS", 0, "Status: WLAN %s%s, %d dBm, Speicher %u KB (min. %u KB), Messungen nicht übernommen: %u",
+       WiFi.status() == WL_CONNECTED ? "verbunden mit " : (apActive ? "Einrichtungsmodus" : "getrennt"),
+       WiFi.status() == WL_CONNECTED ? WiFi.SSID().c_str() : "", WiFi.status() == WL_CONNECTED ? (int)WiFi.RSSI() : 0,
+       (unsigned)(ESP.getFreeHeap() / 1024), (unsigned)(ESP.getMinFreeHeap() / 1024),
+       (unsigned)(history.ready() ? history.unsynced() : 0));
+  }
   server.handleClient();
   if (dnsActive) dns.processNextRequest();
   discoveryLoop();
@@ -1204,8 +1372,7 @@ void loop() {
       led(255, 0, 0);
       saveWifi("", "");
       savePassword("");                       // forgotten password: BOOT 5 s resets it too
-      delay(300);
-      ESP.restart();
+      restartNow("BOOT-Taste 5 s gehalten: WLAN-Daten und Passwort gelöscht");
     }
   } else if (bootPressedSince) {
     uint32_t pressed = millis() - bootPressedSince;
@@ -1229,7 +1396,11 @@ void loop() {
   // Heap guard: restart cleanly (when idle) instead of failing in odd ways.
   if (ESP.getFreeHeap() < LOW_HEAP_BYTES) {
     if (!lowHeapSince) lowHeapSince = millis();
-    if (millis() - lowHeapSince > 10000 && !scanRunning && !otaRunning && batLink.isIdle()) ESP.restart();
+    if (millis() - lowHeapSince > 10000 && !scanRunning && !otaRunning && batLink.isIdle()) {
+      char why[64];
+      snprintf(why, sizeof(why), "wenig freier Speicher (%u Bytes)", (unsigned)ESP.getFreeHeap());
+      restartNow(why);
+    }
   } else {
     lowHeapSince = 0;
   }

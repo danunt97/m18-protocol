@@ -23,6 +23,8 @@ import csv
 import datetime as _dt
 import io
 import json
+import logging
+import platform
 import os
 import secrets
 import socket
@@ -39,6 +41,7 @@ STATIC = os.path.join(HERE, "static")
 sys.path.insert(0, HERE)
 sys.path.insert(1, PARENT)  # m18.py, m18_bridge.py
 
+import applog  # noqa: E402
 import fleet  # noqa: E402
 from fleet import FleetDB, iso, utcnow  # noqa: E402
 from qrgen import QrCode  # noqa: E402
@@ -98,14 +101,35 @@ class Hardware:
                 self.port = port
                 ok = self.m.reset()
                 self.m.idle()
+                self._log_bridge_info()
                 self.log(f"Verbunden mit {port} – Reset {'ACK' if ok else 'ohne ACK'}")
                 return {"ok": True, "ack": bool(ok), "bridge": self.is_bridge()}
             except Exception as e:
                 self.m = None
                 self.port = None
-                self.log(f"Verbinden fehlgeschlagen: {e}")
+                self.log(f"Verbinden mit {port} fehlgeschlagen: {e}", logging.WARNING, exc=True)
                 import m18_bridge
                 return {"ok": False, "error": str(e), "auth": isinstance(e, m18_bridge.BridgeAuthError)}
+
+    def _log_bridge_info(self):
+        """Firmware, address and restart reason of a connected bridge - helps to read the logs later."""
+        if not self.is_bridge():
+            return
+        with contextlib.suppress(Exception):
+            i = json.loads(self.m.info()[3:])
+            self.log(f"Brücke: Firmware {i.get('version')}, {i.get('host')} ({i.get('ip') or 'USB'}), "
+                     f"WLAN {i.get('wifi')} {i.get('rssi') or ''} dBm, letzter Neustart: {i.get('reset_reason')}, "
+                     f"Unterspannungs-Neustarts: {i.get('brownouts', '?')}, Laufzeit {i.get('uptime_s')} s")
+
+    def bridge_log(self, n=250):
+        """Last n lines of the connected bridge's event log."""
+        if not self.is_bridge():
+            return {"ok": False, "error": "Keine ESP32-Brücke verbunden"}
+        with self.lock:
+            try:
+                return {"ok": True, **self.m.log(n)}
+            except Exception as e:
+                return {"ok": False, "error": f"Protokoll der Brücke nicht abrufbar ({e}) – Firmware ab 1.10 nötig"}
 
     def is_bridge(self):
         import m18_bridge
@@ -131,6 +155,7 @@ class Hardware:
             try:
                 res = import_from_bridge(db, self.m, ids)
             except Exception as e:
+                self.log(f"Übernahme von der Brücke fehlgeschlagen: {e}", logging.WARNING, exc=True)
                 return {"ok": False, "error": str(e)}
         self.log(f"Von der Brücke übernommen: {res['imported']} Messungen, {res['created']} neue Akkus, "
                  f"{res['duplicates']} schon vorhanden")
@@ -154,6 +179,8 @@ class Hardware:
         Returns None for firmware that does not send the raw blocks (then read_id() is used)."""
         import m18_bridge
         r = self.m.scan(store=False)
+        for line in r.get("trace") or []:           # what happened on the battery line (firmware >= 1.10)
+            self.log(f"Brücke/Akku: {line}")
         if not r.get("ok"):
             msg = r.get("error") or "Auslesen fehlgeschlagen"
             if r.get("first_error") and r.get("first_error") != msg:
@@ -184,7 +211,8 @@ class Hardware:
                     if snap is not None:
                         return snap
                 except Exception as e:
-                    self.log(f"Auslesen fehlgeschlagen: {e}")
+                    self.log(f"Auslesen über die Brücke fehlgeschlagen: {e}", logging.WARNING,
+                             exc=not isinstance(e, RuntimeError))
                     return {"ok": False, "error": str(e)}
             buf = io.StringIO()
             try:
@@ -192,6 +220,9 @@ class Hardware:
                     arr = self.m.read_id(output="array")
                 with contextlib.suppress(Exception):
                     self.m.idle()
+                for line in buf.getvalue().splitlines():
+                    if line.strip() and ("rror" in line or "Unexpected" in line or "Failed" in line):
+                        self.log(f"m18.py: {line.strip()}", logging.DEBUG)
                 if not arr:
                     msg = buf.getvalue().strip().splitlines()
                     raise RuntimeError(msg[-1] if msg else "keine Antwort vom Akku")
@@ -206,7 +237,7 @@ class Hardware:
             except Exception as e:
                 with contextlib.suppress(Exception):
                     self.m.idle()
-                self.log(f"Auslesen fehlgeschlagen: {e}")
+                self.log(f"Auslesen fehlgeschlagen: {e}", logging.WARNING, exc=not isinstance(e, RuntimeError))
                 return {"ok": False, "error": str(e)}
 
     def write_note(self, text):
@@ -220,6 +251,7 @@ class Hardware:
                 self.log(f"Notiz geschrieben: {text[:20]!r}")
                 return {"ok": True}
             except Exception as e:
+                self.log(f"Notiz schreiben fehlgeschlagen: {e}", logging.WARNING, exc=True)
                 return {"ok": False, "error": str(e)}
 
     def idle(self):
@@ -247,10 +279,47 @@ class App:
             from autosync import AutoSync
             self.autosync = AutoSync(db, self.log, autosync_min)
 
-    def log(self, msg):
+    def log(self, msg, level=logging.INFO, exc=False):
+        """Status line for the GUI's log box and the log file (applog). level: logging.INFO/WARNING/ERROR."""
+        applog.LOG.log(level, msg, exc_info=exc)
+        if level < logging.INFO:                     # details only in the file
+            return
         ts = _dt.datetime.now().strftime("%H:%M:%S")
-        self.log_lines.append(f"{ts} {msg}")
-        self.log_lines = self.log_lines[-200:]
+        mark = "FEHLER: " if level >= logging.ERROR else "WARNUNG: " if level >= logging.WARNING else ""
+        self.log_lines.append(f"{ts} {mark}{msg}")
+        self.log_lines = self.log_lines[-300:]
+
+    def bridge_log(self, n=250):
+        if self.demo:
+            return {"ok": False, "error": "Im Demo-Modus gibt es keine Brücke"}
+        return self.hw.bridge_log(n)
+
+    def diagnose(self):
+        """One text file with everything needed to trace a problem: versions, connection,
+        settings (without passwords), the PC log and - if connected - the bridge's info and log."""
+        out = ["M18 Akku-Verwaltung – Diagnose", "=" * 40,
+               f"Erstellt: {_dt.datetime.now().isoformat(timespec='seconds')}",
+               f"Python {platform.python_version()} auf {platform.platform()}",
+               f"Datenbank: {self.db.path if hasattr(self.db, 'path') else '?'}",
+               f"Protokolldatei: {applog.path()}",
+               f"Akkus in der Datenbank: {len(self.db.list_batteries())}", ""]
+        st = self.status()
+        out.append(f"Verbindung: {json.dumps(st, ensure_ascii=False)}")
+        settings = {k: v for k, v in self.settings(None).items() if "pass" not in k.lower()}
+        out.append(f"Einstellungen: {json.dumps(settings, ensure_ascii=False, default=str)}")
+        if self.autosync:
+            out.append(f"Automatischer Abgleich: {json.dumps(self.autosync.info(), ensure_ascii=False, default=str)}")
+        if not self.demo and self.hw.is_bridge():
+            out += ["", "--- ESP32-Brücke ---"]
+            with self.hw.lock:
+                try:
+                    out.append(self.hw.m.info())
+                except Exception as e:
+                    out.append(f"INFO nicht abrufbar: {e}")
+            b = self.hw.bridge_log(250)
+            out += (b.get("lines") or []) if b.get("ok") else [b.get("error", "")]
+        out += ["", "--- Protokoll der PC-Software ---", applog.read_tail(1024 * 1024) or "\n".join(self.log_lines)]
+        return "\n".join(out) + "\n"
 
     # status / connection -------------------------------------------------
     def status(self):
@@ -585,7 +654,17 @@ class Handler(BaseHTTPRequestHandler):
             if r == ["ports"]:
                 return self._send(200, {"ports": app.ports(), "demo": bool(app.demo)})
             if r == ["log"]:
-                return self._send(200, {"lines": app.log_lines[-80:]})
+                return self._send(200, {"lines": app.log_lines[-150:], "file": applog.path()})
+            if r == ["log", "download"]:
+                stamp = _dt.datetime.now().strftime("%Y-%m-%d_%H%M")
+                return self._download(applog.read_tail(4 * 1024 * 1024).encode("utf-8"),
+                                      f"m18-protokoll-{stamp}.log", "text/plain; charset=utf-8")
+            if r == ["bridge", "log"]:
+                return self._send(200, app.bridge_log(int(qs.get("n", ["250"])[0])))
+            if r == ["diagnose"]:
+                stamp = _dt.datetime.now().strftime("%Y-%m-%d_%H%M")
+                return self._download(app.diagnose().encode("utf-8"), f"m18-diagnose-{stamp}.txt",
+                                      "text/plain; charset=utf-8")
             if r == ["settings"]:
                 return self._send(200, app.settings(host))
             if r == ["batteries"]:
@@ -620,7 +699,7 @@ class Handler(BaseHTTPRequestHandler):
                                         "plugged": app.demo.plugged})
             return self._send(404, {"error": "unknown endpoint"})
         except Exception as e:  # keep the server alive, report the error
-            app.log(f"Fehler bei {path}: {e}")
+            app.log(f"Fehler bei {path}: {e}", logging.ERROR, exc=True)
             return self._send(500, {"ok": False, "error": str(e)})
 
     def do_POST(self):
@@ -679,7 +758,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             return self._send(404, {"error": "unknown endpoint"})
         except Exception as e:
-            app.log(f"Fehler bei {path}: {e}")
+            app.log(f"Fehler bei {path}: {e}", logging.ERROR, exc=True)
             return self._send(500, {"ok": False, "error": str(e)})
 
     def do_DELETE(self):
@@ -722,6 +801,11 @@ def main():
     else:
         db_path = DEFAULT_DB
     os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+    log_path = os.environ.get("M18_LOG_FILE") or os.path.join(os.path.dirname(os.path.abspath(db_path)),
+                                                              "m18_protokoll.log")
+    applog.setup(log_path)
+    applog.LOG.info(f"Start: {'Demo' if args.demo else 'live'}, Datenbank {db_path}, http://{args.host}:{args.http_port}, "
+                    f"automatischer Abgleich {args.auto_sync} min, Python {platform.python_version()}")
     db = FleetDB(db_path)
 
     demo = None
@@ -743,6 +827,7 @@ def main():
     url = f"http://{shown}:{args.http_port}"
     print(f"M18 Akku-Verwaltung ({'DEMO' if demo else 'live'}) läuft auf {url}")
     print(f"Datenbank: {db_path}")
+    print(f"Protokoll: {log_path}")
     if args.host in ("0.0.0.0", ""):
         print(f"Im LAN erreichbar unter http://{lan_ip()}:{args.http_port}")
     print("Beenden mit Strg+C.")

@@ -292,6 +292,30 @@ python m18_bridge.py --bridge COM7
 
 Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus. Die dritte öffnet eine interaktive Shell mit `m.scan()`, `m.health()` und `m.read_id()`.
 
+## Protokoll
+
+Die Brücke schreibt mit, was sie und der Akku tun. Die Einträge stehen unter **Gerät → Protokoll**, lassen sich dort als Datei herunterladen
+und sind über `LOG` bzw. `/api/log` auch für die PC-Software abrufbar.
+
+```
+B12 +3.1s SYS  Start: Firmware 1.10 (Build …), Grund: Watchdog, Unterspannungs-Neustarts: 0, Speicher 251 KB, …
+B12 +5.8s WLAN WLAN verbunden: Werkstatt, http://m18-bridge-ab12.local (192.168.178.57), -61 dBm, Kanal 6
+B12 +62.0s 2026-11-07 18:43:12Z PC   PC 192.168.178.20: SCAN NOSTORE -> OK 40-123456 5Ah XC (<= 2018)
+B12 +55.2s 2026-11-07 18:43:05Z AKKU Wecken 1/3: keine Antwort auf Sync
+B12 +60.9s 2026-11-07 18:43:11Z AKKU 1. Durchlauf: 19 ok, abgelehnt: 4000 400A 4014 …
+```
+
+- `B12` ist der 12. Start des Geräts, `+55.2s` die Zeit seit dem Start, danach die Uhrzeit (UTC), sobald die Uhr gestellt ist.
+- **SYS**: Start mit Neustartgrund, Einstellungen, Updates, Neustarts, Tiefschlaf, alle 30 min eine Statuszeile (WLAN, Speicher).
+- **WLAN**: Verbinden, Verbindung verloren und wieder da, Einrichtungs-WLAN auf und zu.
+- **PC** / **WEB**: Befehle vom PC (USB oder WLAN, mit Adresse) und von der Webseite, falsche Passwörter. Häufige Abfragen (`PING`, `INFO`, `READ` …) nur bei Fehlern.
+- **AKKU**: Ablauf jedes Auslesens: Weckversuche, abgelehnte oder fehlende Register, Wiederholungen, Ergebnis.
+  Derselbe Ablauf steht auch im Ergebnis (`trace`), auf der Webseite unter „Ablauf beim Auslesen“ und im Protokoll der PC-Software.
+
+Das Protokoll liegt im Flash (rund 1500 Zeilen, die ältesten werden gelöscht) und übersteht Neustarts. Warnungen und Fehler werden sofort gespeichert,
+der Rest in Blöcken. Zeilen, die bei einem Absturz, Watchdog oder Unterspannung noch nicht im Flash waren, bleiben im RTC-Speicher erhalten
+und werden beim nächsten Start als „wiederhergestellt“ eingetragen (nicht bei einem echten Stromausfall).
+
 ## Schnittstellen
 
 **Textprotokoll** (USB 115200 Baud oder `POST /cmd`, eine Zeile pro Befehl, eine Antwortzeile pro Befehl):
@@ -309,6 +333,7 @@ Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus.
 | `HLIST <nach-id> [max] [new\|all]` | `OK {"items":[…],"next":id}` | Gespeicherte Messungen (seitenweise) |
 | `HGET <id>` | `OK {"meta":{…},"scan":{…}}` | Eine Messung komplett |
 | `HACK <id>` / `HDEL <id>` / `HCLEAR [all]` | `OK` | Als übernommen markieren / löschen / übernommene löschen |
+| `LOG [n]` | `OK {"boot","total","lines":[...]}` | Letzte n Zeilen des Protokolls (max. 250) |
 | `PASS <pw>` / `PASS OFF` | `OK` | Passwort setzen (nur USB oder entsperrt) |
 | `SHOW good\|watch\|weak\|critical\|fail` | `OK` | Ergebnis 30 s auf der LED zeigen |
 | `INFO` | `OK {json}` | Version, WLAN, IP, Speicher … |
@@ -325,6 +350,9 @@ Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus.
 | `POST /api/history/delete` (id), `POST /api/history/clear` | Löschen |
 | `POST /api/password` (pass) | Passwort setzen (nur entsperrt) |
 | `POST /api/power` (sleep_min) | Ruhezeit bis zum Tiefschlaf (0 = nie) |
+| `GET /api/log?n=150` | Letzte Zeilen des Protokolls (JSON) |
+| `GET /api/log.txt` | Ganzes Protokoll aus dem Flash als Textdatei |
+| `POST /api/log/clear` | Protokoll löschen (nur entsperrt) |
 | `GET /api/last` | Letzte Messung (JSON) |
 | `GET /api/info` | Gerätestatus |
 | `GET /api/status` | Läuft ein Auslesen? Fortschritt in % |

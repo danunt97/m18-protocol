@@ -423,6 +423,10 @@ class M18Bridge(m18.M18):
         if not r.startswith("OK"):
             raise BridgeError(r)
 
+    def log(self, n=250):
+        """Last n lines of the bridge's event log (firmware >= 1.10): {"boot", "total", "lines"}."""
+        return self._json(f"LOG {int(n)}")
+
     def boot_info(self):
         """{"boot":..., "uptime_ms":...} - lets the PC date records taken without a clock."""
         info = json.loads(self.info()[3:])

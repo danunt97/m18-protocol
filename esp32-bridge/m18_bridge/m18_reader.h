@@ -5,10 +5,13 @@
 // Pure C++ (no Arduino headers) so it is unit-tested on the PC.
 
 #pragma once
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <string>
+#include <vector>
 
 #include "m18_proto.h"
 
@@ -77,6 +80,12 @@ class Reader {
  public:
   explicit Reader(Link& link, Port& port) : link_(link), port_(port) {}
 
+  // Trace of what happened on the battery line (wake-up, rejected/missing blocks, retries).
+  // Every line goes to the callback (the bridge's event log) and the lines of the last read
+  // are part of its JSON result ("trace"), so the PC log and stored readings carry them too.
+  using TraceFn = void (*)(void* ctx, const char* line);
+  void setTrace(TraceFn fn, void* ctx) { traceFn_ = fn; traceCtx_ = ctx; }
+
   // Full read like m18.py read_id(): dummy pass, idle, reset, real pass, idle.
   // Hardened: several reset attempts, one retry + resync per block, abort as soon
   // as the battery stops answering (unplugged) instead of waiting for every timeout.
@@ -92,17 +101,28 @@ class Reader {
   // first attempt stays in the result ("first_error") for diagnosis.
   int read() {
     uint32_t t0 = port_.millis();
+    trace_.clear();
+    traceDropped_ = 0;
     attempts_ = 1;
     firstError_ = nullptr;
+    tr("Auslesen gestartet");
     int n = readOnce();
     if (!ok_) {
       firstError_ = error_;
+      tr("Versuch 1 fehlgeschlagen: %s – neuer Versuch nach %u ms Pause", error_, (unsigned)RETRY_PAUSE_MS);
       link_.idle();
       port_.delayMs(RETRY_PAUSE_MS);
       attempts_ = 2;
       n = readOnce();
     }
     durationMs_ = port_.millis() - t0;
+    if (ok_)
+      tr("Fertig: Typ %u Nr. %lu, %d/%d Blöcke, %d nicht unterstützt, %d Wiederholungen, %d Prüfsummenfehler, %d Versuch(e), %.1f s",
+         (unsigned)mem_.be(0x0004, 2), (unsigned long)mem_.be(0x0006, 3), answered_, NUM_BLOCKS, unsupported_, retries_,
+         cksumMismatch_, attempts_, durationMs_ / 1000.0);
+    else
+      tr("Fehlgeschlagen: %s (%d/%d Blöcke, %d Versuch(e), %.1f s)", error_ ? error_ : "?", answered_, NUM_BLOCKS,
+         attempts_, durationMs_ / 1000.0);
     return n;
   }
 
@@ -124,16 +144,23 @@ class Reader {
     }
     // dummy pass: refreshes the 0x9000 RAM copy and finds out which blocks this pack supports
     Res first[NUM_BLOCKS];
-    int silentRun = 0;
+    int silentRun = 0, nOk = 0;
+    std::string rejected, silent;
     for (int i = 0; i < NUM_BLOCKS; i++) {
       first[i] = readBlock(BLOCKS[i], buf, false);
       progress_ = progress_ + 1;
+      if (first[i] == Res::OK) nOk++;
+      else addAddr(first[i] == Res::REJECTED ? rejected : silent, BLOCKS[i].addr);
       if (first[i] != Res::SILENT) { silentRun = 0; continue; }
       if (++silentRun >= ABORT_AFTER_FAILS) {         // gone, or just registers it does not have?
+        tr("%d Blöcke in Folge ohne Antwort (zuletzt 0x%04X: %s) – prüfe, ob der Akku noch antwortet", silentRun,
+           (unsigned)BLOCKS[i].addr, why_);
         if (!resetWithRetry(2)) { fail("Verbindung zum Akku abgebrochen", t0); return 0; }
         silentRun = 0;                                // still there: carry on
       }
     }
+    tr("1. Durchlauf: %d ok%s%s%s%s", nOk, rejected.empty() ? "" : ", abgelehnt:", rejected.c_str(),
+       silent.empty() ? "" : ", ohne Antwort:", silent.c_str());
     link_.idle();
     port_.delayMs(100);
     if (!resetWithRetry()) { fail("Akku antwortet nach dem ersten Durchlauf nicht mehr", t0); return 0; }
@@ -155,14 +182,17 @@ class Reader {
       } else {                                        // answered (or a single lost reply) before
         r = readBlock(BLOCKS[i], buf, true);
         if (r != Res::OK) {                           // lost/garbled reply: retry once, then resync
+          tr("Block 0x%04X: %s – Wiederholung", (unsigned)BLOCKS[i].addr, why_);
           retries_++;
           port_.delayMs(40);
           r = readBlock(BLOCKS[i], buf, true);
           if (r == Res::SILENT) {
+            tr("Block 0x%04X: %s – Akku neu wecken", (unsigned)BLOCKS[i].addr, why_);
             if (!resetWithRetry(2)) { fail("Verbindung zum Akku abgebrochen", t0); return answered_; }
             retries_++;
             r = readBlock(BLOCKS[i], buf, true);
           }
+          tr("Block 0x%04X: %s", (unsigned)BLOCKS[i].addr, r == Res::OK ? "beim nächsten Versuch gelesen" : why_);
         }
         if (r == Res::SILENT && ++fails >= ABORT_AFTER_FAILS) { fail("Verbindung zum Akku abgebrochen", t0); return answered_; }
       }
@@ -194,6 +224,10 @@ class Reader {
     j.kvn("duration_ms", durationMs_);
     j.kvn("retries", retries_); j.kvn("checksum_mismatch", cksumMismatch_); j.kvn("attempts", attempts_);
     if (firstError_) j.kvs("first_error", firstError_);
+    j.key("trace"); j.raw("[");
+    for (size_t i = 0; i < trace_.size(); i++) { if (i) j.raw(","); j.str(trace_[i].c_str()); }
+    if (traceDropped_) { char b[48]; snprintf(b, sizeof(b), "%s\"… %d weitere Zeilen im Protokoll\"", trace_.empty() ? "" : ",", traceDropped_); j.raw(b); }
+    j.raw("],");
     if (!ok_) { j.kvs("error", error_ ? error_ : "Akku antwortet nicht", false); j.raw("}"); return j.len(); }
 
     uint16_t type = (uint16_t)mem_.be(0x0004, 2);
@@ -338,14 +372,37 @@ class Reader {
  private:
   static const int ABORT_AFTER_FAILS = 3;
   static const uint32_t RETRY_PAUSE_MS = 1500;   // J2 low before the automatic second attempt
+  static const size_t MAX_TRACE = 30;            // trace lines kept in the JSON result
 
   bool resetWithRetry(int attempts = 3) {
     for (int attempt = 0; attempt < attempts; attempt++) {
-      if (link_.reset(nullptr)) return true;
+      int got = -1;
+      if (link_.reset(&got)) {
+        if (attempt) tr("Akku geweckt (Sync ok) im %d. Versuch", attempt + 1);
+        return true;
+      }
+      if (got < 0) tr("Wecken %d/%d: keine Antwort auf Sync", attempt + 1, attempts);
+      else tr("Wecken %d/%d: falsche Antwort auf Sync (0x%02X statt 0xAA)", attempt + 1, attempts, got);
       link_.idle();
       port_.delayMs(250);
     }
     return false;
+  }
+
+  void tr(const char* fmt, ...) {
+    char line[200];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(line, sizeof(line), fmt, ap);
+    va_end(ap);
+    if (trace_.size() < MAX_TRACE) trace_.push_back(line);
+    else traceDropped_++;
+    if (traceFn_) traceFn_(traceCtx_, line);
+  }
+  static void addAddr(std::string& list, uint16_t a) {
+    char b[8];
+    snprintf(b, sizeof(b), " %04X", (unsigned)a);
+    list += b;
   }
 
   void fail(const char* why, uint32_t t0) {
@@ -363,12 +420,23 @@ class Reader {
     size_t want = (size_t)b.len + 5;
     size_t n = link_.command(0x01, 0x04, 0x03, (uint8_t)(b.addr >> 8), (uint8_t)b.addr, b.len,
                              buf, want, MAX_FRAME);
-    if (n >= 1 && buf[0] == 0x82) return Res::REJECTED;
-    if (n < (size_t)b.len + 3 || buf[0] != 0x81) return Res::SILENT;
+    if (n >= 1 && buf[0] == 0x82) {
+      snprintf(why_, sizeof(why_), "abgelehnt (82 %02X)", n >= 2 ? buf[1] : 0);
+      return Res::REJECTED;
+    }
+    if (n == 0) { snprintf(why_, sizeof(why_), "keine Antwort"); return Res::SILENT; }
+    if (buf[0] != 0x81) { snprintf(why_, sizeof(why_), "unerwartete Antwort 0x%02X", buf[0]); return Res::SILENT; }
+    if (n < (size_t)b.len + 3) {
+      snprintf(why_, sizeof(why_), "unvollständig (%u von %u Bytes)", (unsigned)n, (unsigned)want);
+      return Res::SILENT;
+    }
     if (n == want) {                                                  // full frame: check the sum
       uint16_t sum = 0;
       for (size_t i = 0; i < n - 2; i++) sum += buf[i];
-      if (((sum >> 8) & 0xFF) != buf[n - 2] || (sum & 0xFF) != buf[n - 1]) cksumMismatch_++;
+      if (((sum >> 8) & 0xFF) != buf[n - 2] || (sum & 0xFF) != buf[n - 1]) {
+        cksumMismatch_++;
+        if (store) tr("Block 0x%04X: Prüfsumme falsch", (unsigned)b.addr);
+      }
     }
     if (store) mem_.store(b.addr, buf + 3, b.len);
     return Res::OK;
@@ -446,6 +514,11 @@ class Reader {
   volatile int progress_ = 0;
   const char* error_ = nullptr;
   const char* firstError_ = nullptr;
+  TraceFn traceFn_ = nullptr;
+  void* traceCtx_ = nullptr;
+  std::vector<std::string> trace_;
+  int traceDropped_ = 0;
+  char why_[48] = "";
   int attempts_ = 0;
   uint32_t durationMs_ = 0;
 };

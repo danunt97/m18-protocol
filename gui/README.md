@@ -144,6 +144,20 @@ und das Suchfeld akzeptiert URL, E-Seriennummer, Name oder Gehäuse-Seriennummer
 Die E-Seriennummer stammt aus dem Akku (Register 0x0004) und ist **nicht** die Seriennummer auf dem Gehäuse.
 Die Gehäuse-Seriennummer kannst du zusätzlich erfassen.
 
+## Protokoll und Diagnose
+
+Die PC-Software schreibt alles in **`m18_protokoll.log`** neben der Datenbank (im Docker-Container also in `./data`):
+Verbindungen (mit Firmware, Adresse und Neustartgrund der Brücke), jedes Auslesen mit dem Ablauf am Akku, Übernahmen,
+den automatischen Abgleich und Fehler mit vollständiger Fehlermeldung. Die Datei wird bei 2 MB rotiert, fünf alte Dateien bleiben.
+Ein anderer Ort geht mit der Umgebungsvariable `M18_LOG_FILE`.
+
+Unter **Auslesen → Protokoll**:
+
+- **PC-Protokoll**: die Protokolldatei herunterladen.
+- **Brücken-Protokoll anzeigen**: die letzten 250 Zeilen der verbundenen ESP32-Brücke (Firmware ab 1.10).
+- **Diagnose-Datei**: alles in einer Datei für die Fehlersuche: Versionen, Verbindung, Einstellungen (ohne Passwörter),
+  Status und Protokoll der Brücke, PC-Protokoll.
+
 ## Dateien
 
 | Datei | Inhalt |
@@ -151,6 +165,7 @@ Die Gehäuse-Seriennummer kannst du zusätzlich erfassen.
 | `m18_gui.py` | Webserver, REST-API, Register-Dekodierung, Hardware-Zugriff über `m18.py`, CSV |
 | `fleet.py` | SQLite-Schema und -Zugriff, Zustandsschätzung, Warnlogik, Trend |
 | `qrgen.py` | QR-Code-Encoder (reines Python, SVG/PNG) |
+| `applog.py` | Protokolldatei (rotierend) |
 | `demo.py` | Simulierte Flotte und simulierter Adapter |
 | `static/` | Oberfläche (HTML/CSS/JS ohne Framework), Etiketten- und Berichtsseite |
 | `tests/` | `python -m unittest discover -s gui/tests` |

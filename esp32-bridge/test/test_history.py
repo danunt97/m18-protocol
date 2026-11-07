@@ -201,6 +201,14 @@ class TestHistory(unittest.TestCase):
             for k in ("eserial", "cells", "pack_v", "temp", "imbalance_mv", "manufactured", "note", "counters"):
                 self.assertEqual(r[k], classic[k], k)
             self.assertTrue(any("Ausgelesen über die Brücke" in ln for ln in app.log_lines), app.log_lines[-3:])
+            # battery trace of the bridge lands in the PC log; the bridge's own log is retrievable
+            self.assertTrue(any("Brücke/Akku: Fertig: Typ 306" in ln for ln in app.log_lines), app.log_lines[-6:])
+            bl = app.bridge_log(50)
+            self.assertTrue(bl["ok"], bl)
+            self.assertTrue(any("AKKU Fertig: Typ 306" in ln for ln in bl["lines"]), bl["lines"][-5:])
+            diag = app.diagnose()
+            self.assertIn("--- ESP32-Brücke ---", diag)
+            self.assertIn("AKKU Auslesen gestartet", diag)
         finally:
             app.disconnect()
 
@@ -211,7 +219,7 @@ class TestHistory(unittest.TestCase):
         self.srv.seen.clear()
         logs = []
         from autosync import AutoSync
-        a = AutoSync(self.db, logs.append, default_interval_min=5)
+        a = AutoSync(self.db, lambda msg, *_a, **_k: logs.append(msg), default_interval_min=5)
         a.configure(hosts=self.url)
         res = a.run_once(discover_timeout=0.2)
         mine = [r for r in res["results"] if r["target"] == self.url][0]

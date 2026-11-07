@@ -135,6 +135,8 @@ class TestHttp(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp()
+        import applog
+        applog.setup(os.path.join(cls.tmp, "m18_protokoll.log"))
         db = FleetDB(os.path.join(cls.tmp, "t.db"))
         app = m18_gui.App(db, demo=DemoFleet(db))
         m18_gui.Handler.app = app
@@ -184,6 +186,23 @@ class TestHttp(unittest.TestCase):
         s = self.req("/api/save", {"token": r["token"], "fields": {"name": "N-01", "location": "Lager"}})
         self.assertTrue(s["created"])
         self.assertEqual(self.req("/api/resolve?q=N-01")["battery"]["eserial"], r["eserial"])
+
+    def test_log_file_and_diagnose(self):
+        """Every status line lands in the log file; the diagnose download bundles it without passwords."""
+        self.req("/api/settings", {"bridge_password": "geheim123"})
+        self.req("/api/connect", {"port": "DEMO"})
+        self.req("/api/demo/plug", {"key": "b01"})
+        self.assertTrue(self.req("/api/read", {})["ok"])
+        lines = self.req("/api/log")["lines"]
+        self.assertTrue(any("Ausgelesen (Demo)" in ln for ln in lines), lines[-3:])
+        full = self.req("/api/log/download").decode("utf-8")
+        self.assertIn("INFO    Ausgelesen (Demo): 108-88213", full)
+        diag = self.req("/api/diagnose").decode("utf-8")
+        self.assertIn("M18 Akku-Verwaltung – Diagnose", diag)
+        self.assertIn("Ausgelesen (Demo)", diag)
+        self.assertNotIn("geheim123", diag)
+        self.assertFalse(self.req("/api/bridge/log")["ok"])          # demo: no bridge
+        self.req("/api/settings", {"bridge_password": ""})
 
     def test_edit_and_settings(self):
         self.req("/api/batteries/306-412901", {"comment": "neu kommentiert", "retired": True})
