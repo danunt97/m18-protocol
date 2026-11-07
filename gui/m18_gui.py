@@ -147,10 +147,45 @@ class Hardware:
         self.log("Getrennt")
         return {"ok": True}
 
+    def _read_via_bridge(self):
+        """Read through the ESP32 bridge with one SCAN: the bridge's own reader wakes the pack with
+        retries, repeats a failed read once, skips registers the pack does not have and returns the
+        raw register blocks - decoded here exactly like a read-out over a USB adapter.
+        Returns None for firmware that does not send the raw blocks (then read_id() is used)."""
+        import m18_bridge
+        r = self.m.scan(store=False)
+        if not r.get("ok"):
+            msg = r.get("error") or "Auslesen fehlgeschlagen"
+            if r.get("first_error") and r.get("first_error") != msg:
+                msg += f" (1. Versuch: {r['first_error']})"
+            raise RuntimeError(msg)
+        if not r.get("mem"):
+            return None
+        snap = decode_registers(m18_bridge.registers_from_memory(r["mem"]))
+        if not snap["ok"]:
+            raise RuntimeError("Seriennummer nicht lesbar – Akku richtig angeschlossen?")
+        extra = []
+        if r.get("blocks_unsupported"):
+            extra.append(f"{r['blocks_unsupported']} vom Akku nicht unterstützt")
+        if (r.get("attempts") or 1) > 1:
+            extra.append(f"2. Versuch, 1. Versuch: {r.get('first_error')}")
+        self.log(f"Ausgelesen über die Brücke: {snap['eserial']}, {r.get('blocks_ok')}/{r.get('blocks_total')} Blöcke"
+                 f"{' (' + '; '.join(extra) + ')' if extra else ''} in {(r.get('duration_ms') or 0) / 1000:.1f} s, "
+                 f"{snap['pack_v']} V")
+        return snap
+
     def read(self):
         if self.m is None:
             return {"ok": False, "error": "Nicht verbunden"}
         with self.lock:
+            if self.is_bridge():
+                try:
+                    snap = self._read_via_bridge()
+                    if snap is not None:
+                        return snap
+                except Exception as e:
+                    self.log(f"Auslesen fehlgeschlagen: {e}")
+                    return {"ok": False, "error": str(e)}
             buf = io.StringIO()
             try:
                 with contextlib.redirect_stdout(buf):

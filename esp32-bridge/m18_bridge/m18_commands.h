@@ -5,7 +5,8 @@
 //   IDLE | HIGH             -> OK
 //   READ <addr> <len>       -> OK <hex response frame> | ERR TIMEOUT
 //   NOTE <addr> <byte>      -> OK <hex response frame>     (note area 0x23-0x36 only)
-//   SCAN                    -> OK {decoded read-out + raw blocks, "history_id"} | ERR {json}
+//   SCAN [NOSTORE]          -> OK {decoded read-out + raw blocks, "history_id"} | ERR {json}
+//                              (NOSTORE: do not keep it in the history - the PC saves it itself)
 //   INFO                    -> OK {json}
 //   TIME <unix>             -> OK <unix now>   (sets the clock if it is not synced yet)
 //   HSTAT                   -> OK {"count","unsynced","free_kb","total_kb","ready"}
@@ -18,6 +19,7 @@
 
 #pragma once
 #include <string>
+#include <strings.h>    // strcasecmp
 #include "m18_proto.h"
 #include "m18_reader.h"
 #include "m18_history.h"
@@ -55,7 +57,9 @@ class CommandProcessor {
     char r[200];
 
     if (!strcmp(cmd, "SCAN")) {                 // full direct read-out, decoded as JSON
-      uint32_t id = scan();
+      // "SCAN NOSTORE": the PC software reads and saves itself - keep the bridge's history clean
+      bool store = !(argc > 1 && !strcasecmp(argv[1], "NOSTORE"));
+      uint32_t id = scan(store);
       std::string out = reader_.ok() ? "OK " : "ERR ";
       out += scanBuf_;
       if (id) out.insert(out.size() - 1, ",\"history_id\":" + std::to_string(id));
@@ -66,7 +70,8 @@ class CommandProcessor {
     if (!strcmp(cmd, "HIGH")) { link_.high(); return "OK"; }
     if (!strcmp(cmd, "RESET")) {
       int got = -1;
-      if (link_.reset(&got)) return "OK ACK";
+      for (int attempt = 0; attempt < 3; attempt++)   // packs sometimes miss the first wake-up
+        if (link_.reset(&got)) return "OK ACK";
       if (got < 0) return "ERR NOACK";
       snprintf(r, sizeof(r), "ERR NOACK %02X", got);
       return r;
@@ -111,10 +116,10 @@ class CommandProcessor {
 
   // Full read-out; stores it in the history when successful. Returns the history id (0 = not stored).
   // Callers must hold the battery line (the sketch's mutex).
-  uint32_t scan() {
+  uint32_t scan(bool store = true) {
     reader_.read();
     reader_.toJson(scanBuf_, sizeof(scanBuf_), clock_ ? clock_() : 0);
-    if (!reader_.ok() || !history_ || !history_->ready()) return 0;
+    if (!store || !reader_.ok() || !history_ || !history_->ready()) return 0;
     RecordMeta m;
     if (meta_) meta_(m);
     return history_->add(scanBuf_, m);

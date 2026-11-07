@@ -179,6 +179,31 @@ class TestHistory(unittest.TestCase):
         finally:
             app.disconnect()
 
+    def test_pc_read_uses_one_scan(self):
+        """The GUI reads through the bridge with one SCAN NOSTORE (bridge's robust reader) instead of
+        hundreds of single READs; the result decodes like a register-by-register read_id() and the
+        bridge's own history stays untouched."""
+        from registers import decode_registers
+        app = m18_gui.App(fleet.FleetDB(":memory:"))
+        try:
+            self.assertTrue(app.connect(self.url)["ok"])
+            before = app.hw.m.history_stats()["count"]
+            self.srv.seen.clear()
+            r = app.live_read()
+            self.assertTrue(r["ok"], r)
+            lines = [ln for _, ls in self.srv.seen for ln in ls]
+            self.assertIn("SCAN NOSTORE", lines)
+            self.assertFalse([ln for ln in lines if ln.startswith("READ ")], lines[:5])
+            self.assertEqual(app.hw.m.history_stats()["count"], before)
+            # same values as the classic register-by-register read over the bridge
+            arr = app.hw.m.read_id(output="array")
+            classic = decode_registers({m18.data_id[i][0]: v for i, v in arr})
+            for k in ("eserial", "cells", "pack_v", "temp", "imbalance_mv", "manufactured", "note", "counters"):
+                self.assertEqual(r[k], classic[k], k)
+            self.assertTrue(any("Ausgelesen über die Brücke" in ln for ln in app.log_lines), app.log_lines[-3:])
+        finally:
+            app.disconnect()
+
     def test_autosync(self):
         m = m18_bridge.M18Bridge(self.url)
         m.scan()                                       # stored on the bridge, not yet in the database

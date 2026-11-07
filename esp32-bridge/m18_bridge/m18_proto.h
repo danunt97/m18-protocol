@@ -20,7 +20,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define M18BRIDGE_VERSION "1.8"
+#define M18BRIDGE_VERSION "1.9"
 
 namespace m18 {
 

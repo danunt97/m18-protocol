@@ -213,7 +213,7 @@ einer Woche leer. Deshalb geht sie nach einer einstellbaren Ruhezeit in den **Ti
 
 ## Messungen speichern und in die PC-Datenbank übernehmen
 
-**Jede erfolgreiche Messung wird auf der Brücke gespeichert.** Das gilt für das Handy, die Weboberfläche und `SCAN`.
+**Jede erfolgreiche Messung wird auf der Brücke gespeichert.** Das gilt für das Handy, die Weboberfläche und `SCAN`. Liest die PC-Software über die Brücke, speichert sie selbst in ihrer Datenbank (`SCAN NOSTORE`).
 Gespeichert werden Zeitpunkt, optional Standort/Kunde und Kommentar (vor dem Auslesen eingeben), die dekodierten Werte
 und **alle Rohregister**. Der Speicher reicht für mehrere tausend Messungen (FAT-Partition, ca. 3 KB pro Messung).
 Wird er knapp, werden zuerst die ältesten schon übernommenen Messungen gelöscht.
@@ -303,7 +303,7 @@ Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus.
 | `IDLE` / `HIGH` | `OK` | TX auf Low halten / UART aktiv |
 | `READ <addr> <len>` | `OK <Antwortrahmen hex>` | Register lesen (wie `M18.cmd`) |
 | `NOTE <addr> <byte>` | `OK <hex>` | Ein Zeichen der Notiz schreiben, **nur 0x23–0x36** |
-| `SCAN` | `OK {json}` | Komplett auslesen, dekodieren, im Verlauf speichern |
+| `SCAN [NOSTORE]` | `OK {json}` | Komplett auslesen, dekodieren, im Verlauf speichern (mit `NOSTORE` nicht speichern – so liest die PC-Software) |
 | `TIME <unix>` | `OK <jetzt>` | Uhr stellen, falls nicht per NTP gestellt |
 | `HSTAT` | `OK {count, unsynced, free_kb, …}` | Speicherstand |
 | `HLIST <nach-id> [max] [new\|all]` | `OK {"items":[…],"next":id}` | Gespeicherte Messungen (seitenweise) |

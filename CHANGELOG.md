@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9 – Auslesen vom PC über die Brücke robust und schnell
+- Die PC-Software liest über die ESP32-Brücke jetzt mit **einem** Befehl (`SCAN NOSTORE`) statt mit rund 220 einzelnen Registerabfragen.
+  Damit gelten auch beim Auslesen vom PC alle Härtungen der Brücke: mehrere Weckversuche, automatischer zweiter Durchlauf, Wiederholungen pro Block, nicht unterstützte Register (ältere 5-Ah-Akkus) werden übersprungen.
+  Bisher wurde der Akku vom PC aus nur einmal geweckt; verpasste er das, lief jede einzelne Abfrage in eine Zeitüberschreitung.
+- Das Ergebnis wird mit demselben Code dekodiert wie ein Auslesen über einen USB-Adapter. Die Messung landet nicht zusätzlich im Speicher der Brücke (`NOSTORE`), gespeichert wird wie gewohnt in der PC-Datenbank.
+- `RESET` der Brücke versucht das Wecken bis zu dreimal.
+- Ältere Firmware ohne Rohdaten im Ergebnis: Die PC-Software liest wie bisher Register für Register.
+
 ## 1.8 – Alle Werte auch auf dem Handy
 - Die Weboberfläche der Brücke zeigt nach dem Auslesen **alle 185 Werte**, die der Akku liefert (dieselben Register wie die PC-Software): Grunddaten, aktuelle Messwerte, Zähler, Entladezeit nach Strom (10-A- und 5-A-Stufen), Ladungen nach Spannung und Temperatur, Ladedauer-Histogramme, unbekannte Register. Histogramme als Balken, deutsche Bezeichnungen, Registeradresse dazu.
 - Werte, die ein Akku nicht liefert, stehen als „nicht verfügbar“.

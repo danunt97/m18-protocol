@@ -388,9 +388,10 @@ class M18Bridge(m18.M18):
         except BridgeError:
             return False
 
-    def scan(self):
-        """Let the bridge read and decode the battery itself; returns a dict."""
-        r = self.link.exec(["SCAN"], timeout=90)[0]   # older packs: unsupported blocks cost time
+    def scan(self, store=True):
+        """Let the bridge read and decode the battery itself; returns a dict.
+        store=False: the bridge does not keep it in its history (the PC saves it itself)."""
+        r = self.link.exec(["SCAN" if store else "SCAN NOSTORE"], timeout=90)[0]   # older packs take longer
         return json.loads(r[r.index("{"):]) if "{" in r else {"ok": False, "error": r}
 
     # -- measurement history stored on the bridge ---------------------------
