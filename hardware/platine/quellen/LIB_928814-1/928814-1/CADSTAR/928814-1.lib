@@ -1,0 +1,16 @@
+.928814-1 :1 ;Crimp,Faston,tab,90,M,6.35x0.81mm
+"9288141"
+*STM U
+*NGS
+*PLB 1="1" 2="2"
+*MXP 2
+*DFN 928814-1
+~!Mouser Part Number (571-928814-1)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/TE-Connectivity-AMP/928814-1?qs=pyu0Ngu8oR6IQj1m4jmYEA%3D%3D)
+~!Manufacturer_Name (TE Connectivity)
+~!Manufacturer_Part_Number (928814-1)
+~!Link Datasheet (http://www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Catalog+Section%7F82004_FASTON_PCB_Tabs_Receptacles%7F0914%7Fpdf%7FEnglish%7FENG_CS_82004_FASTON_PCB_Tabs_Receptacles_0914.pdf%7F928814-1)
+~!Height (6mm)
+~!3D_Model (928814-1)
+"928814-1"
+1.1!U 2.1!U 

@@ -1,0 +1,66 @@
+(Japanese_coding: sjis)
+(function "ECS_962168"
+    (uver 1)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (ctime 2018-05-21-15:28:05)
+    (utime 2024-12-15-23:20:15)
+    (interface
+        (port "1" (symbPinId 1) (portType INOUT))
+        (port "2" (symbPinId 2) (portType INOUT))
+    )
+    (property "symbolName" "928814-1")
+)
+
+
+(pinAssign "ECS_962168"
+    (uver 1)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (ctime 2018-05-21-15:28:05)
+    (utime 2024-12-15-23:20:15)
+    (interface
+        (port "1" (symbPinId 1) (portName "1") (portType INOUT))
+        (port "2" (symbPinId 2) (portName "2") (portType INOUT))
+    )
+    (internal
+        (funcInst (functionRef "ECS_962168")
+                (port "1" (match "1"))
+                (port "2" (match "2"))
+        )
+    )
+    (property "usePowerBox" "No")
+    (property "symbolName" "928814-1")
+)
+
+
+(part "928814-1"
+    (uver 1)
+    (cuser "SamacSys")
+    (uuser "SamacSys")
+    (ctime 2018-05-21-15:28:05)
+    (utime 2024-12-15-23:20:15)
+    (packageRef "928814-1")
+    (pinAssignRef "ECS_962168")
+    (interface
+        (port "1" (symbPinId 1) (portName "1") (portType INOUT))
+        (port "2" (symbPinId 2) (portName "2") (portType INOUT))
+    )
+    (partClass UNDEF)
+    (useInSchema Y)
+    (useInLayout Y)
+    (inPartsList Y)
+    (partType NORMAL)
+    (placeRestriction FREE)
+    (property "enetNonSeries" "YES")
+    (property "refDesPrefix" "U")
+    (property "description" "Crimp,Faston,tab,90,M,6.35x0.81mm")
+    (property "Mouser_Part_Number" "571-928814-1")
+    (property "Mouser_Price/Stock" "https://www.mouser.co.uk/ProductDetail/TE-Connectivity-AMP/928814-1?qs=pyu0Ngu8oR6IQj1m4jmYEA%3D%3D")
+    (property "Manufacturer_Name" "TE Connectivity")
+    (property "Manufacturer_Part_Number" "928814-1")
+    (property "Datasheet_Link" "http://www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Catalog+Section%7F82004_FASTON_PCB_Tabs_Receptacles%7F0914%7Fpdf%7FEnglish%7FENG_CS_82004_FASTON_PCB_Tabs_Receptacles_0914.pdf%7F928814-1")
+    (property "compAreaTopHeight" 6)
+)
+
+

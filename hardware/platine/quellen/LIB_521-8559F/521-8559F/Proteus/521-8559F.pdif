@@ -1,0 +1,109 @@
+;Proteus Design Interchange Format
+(PDIF
+ (vendor "SamacSys Limited")
+ (version 1 0)
+ (library
+  (part "521-8559F"
+   (description "Standard LEDs - Through Hole 5mm RGB WC LED w4 leads")
+   (family "DIO")
+   (package "5218559F")
+   (attribute "Datasheet Link" "")
+   (attribute "Geometry.Height" "8.6mm")
+   (attribute "Mouser Part Number" "645-5218559F")
+   (attribute "Mouser Price/Stock" "https://www.mouser.co.uk/ProductDetail/Dialight/521-8559F?qs=vmHwEFxEFR%2FyCJVY9sdZTA%3D%3D")
+   (attribute "Manufacturer_Name" "Dialight")
+   (attribute "Manufacturer_Part_Number" "521-8559F")
+   (gate
+    (symbol "521-8559F")
+    (pin "RED_K" 1 PS)
+    (pin "COMMON_A" 2 PS)
+    (pin "BLUE_K" 3 PS)
+    (pin "GREEN_K" 4 PS)
+   )
+  )
+  (symbol "521-8559F"
+   (units THOU)
+   (origin (pt 0 0))
+   (graphic
+    (stroke 10)
+    (path (pt 200 100) (pt 900 100) (pt 900 -400) (pt 200 -400) (pt 200 100) (closed))
+   )
+   (terminal
+    (body (symbol "PIN") (pt 0 0) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+   (terminal
+    (body (symbol "PIN") (pt 0 -100) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+   (terminal
+    (body (symbol "PIN") (pt 0 -200) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+   (terminal
+    (body (symbol "PIN") (pt 0 -300) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+  )
+  (symbol "PIN"
+   (units THOU)
+   (origin (pt 0 0))
+   (graphic
+    (stroke 10)
+    (path (pt 0 0) (pt 200 0))))
+  (symbol "PINSHORT"
+   (units THOU)
+   (origin (pt 0 0))
+   (graphic
+    (stroke 10)
+    (path (pt 0 0) (pt 100 0))))
+  (package "5218559F"
+   (units MM)
+   (layer OCCA
+    (graphic
+     (stroke 0.1)
+     (path
+      (closed true)
+      (pt -3.54 2.345)
+      (pt 3.54 2.345)
+      (pt 3.54 -5.445)
+      (pt -3.54 -5.445)
+      (pt -3.54 2.345))))
+   (layer TASM
+    (graphic
+     (stroke 0.2)
+     (path
+      (closed true)
+      (pt -2.54 -1.905)
+      (arc (pt -2.540 -1.905) (pt -2.540 -4.445) (pt 2.540 0.635) (start 180.0) (sweep -180.0))
+      (pt 2.54 -1.905)
+      (arc (pt 2.540 -1.905) (pt -2.540 -4.445) (pt 2.540 0.635) (start 180.0) (sweep .0))
+      (pt -2.54 -1.905))))
+   (layer TSLK
+    (graphic
+     (stroke 0.1)
+     (path
+      (closed true)
+      (pt 0 1.295)
+      (arc (pt 0.000 1.295) (pt 0.000 1.245) (pt 0.100 1.345) (start 180.0) (sweep 180.0))
+      (pt 0.1 1.295)
+      (arc (pt 0.100 1.295) (pt 0.000 1.245) (pt 0.100 1.345) (start 180.0) (sweep .0))
+      (pt 0 1.295))))
+   (leg 1 (pt 0.000 0.000) (padstack 0))
+   (leg 2 (pt 0.000 -1.270) (padstack 0))
+   (leg 3 (pt 0.000 -2.540) (padstack 0))
+   (leg 4 (pt 0.000 -3.810) (padstack 0))
+   (padstack 0
+    (hole 0.91)
+    (plated true)
+    (pad (layer TCOP) (round 1.150))
+    (pad (layer INNER) (round 1.150))
+    (pad (layer BCOP) (round 1.150))
+   )
+   (model "521-8559F.stp"
+    (euler 90 0 0)
+    (offset 0 -1.8799999952316284 0)
+   )
+  )
+ )
+)

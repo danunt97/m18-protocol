@@ -34,6 +34,26 @@ Ein **ESP32-S3-N16R8** sitzt zwischen dem Akku und der PC-Software und ersetzt d
 - **Versorgung:** über USB, oder im [Aufsteckgehäuse](../hardware/aufsteckgehaeuse/README.md) aus dem Akku über einen
   Step-down-Wandler (HW-411/LM2596, **auf 5,0 V eingestellt**) an den 5V-Pin. **Nie** B+ (18–21 V) direkt anschließen.
 
+## Variante: eigene Platine mit ESP32-S3 SuperMini
+
+Für die Platine in [`hardware/platine`](../hardware/platine/README.md) gibt es eine eigene Firmware-Variante (`BOARD_SUPERMINI`).
+Die Logik bleibt gleich, nur Pins und Speicher sind anders:
+
+| | DevKitC-1 N16R8 | SuperMini (eigene Platine) |
+|---|---|---|
+| TX → J2 | GPIO17 (Pegelwandler) | **GPIO7** (NPN/PNP-Schalter auf B+, nicht invertierend) |
+| RX ← J1 | GPIO18 (1 kΩ) | **GPIO6** (Trennstufe mit zwei NPN, nicht invertierend) |
+| Status-LED | WS2812 an GPIO48/38 | WS2812 an GPIO48 **und** RGB-LED der Platine an GPIO13/12/11 (gleiche Farben) |
+| Laden (vorbereitet) | – | CHG_EN an GPIO5, bleibt Low |
+| Flash / PSRAM | 16 MB / 8 MB Octal | 4 MB / 2 MB Quad |
+| Partitionen | 3 MB App, 9,9 MB FAT | 2 × 1,5 MB App, 896 KB FAT (ca. 150 Messungen), [`partitions/supermini-4mb.csv`](partitions/supermini-4mb.csv) |
+
+Im Web-Flasher gibt es dafür einen eigenen Knopf. Die Update-Datei für die Weboberfläche heißt `m18-bruecke-supermini-update.bin`.
+
+Arduino IDE: in `m18_bridge.ino` die Zeile `// #define BOARD_SUPERMINI` aktivieren und `partitions/supermini-4mb.csv` als
+`partitions.csv` neben die `.ino` kopieren. Dann *Board* „ESP32S3 Dev Module“, *Flash Size* „4MB“, *PSRAM* „QSPI PSRAM“,
+*USB CDC On Boot* „Enabled“ einstellen. Das *Partition Scheme* ist egal, weil die `partitions.csv` Vorrang hat.
+
 ## Status-LED (Onboard-RGB-LED)
 
 Die WS2812-LED auf dem Board zeigt den Zustand. Ab Werk ist **GPIO48** eingestellt (DevKitC-1 v1.0 und die meisten

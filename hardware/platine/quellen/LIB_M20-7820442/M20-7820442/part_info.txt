@@ -1,0 +1,9 @@
+Manufacturer=Harwin
+PartNumber=M20-7820442
+PartCategory=Connector
+PackageCategory=Header, Receptacle - Straight PTH Box
+PinCount=4
+Version=4.1
+Released=2017-12-07 09:27:12
+Downloaded=2026-11-08 10:31:31
+3D=Y

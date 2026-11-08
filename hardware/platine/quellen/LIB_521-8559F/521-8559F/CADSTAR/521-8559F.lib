@@ -1,0 +1,16 @@
+.521-8559F :1 ;Standard LEDs - Through Hole 5mm RGB WC LED w4 leads
+"5218559F"
+*STM LED
+*NGS
+*PLB 1="RED K" 2="COMMON A" 3="BLUE K" 4="GREEN K"
+*MXP 4
+*DFN 521-8559F
+~!Mouser Part Number (645-5218559F)
+~!Link Mouser Price/Stock (https://www.mouser.co.uk/ProductDetail/Dialight/521-8559F?qs=vmHwEFxEFR%2FyCJVY9sdZTA%3D%3D)
+~!Manufacturer_Name (Dialight)
+~!Manufacturer_Part_Number (521-8559F)
+~!Link Datasheet (-)
+~!Height (8.6mm)
+~!3D_Model (521-8559F)
+"521-8559F"
+1.1!U 2.1!U 3.1!U 4.1!U 

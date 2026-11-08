@@ -1,0 +1,11 @@
+FILE_TYPE = MULTI_PHYS_TABLE;
+
+PART 'M20_7820442'
+CLASS = IO
+{========================================================================================}
+:"MANUFACTURER_NAME", "MANUFACTURER_PART_NUMBER"= "PART_NUMBER", "JEDEC_TYPE", "PACK_TYPE", "MOUSER_PART_NUMBER", "MOUSER_PRICE/STOCK", "DESCRIPTION", "DATASHEET", "HEIGHT";
+{========================================================================================}
+ "Harwin", "M20-7820442" (!) = "", "RHDR4W70P0X254_1X4_1056X250X850P", "Header, Receptacle - Straight PTH Box", "855-M20-7820442", "https://www.mouser.co.uk/ProductDetail/Harwin/M20-7820442?qs=vF78I%252BjhbY9ZgDLCXkGx4w%3D%3D", "M20: 4 Pos Receptacle SIL Straight 3mm THT Connector 8.5mm high Gold+Tin", "https://content.harwin.com/m/c2ac50ebb1c800d5/original/DRG-00385-Technical-Drawing-Datasheet-M20-782-pdf.pdf", "8.5 mm"
+END_PART
+
+END.

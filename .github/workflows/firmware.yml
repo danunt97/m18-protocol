@@ -23,6 +23,9 @@ concurrency:
 
 env:
   FQBN: esp32:esp32:esp32s3:PSRAM=opi,FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,CDCOnBoot=cdc
+  # ESP32-S3 SuperMini (ESP32-S3FH4R2): 4 MB Flash, 2 MB PSRAM (QSPI). Die Partitionstabelle kommt aus
+  # esp32-bridge/partitions/supermini-4mb.csv (als partitions.csv neben dem Sketch); min_spiffs nur für die Größenprüfung.
+  FQBN_SUPERMINI: esp32:esp32:esp32s3:PSRAM=enabled,FlashSize=4M,PartitionScheme=min_spiffs,CDCOnBoot=cdc
   CORE: "3.0.7"
   INDEX: https://espressif.github.io/arduino-esp32/package_esp32_index.json
 
@@ -36,76 +39,97 @@ jobs:
         run: |
           arduino-cli core update-index --additional-urls "$INDEX"
           arduino-cli core install "esp32:esp32@$CORE" --additional-urls "$INDEX"
-      - name: Firmware bauen
+      - name: Firmware bauen (ESP32-S3-DevKitC-1 N16R8)
         run: arduino-cli compile --fqbn "$FQBN" --export-binaries --output-dir build esp32-bridge/m18_bridge
+      - name: Firmware bauen (ESP32-S3 SuperMini, eigene Platine)
+        run: |
+          set -e
+          mkdir -p build-sm/src
+          cp -r esp32-bridge/m18_bridge build-sm/src/
+          cp esp32-bridge/partitions/supermini-4mb.csv build-sm/src/m18_bridge/partitions.csv
+          sed -i '1i #define BOARD_SUPERMINI' build-sm/src/m18_bridge/m18_bridge.ino
+          arduino-cli compile --fqbn "$FQBN_SUPERMINI" --export-binaries --output-dir build-sm/out build-sm/src/m18_bridge
       - name: Web-Flasher zusammenstellen
         run: |
           set -e
-          ls -la build
           mkdir -p site/firmware
           cp webflash/index.html site/
-          cp build/m18_bridge.ino.bin site/firmware/m18-bruecke-update.bin
-          if [ -f build/m18_bridge.ino.merged.bin ]; then
-            cp build/m18_bridge.ino.merged.bin site/firmware/m18-bruecke.bin
-          else
-            # Fallback: Bootloader + Partitionen + boot_app0 + App selbst zusammenfügen
-            ESPTOOL=$(find ~/.arduino15/packages/esp32/tools -name 'esptool' -type f -perm -u+x | head -1)
-            BOOTAPP=$(find ~/.arduino15/packages/esp32/hardware -name boot_app0.bin | head -1)
-            "$ESPTOOL" --chip esp32s3 merge_bin -o site/firmware/m18-bruecke.bin --flash_mode keep --flash_size 16MB \
-              0x0 build/m18_bridge.ino.bootloader.bin 0x8000 build/m18_bridge.ino.partitions.bin \
-              0xe000 "$BOOTAPP" 0x10000 build/m18_bridge.ino.bin
-          fi
-          # Das Arduino-Image ist auf die vollen 16 MB aufgefüllt (fast nur 0xFF). Leere Bytes am Ende
-          # abschneiden: Der Browser muss dann nur ~1,3 MB schreiben statt 16 MB (sonst steht er minutenlang bei 98 %).
-          python3 - <<'PY'
-          p = "site/firmware/m18-bruecke.bin"
-          d = open(p, "rb").read()
-          end = len(d.rstrip(b"\xff"))
-          end = (end + 0xFFF) & ~0xFFF
-          open(p, "wb").write(d[:end])
-          print(f"Web-Flasher-Image: {len(d)} -> {end} Bytes")
-          PY
+          ESPTOOL=$(find ~/.arduino15/packages/esp32/tools -name 'esptool' -type f -perm -u+x | head -1)
+          BOOTAPP=$(find ~/.arduino15/packages/esp32/hardware -name boot_app0.bin | head -1)
+          # pack <Build-Ordner> <Dateiname> <Flashgröße>
+          pack() {
+            ls -la "$1"
+            cp "$1/m18_bridge.ino.bin" "site/firmware/$2-update.bin"
+            if [ -f "$1/m18_bridge.ino.merged.bin" ]; then
+              cp "$1/m18_bridge.ino.merged.bin" "site/firmware/$2.bin"
+            else
+              # Fallback: Bootloader + Partitionen + boot_app0 + App selbst zusammenfügen
+              "$ESPTOOL" --chip esp32s3 merge_bin -o "site/firmware/$2.bin" --flash_mode keep --flash_size "$3" \
+                0x0 "$1/m18_bridge.ino.bootloader.bin" 0x8000 "$1/m18_bridge.ino.partitions.bin" \
+                0xe000 "$BOOTAPP" 0x10000 "$1/m18_bridge.ino.bin"
+            fi
+            # Das Arduino-Image ist auf die volle Flashgröße aufgefüllt (fast nur 0xFF). Leere Bytes am Ende
+            # abschneiden: Der Browser muss dann nur ~1,3 MB schreiben (sonst steht er minutenlang bei 98 %).
+            python3 -c "
+          p = 'site/firmware/$2.bin'
+          d = open(p, 'rb').read()
+          end = (len(d.rstrip(b'\xff')) + 0xFFF) & ~0xFFF
+          open(p, 'wb').write(d[:end])
+          print(f'Web-Flasher-Image {p}: {len(d)} -> {end} Bytes')"
+          }
+          pack build m18-bruecke 16MB
+          pack build-sm/out m18-bruecke-supermini 4MB
           VERSION=$(grep -oP '#define M18BRIDGE_VERSION "\K[^"]+' esp32-bridge/m18_bridge/m18_proto.h)
-          cat > site/manifest.json <<JSON
+          BUILD="$(date -u +%Y-%m-%d) (${GITHUB_SHA::7})"
+          manifest() {
+            cat > "site/$1" <<JSON
           {
-            "name": "M18 Akku-Brücke",
+            "name": "$2",
             "version": "$VERSION",
-            "build": "$(date -u +%Y-%m-%d) (${GITHUB_SHA::7})",
+            "build": "$BUILD",
             "new_install_prompt_erase": true,
             "new_install_improv_wait_time": 0,
             "builds": [
-              { "chipFamily": "ESP32-S3", "parts": [ { "path": "firmware/m18-bruecke.bin", "offset": 0 } ] }
+              { "chipFamily": "ESP32-S3", "parts": [ { "path": "firmware/$3", "offset": 0 } ] }
             ]
           }
           JSON
-          cat site/manifest.json
+            cat "site/$1"
+          }
+          manifest manifest.json "M18 Akku-Brücke (ESP32-S3-DevKitC-1 N16R8)" m18-bruecke.bin
+          manifest manifest-supermini.json "M18 Akku-Brücke (ESP32-S3 SuperMini, eigene Platine)" m18-bruecke-supermini.bin
           ls -la site site/firmware
-      - name: Image prüfen (Bootloader, Partitionen, App)
+      - name: Images prüfen (Bootloader, Partitionen, App)
         run: |
           python3 - <<'PY'
           import struct, sys
-          d = open("site/firmware/m18-bruecke.bin", "rb").read()
-          app = open("site/firmware/m18-bruecke-update.bin", "rb").read()
           ok = True
           def check(cond, msg):
               global ok
               print(("OK   " if cond else "FAIL ") + msg)
               ok &= cond
-          check(d[0] == 0xE9, "Bootloader-Kennung 0xE9 bei 0x0")
-          check(d[0x8000:0x8002] == b"\xaa\x50", "Partitionstabelle bei 0x8000")
-          parts = {}
-          for i in range(0, 0xC00, 32):
-              e = d[0x8000 + i:0x8000 + i + 32]
-              if e[:2] != b"\xaa\x50":
-                  break
-              off, size = struct.unpack("<II", e[4:12])
-              name = e[12:28].rstrip(b"\0").decode()
-              parts[name] = (e[2], e[3], off, size)
-              print(f"     {name:10} typ {e[2]} sub {e[3]:3} 0x{off:06x} {size // 1024} KB")
-          check(any(t == 1 and st == 0x81 for t, st, _, _ in parts.values()), "FAT-Partition (Messungsspeicher) vorhanden")
-          check(sum(1 for t, *_ in parts.values() if t == 0) >= 2, "zwei App-Partitionen (OTA)")
-          check(d[0x10000:0x10000 + len(app)] == app, "App bei 0x10000 = Update-Datei")
-          check(len(d) < 4 * 1024 * 1024, f"Image klein genug für schnelles Flashen ({len(d) // 1024} KB)")
+          for name, flash_mb in (("m18-bruecke", 16), ("m18-bruecke-supermini", 4)):
+              print(f"--- {name} ({flash_mb} MB Flash)")
+              d = open(f"site/firmware/{name}.bin", "rb").read()
+              app = open(f"site/firmware/{name}-update.bin", "rb").read()
+              check(d[0] == 0xE9, "Bootloader-Kennung 0xE9 bei 0x0")
+              check(d[0x8000:0x8002] == b"\xaa\x50", "Partitionstabelle bei 0x8000")
+              parts = {}
+              for i in range(0, 0xC00, 32):
+                  e = d[0x8000 + i:0x8000 + i + 32]
+                  if e[:2] != b"\xaa\x50":
+                      break
+                  off, size = struct.unpack("<II", e[4:12])
+                  pname = e[12:28].rstrip(b"\0").decode()
+                  parts[pname] = (e[2], e[3], off, size)
+                  print(f"     {pname:10} typ {e[2]} sub {e[3]:3} 0x{off:06x} {size // 1024} KB")
+              apps = [size for t, st, off, size in parts.values() if t == 0]
+              check(any(t == 1 and st == 0x81 for t, st, _, _ in parts.values()), "FAT-Partition (Messungsspeicher) vorhanden")
+              check(len(apps) >= 2, "zwei App-Partitionen (OTA)")
+              check(bool(apps) and len(app) <= min(apps), f"App ({len(app) // 1024} KB) passt in die App-Partition ({min(apps) // 1024 if apps else 0} KB)")
+              check(max((off + size for _, _, off, size in parts.values()), default=0) <= flash_mb * 1024 * 1024, "Partitionen passen in den Flash")
+              check(d[0x10000:0x10000 + len(app)] == app, "App bei 0x10000 = Update-Datei")
+              check(len(d) < 4 * 1024 * 1024, f"Image klein genug für schnelles Flashen ({len(d) // 1024} KB)")
           sys.exit(0 if ok else 1)
           PY
       - uses: actions/upload-artifact@v4

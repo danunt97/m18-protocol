@@ -20,6 +20,9 @@
 // Arduino IDE settings for ESP32-S3-DevKitC-1 N16R8 (see README):
 //   Board "ESP32S3 Dev Module", Flash Size 16MB, PSRAM "OPI PSRAM",
 //   Partition Scheme "16M Flash (3MB APP/9.9MB FATFS)", USB CDC On Boot "Enabled".
+// ESP32-S3 SuperMini (own PCB): #define BOARD_SUPERMINI below, Flash Size 4MB, PSRAM "QSPI PSRAM",
+//   partition table from ../partitions/supermini-4mb.csv copied as partitions.csv next to the
+//   sketch, USB CDC On Boot "Enabled".
 //   Arduino-ESP32 core 2.0.x or 3.x, no extra libraries.
 
 #include <WiFi.h>
@@ -47,6 +50,23 @@
 #define FW_BUILD __DATE__ " " __TIME__
 
 // ----------------------------------------------------------------- settings
+// Board variant. Default: ESP32-S3-DevKitC-1 N16R8 with level shifter (hardware/aufsteckgehaeuse).
+// BOARD_SUPERMINI: own PCB (hardware/platine) with an ESP32-S3 SuperMini (ESP32-S3FH4R2,
+// 4 MB flash, 2 MB quad PSRAM). In the Arduino IDE uncomment the next line; the CI build
+// defines it itself.
+// #define BOARD_SUPERMINI
+#if defined(BOARD_SUPERMINI)
+#define BOARD_NAME "supermini"
+#define PIN_TX 7           // -> NPN/PNP high-side switch -> battery J2 (not inverting)
+#define PIN_RX 6           // <- two-NPN isolator <- battery J1 (not inverting)
+#define DEFAULT_LED_PIN 48 // WS2812 on the SuperMini (mostly hidden under the module)
+#define PIN_RGB_R 13       // RGB LED on the PCB (common anode, each colour via an NPN: high = on)
+#define PIN_RGB_G 12
+#define PIN_RGB_B 11
+#define PIN_CHG_EN 5       // charger connector J2 pin 5: low = do not charge (nothing fitted yet)
+#else
+#define BOARD_NAME "devkitc"
+#endif
 #ifndef PIN_TX
 #define PIN_TX 17          // -> level shifter -> battery J2
 #endif
@@ -456,7 +476,51 @@ void showScanResult(const String& json, bool ok) {
   showResult(k ? k : (uint8_t)RES_GOOD);
 }
 
+#if defined(PIN_RGB_R)
+// Discrete RGB LED on the SuperMini PCB: 8-bit PWM per colour, shows the same colour as the WS2812.
+static bool rgbReady = false;
+static void rgbBegin() {
+  const int pins[3] = {PIN_RGB_R, PIN_RGB_G, PIN_RGB_B};
+  for (int i = 0; i < 3; i++) {
+    gpio_hold_dis((gpio_num_t)pins[i]);
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+    ledcAttach(pins[i], 5000, 8);
+    ledcWrite(pins[i], 0);
+#else
+    ledcSetup(i + 4, 5000, 8);         // channels 4-6: keep clear of anything the core uses first
+    ledcAttachPin(pins[i], i + 4);
+    ledcWrite(i + 4, 0);
+#endif
+  }
+  rgbReady = true;
+}
+static void rgbWrite(uint8_t r, uint8_t g, uint8_t b) {
+  if (!rgbReady) return;
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  ledcWrite(PIN_RGB_R, r); ledcWrite(PIN_RGB_G, g); ledcWrite(PIN_RGB_B, b);
+#else
+  ledcWrite(4, r); ledcWrite(5, g); ledcWrite(6, b);
+#endif
+}
+static void rgbOffForSleep() {         // NPN bases low and held: no glowing LED in deep sleep
+  const int pins[3] = {PIN_RGB_R, PIN_RGB_G, PIN_RGB_B};
+  for (int i = 0; i < 3; i++) {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+    ledcDetach(pins[i]);
+#else
+    ledcDetachPin(pins[i]);
+#endif
+    pinMode(pins[i], OUTPUT);
+    digitalWrite(pins[i], LOW);
+    gpio_hold_en((gpio_num_t)pins[i]);
+  }
+}
+#endif
+
 static void ledWrite(int pin, uint8_t r, uint8_t g, uint8_t b) {
+#if defined(PIN_RGB_R)
+  rgbWrite(r, g, b);
+#endif
   if (pin < 0) return;
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
   rgbLedWrite(pin, r, g, b);
@@ -480,6 +544,9 @@ static bool ledPinAllowed(int pin) {
   if (pin == -1) return true;
   if (pin < 1 || pin > 48) return false;
   if (pin == PIN_TX || pin == PIN_RX || pin == PIN_BOOT || pin == 19 || pin == 20 || pin == 43 || pin == 44) return false;
+#if defined(PIN_RGB_R)
+  if (pin == PIN_RGB_R || pin == PIN_RGB_G || pin == PIN_RGB_B || pin == PIN_CHG_EN) return false;
+#endif
   return !(pin >= 26 && pin <= 37);
 }
 
@@ -533,6 +600,9 @@ void goToSleep() {
   gpio_hold_en((gpio_num_t)PIN_TX);             // ... and held low during deep sleep
   gpio_deep_sleep_hold_en();
   ledWrite(ledPin, 0, 0, 0);
+#if defined(PIN_RGB_R)
+  rgbOffForSleep();
+#endif
   MDNS.end();
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
@@ -777,7 +847,7 @@ void updateInfo() {
               ",\"mac\":\"" + WiFi.macAddress() + "\",\"uptime_s\":" + String(millis() / 1000) +
               ",\"heap_kb\":" + String(ESP.getFreeHeap() / 1024) + ",\"min_heap_kb\":" + String(ESP.getMinFreeHeap() / 1024) +
               ",\"psram_kb\":" + String(ESP.getFreePsram() / 1024) + ",\"reset_reason\":\"" + resetReason() +
-              "\",\"build\":\"" FW_BUILD "\",\"led_pin\":" + String(ledPin) + ",\"led_brightness\":" + String(ledBright) +
+              "\",\"build\":\"" FW_BUILD "\",\"board\":\"" BOARD_NAME "\",\"led_pin\":" + String(ledPin) + ",\"led_brightness\":" + String(ledBright) +
               ",\"unlocked\":" + (unlocked() ? "true" : "false") + ",\"unlock_s\":" + String(unlockS) +
               ",\"setup_client\":" + (clientOnSetupAp() ? "true" : "false") +
               ",\"reading\":" + (scanRunning ? "true" : "false") + ",\"auth\":" + (webPass.length() ? "true" : "false") +
@@ -1264,6 +1334,13 @@ void setup() {
   port.begin();                                 // J2 low first - before anything else
   port.startUart();                             // UART with inverted (= low) TX idle
   pinMode(PIN_BOOT, INPUT_PULLUP);
+#if defined(PIN_CHG_EN)
+  pinMode(PIN_CHG_EN, OUTPUT);
+  digitalWrite(PIN_CHG_EN, LOW);                // charger (if ever fitted) stays off
+#endif
+#if defined(PIN_RGB_R)
+  rgbBegin();
+#endif
   batMutex = xSemaphoreCreateMutex();
   stateMutex = xSemaphoreCreateMutex();
   histMutex = xSemaphoreCreateMutex();

@@ -17,7 +17,7 @@
     .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px; margin-bottom:16px; }
     .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin:0 0 12px; }
     ol { margin: 0; padding-left: 22px; } li { margin: 6px 0; }
-    .install { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+    .board { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; padding:12px 0; border-bottom:1px solid var(--line); }
     esp-web-install-button button, .btn { background:var(--accent); color:#fff; border:0; border-radius:9px; padding:13px 26px; font:600 16px system-ui,sans-serif; cursor:pointer; text-decoration:none; display:inline-block; }
     .ver { color: var(--muted); }
     .warn { color: var(--warn); }
@@ -31,25 +31,40 @@
 <body>
 <main>
   <h1><span class="logo">M18</span> Akku-Brücke – Firmware installieren</h1>
-  <p class="sub">Firmware für den ESP32-S3 (N16R8) direkt aus dem Browser aufspielen – ohne Arduino IDE.</p>
+  <p class="sub">Firmware für die M18-Brücke direkt aus dem Browser aufspielen – ohne Arduino IDE. Erst das passende Board wählen.</p>
 
   <div class="card">
     <h2>Installieren</h2>
-    <div class="install">
+    <div class="board">
+      <div>
+        <b>ESP32-S3-DevKitC-1 (N16R8)</b> mit Pegelwandler, z. B. im Aufsteckgehäuse<br>
+        <span class="ver">16 MB Flash, 8 MB PSRAM, zwei USB-C-Buchsen</span>
+      </div>
       <esp-web-install-button manifest="manifest.json">
         <span slot="unsupported" class="warn">Dieser Browser kann nicht auf USB-Geräte zugreifen. Bitte <b>Chrome</b> oder <b>Edge</b> am PC/Mac verwenden.</span>
         <span slot="not-allowed" class="warn">Die Seite muss über https geöffnet werden.</span>
       </esp-web-install-button>
-      <span class="ver" id="ver">Firmware wird geladen …</span>
     </div>
+    <div class="board">
+      <div>
+        <b>ESP32-S3 SuperMini</b> auf der eigenen Platine (<code>hardware/platine</code>)<br>
+        <span class="ver">4 MB Flash, 2 MB PSRAM, eine USB-C-Buchse</span>
+      </div>
+      <esp-web-install-button manifest="manifest-supermini.json">
+        <span slot="unsupported" class="warn">Bitte <b>Chrome</b> oder <b>Edge</b> am PC/Mac verwenden.</span>
+        <span slot="not-allowed" class="warn">Die Seite muss über https geöffnet werden.</span>
+      </esp-web-install-button>
+    </div>
+    <p class="ver" id="ver">Firmware wird geladen …</p>
+    <p class="warn">Die Firmware passt nur zu ihrem Board. Auf dem falschen Board startet sie zwar, spricht aber nicht mit dem Akku (andere Pins).</p>
   </div>
 
   <div class="card">
     <h2>So geht's</h2>
     <ol>
       <li>ESP32-S3 per USB-C an den PC anschließen (beim Aufsteckgehäuse: die seitliche Buchse).</li>
-      <li>Auf <b>Installieren</b> klicken und im Fenster den Port des Boards wählen
-        (meist „USB JTAG/serial debug unit“ oder „USB-Enhanced-SERIAL CH343“).</li>
+      <li>Beim passenden Board auf <b>Installieren</b> klicken und im Fenster den Port des Boards wählen
+        (meist „USB JTAG/serial debug unit“, beim DevKit auch „USB-Enhanced-SERIAL CH343“).</li>
       <li>Bei der <b>ersten Installation</b> „Gerät löschen“ anhaken. Bei einem <b>Update</b> <u>nicht</u> anhaken –
         sonst gehen WLAN-Einstellungen und die auf der Brücke gespeicherten Messungen verloren.</li>
       <li>Nach dem Neustart öffnet die Brücke das WLAN <code>M18-Bridge-XXXX</code> (Passwort <code>m18bridge</code>) –
@@ -63,12 +78,15 @@
       <tr><td>Kein Port in der Liste</td><td>Anderes USB-Kabel (viele Ladekabel haben keine Datenleitungen) oder die andere USB-Buchse des Boards versuchen.</td></tr>
       <tr><td>„Failed to connect“</td><td>BOOT-Taste gedrückt halten, kurz RESET drücken, BOOT loslassen – dann erneut installieren.</td></tr>
       <tr><td>Update ohne USB</td><td>Für eine laufende Brücke gibt es das Update auch in ihrer Weboberfläche (<i>Gerät → Firmware-Update</i>, vorher BOOT kurz drücken) mit der Datei
-        <a href="firmware/m18-bruecke-update.bin">m18-bruecke-update.bin</a>.</td></tr>
+        <a href="firmware/m18-bruecke-update.bin">m18-bruecke-update.bin</a> (DevKitC) bzw.
+        <a href="firmware/m18-bruecke-supermini-update.bin">m18-bruecke-supermini-update.bin</a> (SuperMini).</td></tr>
+      <tr><td>SuperMini wird nicht erkannt</td><td>BOOT gedrückt halten, USB einstecken, BOOT loslassen – dann erneut installieren.</td></tr>
     </table>
   </div>
 
   <p class="sub">Projekt und Anleitung: <a href="https://github.com/danunt97/m18-protocol">github.com/danunt97/m18-protocol</a> ·
-    Komplettes Image: <a href="firmware/m18-bruecke.bin">m18-bruecke.bin</a> (für <code>esptool</code>, Adresse 0x0)</p>
+    Komplette Images für <code>esptool</code> (Adresse 0x0): <a href="firmware/m18-bruecke.bin">m18-bruecke.bin</a> (DevKitC),
+    <a href="firmware/m18-bruecke-supermini.bin">m18-bruecke-supermini.bin</a> (SuperMini)</p>
 </main>
 <script>
   fetch("manifest.json").then(r => r.json()).then(m => {

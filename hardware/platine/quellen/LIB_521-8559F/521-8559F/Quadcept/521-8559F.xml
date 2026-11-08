@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--/13125497/1541526/2.50/4/4/LED/-->
+<quadcept_library>
+  <setting unit="mil" />
+  <textstyle name="Default" height="47.244094488189" strokewidth="7.8740157480315" charwidth="47.244094488189" />
+  <textstyle name="Dimension" height="19.6850393700787" strokewidth="0" charwidth="19.6850393700787" />
+  <textstyle name="H127W0635TH00762" height="50" strokewidth="3" charwidth="25" />
+  <textstyle name="H15W15TH02" height="59.0551181102362" strokewidth="7.8740157480315" charwidth="59.0551181102362" />
+  <padstyle name="c115_h91" surface="False" plated="True" isvia="False" nopaste="True" nomask="True" complex="False" holesize="35.826771653543">
+    <padshape layer="TOP" shape="round" width="45.275590551181" height="45.275590551181" />
+    <padshape layer="TOP_SOLDER_MASK" shape="round" width="53.149606299212" height="53.149606299212" />
+    <padshape layer="INNER" shape="round" width="45.275590551181" height="45.275590551181" />
+    <padshape layer="BOTTOM" shape="round" width="45.275590551181" height="45.275590551181" />
+    <padshape layer="BOTTOM_SOLDER_MASK" shape="round" width="53.149606299212" height="53.149606299212" />
+  </padstyle>
+  <footprint name="5218559F" originx="0" originy="0" pickpointx="0" pickpointy="0">
+    <pcbpin number="1" name="1" style="c115_h91" originx="0" originy="0" rotation="90" />
+    <pcbpin number="2" name="2" style="c115_h91" originx="0" originy="-49.999999999999" rotation="90" />
+    <pcbpin number="3" name="3" style="c115_h91" originx="0" originy="-99.999999999999" rotation="90" />
+    <pcbpin number="4" name="4" style="c115_h91" originx="0" originy="-150" rotation="90" />
+    <line layer="TOP_PLACE_BOUND" originx="-139.37007874016" originy="92.322834645668" endx="139.37007874016" endy="92.322834645668" width="3.9370078740157" />
+    <line layer="TOP_PLACE_BOUND" originx="139.37007874016" originy="92.322834645668" endx="139.37007874016" endy="-214.37007874015" width="3.9370078740157" />
+    <line layer="TOP_PLACE_BOUND" originx="139.37007874016" originy="-214.37007874015" endx="-139.37007874016" endy="-214.37007874015" width="3.9370078740157" />
+    <line layer="TOP_PLACE_BOUND" originx="-139.37007874016" originy="-214.37007874015" endx="-139.37007874016" endy="92.322834645668" width="3.9370078740157" />
+    <line layer="TOP_ASSEMBLY" originx="-99.999999999999" originy="-74.999999999999" endx="-99.999999999999" endy="-74.999999999999" width="7.8740157480314" />
+    <arc layer="TOP_ASSEMBLY" originx="0" originy="-74.999999999999" startangle="-180.0" sweepangle="180.0" radius="99.999999999999" width="7.8740157480314" />
+    <line layer="TOP_ASSEMBLY" originx="99.999999999999" originy="-74.999999999999" endx="99.999999999999" endy="-74.999999999999" width="7.8740157480314" />
+    <arc layer="TOP_ASSEMBLY" originx="0" originy="-74.999999999999" startangle=".0" sweepangle="180.0" radius="99.999999999999" width="7.8740157480314" />
+    <line layer="TOP_SILKSCREEN" originx="0" originy="50.984251968503" endx="0" endy="50.984251968503" width="3.9370078740157" />
+    <arc layer="TOP_SILKSCREEN" originx="1.9685039370078" originy="50.984251968503" startangle="180.0" sweepangle="180.0" radius="1.9685039370078" width="3.9370078740157" />
+    <line layer="TOP_SILKSCREEN" originx="3.9370078740157" originy="50.984251968503" endx="3.9370078740157" endy="50.984251968503" width="3.9370078740157" />
+    <arc layer="TOP_SILKSCREEN" originx="1.9685039370078" originy="50.984251968503" startangle=".0" sweepangle="180.0" radius="1.9685039370078" width="3.9370078740157" />
+  </footprint>
+  <symbol name="521-8559F" originx="0" originy="0">
+    <line originx="200" originy="100" endx="900" endy="100" width="0" />
+    <line originx="900" originy="-400" endx="900" endy="100" width="0" />
+    <line originx="900" originy="-400" endx="200" endy="-400" width="0" />
+    <line originx="200" originy="100" endx="200" endy="-400" width="0" />
+    <sympin number="1" originx="200" originy="0" rotation="180" length="100" width="7.8740157480315" flipped="False">
+      <text name="pinname" originx="230" originy="0" style="Default" rotation="0" justify="left" flipped="False" hidden="False" data="RED_K" />
+      <text name="pindes" originx="140" originy="20" style="Default" rotation="0" justify="lowerright" flipped="False" hidden="False" data="1" />
+    </sympin>
+    <sympin number="2" originx="200" originy="-100" rotation="180" length="100" width="7.8740157480315" flipped="False">
+      <text name="pinname" originx="230" originy="-100" style="Default" rotation="0" justify="left" flipped="False" hidden="False" data="COMMON_A" />
+      <text name="pindes" originx="140" originy="-80" style="Default" rotation="0" justify="lowerright" flipped="False" hidden="False" data="2" />
+    </sympin>
+    <sympin number="3" originx="200" originy="-200" rotation="180" length="100" width="7.8740157480315" flipped="False">
+      <text name="pinname" originx="230" originy="-200" style="Default" rotation="0" justify="left" flipped="False" hidden="False" data="BLUE_K" />
+      <text name="pindes" originx="140" originy="-180" style="Default" rotation="0" justify="lowerright" flipped="False" hidden="False" data="3" />
+    </sympin>
+    <sympin number="4" originx="200" originy="-300" rotation="180" length="100" width="7.8740157480315" flipped="False">
+      <text name="pinname" originx="230" originy="-300" style="Default" rotation="0" justify="left" flipped="False" hidden="False" data="GREEN_K" />
+      <text name="pindes" originx="140" originy="-280" style="Default" rotation="0" justify="lowerright" flipped="False" hidden="False" data="4" />
+    </sympin>
+  </symbol>
+  <component name="521-8559F" designatorprefix="LED" height="338.58267716535" footprint="5218559F">
+    <comppin designator="1" sympin="1" pinswap="0" gateswap="0" gate="1" group="1" side="" type="Any" name="RED_K" />
+    <comppin designator="2" sympin="2" pinswap="0" gateswap="0" gate="1" group="1" side="" type="Any" name="COMMON_A" />
+    <comppin designator="3" sympin="3" pinswap="0" gateswap="0" gate="1" group="1" side="" type="Any" name="BLUE_K" />
+    <comppin designator="4" sympin="4" pinswap="0" gateswap="0" gate="1" group="1" side="" type="Any" name="GREEN_K" />
+    <attached_symbol gate="1" name="521-8559F" />
+    <pinmap designator="1" footprintpin="1" />
+    <pinmap designator="2" footprintpin="2" />
+    <pinmap designator="3" footprintpin="3" />
+    <pinmap designator="4" footprintpin="4" />
+    <text name="Datasheet" originx="0" originy="0" style="Default" rotation="0" justify="" flipped="False" hidden="True" data="" />
+    <text name="Description" originx="0" originy="0" style="Default" rotation="0" justify="" flipped="False" hidden="True" data="Standard LEDs - Through Hole 5mm RGB WC LED w4 leads" />
+    <text name="Mouser Part Number" originx="0" originy="0" style="Default" rotation="0" justify="" flipped="False" hidden="True" data="645-5218559F" />
+    <text name="Mouser Price/Stock" originx="0" originy="0" style="Default" rotation="0" justify="" flipped="False" hidden="True" data="https://www.mouser.co.uk/ProductDetail/Dialight/521-8559F?qs=vmHwEFxEFR%2FyCJVY9sdZTA%3D%3D" />
+    <text name="Manufacturer_Name" originx="0" originy="0" style="Default" rotation="0" justify="" flipped="False" hidden="True" data="Dialight" />
+    <text name="Manufacturer_Part_Number" originx="950" originy="200" style="Default" rotation="0" justify="left" flipped="False" hidden="False" data="521-8559F" />
+  </component>
+</quadcept_library>

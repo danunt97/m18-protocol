@@ -1,0 +1,9 @@
+Manufacturer=TE Connectivity
+PartNumber=928814-1
+PartCategory=Undefined or Miscellaneous
+PackageCategory=Other
+PinCount=2
+Version=1.2
+Released=2018-05-21 15:28:05
+Downloaded=2026-11-08 09:49:15
+3D=Y

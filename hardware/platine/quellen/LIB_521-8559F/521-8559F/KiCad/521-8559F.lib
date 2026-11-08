@@ -1,0 +1,25 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model 521-8559F
+#/13125497/1541526/2.50/4/4/LED
+DEF 521-8559F LED 0 30 Y Y 1 F N
+F0 "LED" 950 300 50 H V L CNN
+F1 "521-8559F" 950 200 50 H V L CNN
+F2 "5218559F" 950 100 50 H I L CNN
+F3 "" 950 0 50 H I L CNN
+F4 "Standard LEDs - Through Hole 5mm RGB WC LED w4 leads" 950 -100 50 H I L CNN "Description"
+F5 "8.6" 950 -200 50 H I L CNN "Height"
+F6 "645-5218559F" 950 -300 50 H I L CNN "Mouser Part Number"
+F7 "https://www.mouser.co.uk/ProductDetail/Dialight/521-8559F?qs=vmHwEFxEFR%2FyCJVY9sdZTA%3D%3D" 950 -400 50 H I L CNN "Mouser Price/Stock"
+F8 "Dialight" 950 -500 50 H I L CNN "Manufacturer_Name"
+F9 "521-8559F" 950 -600 50 H I L CNN "Manufacturer_Part_Number"
+DRAW
+X RED_K 1 0 0 200 R 50 50 0 0 P
+X COMMON_A 2 0 -100 200 R 50 50 0 0 P
+X BLUE_K 3 0 -200 200 R 50 50 0 0 P
+X GREEN_K 4 0 -300 200 R 50 50 0 0 P
+P 5 0 1 6 200 100 900 100 900 -400 200 -400 200 100 N
+ENDDRAW
+ENDDEF
+#
+#End Library

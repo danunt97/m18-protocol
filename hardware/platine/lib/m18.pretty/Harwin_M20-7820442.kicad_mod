@@ -1,0 +1,230 @@
+(footprint "Harwin_M20-7820442"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "M20-7820442")
+	(tags "Connector")
+	(property "Reference" "J**"
+		(at 0 0 0)
+		(layer "F.SilkS")
+		(uuid "ca7f77a6-9f7e-4b92-9685-998be6d2d11f")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(property "Value" "RHDR4W70P0X254_1X4_1056X250X850P"
+		(at 0 0 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(uuid "0d32745a-8ea7-4a58-b304-ca20e877324e")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "1d32b7f1-3306-470e-b83c-3d804c7fb39f")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "1ffb0bc6-36a2-4884-aac7-596544d8460a")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(attr through_hole)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_line
+		(start -1.47 -1.35)
+		(end -1.47 0)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "201b2c05-6e28-419d-9ecb-dfce42e0f7b7")
+	)
+	(fp_line
+		(start 0 1.25)
+		(end 9.44 1.25)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "6f016dfc-9489-452e-a271-0d8f66a6d60e")
+	)
+	(fp_line
+		(start 9.44 -1.35)
+		(end -1.47 -1.35)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "25822a7b-ea66-46d6-86dd-f0dedc1886ce")
+	)
+	(fp_line
+		(start 9.44 1.25)
+		(end 9.44 -1.35)
+		(stroke
+			(width 0.2)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "ebe2b549-8ea2-47a9-936a-de047b6cce1f")
+	)
+	(fp_line
+		(start -1.72 -1.6)
+		(end 9.69 -1.6)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "0bffba9c-fdb9-4dc3-bd62-ea2ddab909a1")
+	)
+	(fp_line
+		(start -1.72 1.5)
+		(end -1.72 -1.6)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "5c2860e2-7eb1-410f-b814-cb5be47980c8")
+	)
+	(fp_line
+		(start 9.69 -1.6)
+		(end 9.69 1.5)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "9f0bd5ef-e048-4bd3-b3bd-e0fca679bba3")
+	)
+	(fp_line
+		(start 9.69 1.5)
+		(end -1.72 1.5)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(layer "F.CrtYd")
+		(uuid "21b0174b-a5d5-4ea5-abf7-82755bf2c3ea")
+	)
+	(fp_line
+		(start -1.47 -1.35)
+		(end 9.44 -1.35)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "636acdbf-2f9c-43b7-b416-ac7b761032a1")
+	)
+	(fp_line
+		(start -1.47 1.25)
+		(end -1.47 -1.35)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "fe31fb01-9519-43c2-a267-2c1bb3571871")
+	)
+	(fp_line
+		(start 9.44 -1.35)
+		(end 9.44 1.25)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "2e5b133a-99b3-4386-af1a-50aeddce8eeb")
+	)
+	(fp_line
+		(start 9.44 1.25)
+		(end -1.47 1.25)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(layer "F.Fab")
+		(uuid "48f0dc2f-2c5a-4c1b-821f-0de8d8044306")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "85d9608e-ef72-4c74-9803-198570092d8e")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+			)
+		)
+	)
+	(pad "1" thru_hole rect
+		(at 0 0)
+		(size 1.8 1.8)
+		(drill 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "76d2f2ac-19d1-48bf-807b-c686f8d6d1e6")
+	)
+	(pad "2" thru_hole circle
+		(at 2.54 0)
+		(size 1.8 1.8)
+		(drill 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "55c413c2-253c-4c85-97cd-50c75550e9fb")
+	)
+	(pad "3" thru_hole circle
+		(at 5.08 0)
+		(size 1.8 1.8)
+		(drill 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "1dcce97f-7521-44fa-afdb-d534434c0d89")
+	)
+	(pad "4" thru_hole circle
+		(at 7.62 0)
+		(size 1.8 1.8)
+		(drill 1.2)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "3ddb9f90-f7b0-4d21-87e9-cbb61c00bf30")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/lib/3d/M20-7820442.stp"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)

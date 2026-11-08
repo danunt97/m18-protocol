@@ -1,0 +1,110 @@
+;Proteus Design Interchange Format
+(PDIF
+ (vendor "SamacSys Limited")
+ (version 1 0)
+ (library
+  (part "928814-1"
+   (description "Crimp,Faston,tab,90,M,6.35x0.81mm")
+   (family "ANA")
+   (package "9288141")
+   (attribute "Datasheet Link" "http://www.te.com/commerce/DocumentDelivery/DDEController?Action=showdoc&DocId=Catalog+Section%7F82004_FASTON_PCB_Tabs_Receptacles%7F0914%7Fpdf%7FEnglish%7FENG_CS_82004_FASTON_PCB_Tabs_Receptacles_0914.pdf%7F928814-1")
+   (attribute "Geometry.Height" "6mm")
+   (attribute "Mouser Part Number" "571-928814-1")
+   (attribute "Mouser Price/Stock" "https://www.mouser.co.uk/ProductDetail/TE-Connectivity-AMP/928814-1?qs=pyu0Ngu8oR6IQj1m4jmYEA%3D%3D")
+   (attribute "Manufacturer_Name" "TE Connectivity")
+   (attribute "Manufacturer_Part_Number" "928814-1")
+   (gate
+    (symbol "928814-1")
+    (pin "1" 1 PS)
+    (pin "2" 2 PS)
+   )
+  )
+  (symbol "928814-1"
+   (units THOU)
+   (origin (pt 0 0))
+   (graphic
+    (stroke 10)
+    (path (pt 200 100) (pt 600 100) (pt 600 -200) (pt 200 -200) (pt 200 100) (closed))
+   )
+   (terminal
+    (body (symbol "PIN") (pt 0 0) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+   (terminal
+    (body (symbol "PIN") (pt 0 -100) (rot 0) (mir 0) (visible true))
+    (name (pt 230 0) (rot 0) (just MIDDLE LEFT) (visible true))
+    (number (pt 140 20) (rot 0) (just BOTTOM RIGHT) (visible true)))
+  )
+  (symbol "PIN"
+   (units THOU)
+   (origin (pt 0 0))
+   (graphic
+    (stroke 10)
+    (path (pt 0 0) (pt 200 0))))
+  (symbol "PINSHORT"
+   (units THOU)
+   (origin (pt 0 0))
+   (graphic
+    (stroke 10)
+    (path (pt 0 0) (pt 100 0))))
+  (package "9288141"
+   (units MM)
+   (layer TASM
+    (graphic
+     (stroke 0.2)
+     (path
+      (closed true)
+      (pt -7.156 0.6)
+      (pt 8.844 0.6)
+      (pt 8.844 -0.6)
+      (pt -7.156 -0.6)
+      (pt -7.156 0.6))))
+   (layer OCCA
+    (graphic
+     (stroke 0.1)
+     (path
+      (closed true)
+      (pt -9.844 2.087)
+      (pt 9.844 2.087)
+      (pt 9.844 -2.087)
+      (pt -9.844 -2.087)
+      (pt -9.844 2.087))))
+   (layer TSLK
+    (graphic
+     (stroke 0.1)
+     (path
+      (closed false)
+      (pt -1.376 0.6)
+      (pt 8.844 0.6)
+      (pt 8.844 -0.6)
+      (pt -1.376 -0.6))))
+   (layer TSLK
+    (graphic
+     (stroke 0.1)
+     (path
+      (closed false)
+      (pt -6.456 0.6)
+      (pt -3.976 0.6))))
+   (layer TSLK
+    (graphic
+     (stroke 0.1)
+     (path
+      (closed false)
+      (pt -6.456 -0.6)
+      (pt -3.976 -0.6))))
+   (leg 1 (pt -7.756 0.000) (padstack 0))
+   (leg 2 (pt -2.676 0.000) (padstack 0))
+   (padstack 0
+    (hole 1.45)
+    (plated true)
+    (pad (layer TCOP) (round 2.175))
+    (pad (layer INNER) (round 2.175))
+    (pad (layer BCOP) (round 2.175))
+   )
+   (model "928814-1.stp"
+    (euler 90 0 90)
+    (offset 7.920000076293945 0 4.5)
+   )
+  )
+ )
+)
