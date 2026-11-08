@@ -43,7 +43,7 @@ Die Logik bleibt gleich, nur Pins und Speicher sind anders:
 |---|---|---|
 | TX → J2 | GPIO17 (Pegelwandler) | **GPIO7** (NPN/PNP-Schalter auf B+, nicht invertierend) |
 | RX ← J1 | GPIO18 (1 kΩ) | **GPIO6** (Trennstufe mit zwei NPN, nicht invertierend) |
-| Status-LED | WS2812 an GPIO48/38 | WS2812 an GPIO48 **und** RGB-LED der Platine an GPIO13/12/11 (gleiche Farben) |
+| Status-LED | WS2812 an GPIO48/38 | WS2812 an GPIO48 **und** RGB-LED der Platine: rot GPIO13, grün GPIO11, blau GPIO12 (Pinfolge der Lumetheus-LED, gleiche Farben wie die WS2812) |
 | Laden (vorbereitet) | – | CHG_EN an GPIO5, bleibt Low |
 | Flash / PSRAM | 16 MB / 8 MB Octal | 4 MB / 2 MB Quad |
 | Partitionen | 3 MB App, 9,9 MB FAT | 2 × 1,5 MB App, 896 KB FAT (ca. 150 Messungen), [`partitions/supermini-4mb.csv`](partitions/supermini-4mb.csv) |

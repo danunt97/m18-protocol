@@ -42,13 +42,18 @@ INFO={ # MPN: (Beschreibung, Bauform, Staffelmenge, Hinweis)
  '521-8559F':('RGB-LED 5 mm, gemeinsame Anode','THT 5 mm',0,'Beinchen versetzt einlöten (Footprint mit versetzten Pads)'),
  '61300611121':('Stiftleiste 1×6, 2,54 mm (Lade-Steuerung)','THT',0,'Nicht bestücken (DNP), nur für spätere Ladeplatine'),
 }
+WK={'GRM31CR71H475KA12L':('Murata','81-GRM31CR71H475KA2L'),'SMBJ24A':('Bourns','652-SMBJ24A')}
+SKIP={'M20-7820942','521-8559F'}  # SuperMini direkt eingelötet; RGB-LED von Amazon (Blatt Sonstiges)
 rows=[]
 for mpn,p in parts.items():
+    if mpn in SKIP: continue
     refs=sorted(p['refs'],key=natkey)
     per=len(refs)*(2 if mpn=='M20-7820942' else 1)
     d,bf,staffel,hint=INFO.get(mpn,(p['val'],'', 0,''))
     dnp = mpn=='61300611121'
-    rows.append(dict(refs=', '.join(refs),desc=d,bf=bf,her=p.get('Hersteller','').split(' (')[0],mpn=mpn,mouser=p.get('Mouser',''),per=0 if dnp else per,staffel=staffel,hint=hint,dnp=dnp))
+    her,mouser=p.get('Hersteller','').split(' (')[0],p.get('Mouser','')
+    if mpn in WK: her,mouser=WK[mpn]   # so wie im Mouser-Warenkorb vom 08.11.2026 (von Mouser bestätigte Nummern)
+    rows.append(dict(refs=', '.join(refs),desc=d,bf=bf,her=her,mpn=mpn,mouser=mouser,per=0 if dnp else per,staffel=staffel,hint=hint,dnp=dnp))
 order={'X':0,'U':1,'F':2,'D':3,'C':4,'Q':5,'R':6,'L':7,'J':8}
 rows.sort(key=lambda r:(order.get(r['refs'][0],9),natkey(r['refs'].split(',')[0])))
 wb=Workbook(); ws=wb.active; ws.title='Bestellliste Mouser'
@@ -93,20 +98,22 @@ ws.row_dimensions[hr].height=32; ws.freeze_panes=ws.cell(hr+1,3)
 ws.auto_filter.ref=f'A{hr}:P{last}'
 # Blatt 2: nicht von Mouser
 w2=wb.create_sheet('Sonstiges')
-H2=['Teil','Stück / Platine','Bedarf','Bezugsquelle','Hinweis']
+H2=['Teil','Stück / Platine','Bedarf','Bezugsquelle','Link','Hinweis']
 for i,h in enumerate(H2,1):
     c=w2.cell(1,i,h); c.font=F(bold=True,color='FFFFFF'); c.fill=head; c.border=B
-other=[
- ('ESP32-S3 SuperMini (ESP32-S3FH4R2, 4 MB Flash, 2 MB PSRAM) mit Stiftleisten',1,'z. B. AliExpress/Amazon („ESP32-S3 SuperMini“)','Nicht bei Mouser. Stiftleisten liegen meist bei; Pinbelegung vor dem Bestellen prüfen (README).'),
- ('OLED-Display I²C 3,3 V, 4 Pins (GND, VCC, SCL, SDA)',1,'z. B. 0,96" SSD1306','Nicht bei Mouser. Pinreihenfolge muss zur Buchse passen (README).'),
- ('Leiterplatte 58 × 38 mm, 2 Lagen, 1,6 mm',1,'Leiterplattenhersteller (Gerber: fertigung/m18-bruecke-gerber.zip)','Mindestens 20 Stück bestellen.'),
- ('Schraube M3 (Befestigung)',4,'Baumarkt / Normteile','Länge je nach Gehäuse.'),
+other=[ # (Teil, Stück/Platine, Bezugsquelle, Link, Hinweis)
+ ('ESP32-S3 SuperMini (HW-747, ESP32-S3FH4R2: 4 MB Flash, 2 MB PSRAM), Stiftleisten liegen bei',1,'Amazon: Heemol 3 Stück ESP32-S3 Mini','https://www.amazon.de/dp/B0H2HMR9C5','Direkt mit den mitgelieferten Stiftleisten einlöten (kein Sockel). Pinbelegung geprüft (links TX, RX, 1–7; rechts 5V, GND, 3V3, 13–8). Nicht die ESP32-C3-Variante nehmen!'),
+ ('RGB-LED 5 mm, gemeinsame Anode, wasserklar (LED1)',1,'Amazon: Lumetheus LED 5 mm RGB, 50 Stück','https://www.amazon.de/dp/B07RR8Z85W','Pinfolge R, A (längster Pin), G, B. Rot ins eckige Pad 1, Anode in Pad 2. Firmware ist darauf eingestellt.'),
+ ('OLED 0,96" I2C SSD1306, Pins GND-VCC-SCL-SDA',1,'Amazon: QIQIAZI 0,96 Zoll OLED, 5 Stück','https://www.amazon.de/dp/B0F13SSSFB','Pinfolge geprüft (Aufdruck GND VCC SCL SDA). Display zeigt beim Einstecken nach außen (zur oberen Platinenkante).'),
+ ('Leiterplatte 58 × 38 mm, 2 Lagen, 1,6 mm',1,'Leiterplattenhersteller','','Gerber: fertigung/m18-bruecke-gerber.zip'),
+ ('Schraube M3 (Befestigung)',4,'Baumarkt / Normteile','','Länge je nach Gehäuse.'),
 ]
-for k,(t,per,src,h) in enumerate(other,2):
-    vals=[t,per,f"=ROUNDUP(B{k}*'Bestellliste Mouser'!$B$3*(1+'Bestellliste Mouser'!$B$4),0)",src,h]
+for k,(t,per,src,url,h) in enumerate(other,2):
+    vals=[t,per,f"=ROUNDUP(B{k}*'Bestellliste Mouser'!$B$3*(1+'Bestellliste Mouser'!$B$4),0)",src,'öffnen' if url else '',h]
     for i,v in enumerate(vals,1):
         c=w2.cell(k,i,v); c.font=F(); c.border=B; c.alignment=Alignment(wrap_text=True,vertical='top')
-for i,w in enumerate([55,10,9,45,60],1): w2.column_dimensions[get_column_letter(i)].width=w
+    if url: w2.cell(k,5).hyperlink=url; w2.cell(k,5).font=Font(name='Arial',color='0563C1',underline='single')
+for i,w in enumerate([50,10,9,34,10,70],1): w2.column_dimensions[get_column_letter(i)].width=w
 out='fertigung/m18-bruecke-bestellliste.xlsx'
 wb.calculation.fullCalcOnLoad=True
 wb.save(out); print(out, len(rows),'Positionen')

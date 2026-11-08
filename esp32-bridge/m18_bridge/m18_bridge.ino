@@ -60,9 +60,12 @@
 #define PIN_TX 7           // -> NPN/PNP high-side switch -> battery J2 (not inverting)
 #define PIN_RX 6           // <- two-NPN isolator <- battery J1 (not inverting)
 #define DEFAULT_LED_PIN 48 // WS2812 on the SuperMini (mostly hidden under the module)
-#define PIN_RGB_R 13       // RGB LED on the PCB (common anode, each colour via an NPN: high = on)
-#define PIN_RGB_G 12
-#define PIN_RGB_B 11
+// RGB LED on the PCB (common anode, each colour via an NPN: high = on). Pinout of the
+// Lumetheus 5 mm RGB (R, A, G, B): pad 3 is green, pad 4 is blue. For a Dialight 521-8559F
+// (R, A, B, G) swap G and B.
+#define PIN_RGB_R 13       // -> Q5 -> pad 1
+#define PIN_RGB_G 11       // -> Q7 -> pad 3
+#define PIN_RGB_B 12       // -> Q6 -> pad 4
 #define PIN_CHG_EN 5       // charger connector J2 pin 5: low = do not charge (nothing fitted yet)
 #else
 #define BOARD_NAME "devkitc"
