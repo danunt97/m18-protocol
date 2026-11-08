@@ -11,6 +11,7 @@ FP=list(b.GetFootprints())
 PADS={f.GetReference():list(f.Pads()) for f in FP}; GR={f.GetReference():list(f.GraphicalItems()) for f in FP}
 REF={f.GetReference():f.Reference() for f in FP}; VAL={f.GetReference():f.Value() for f in FP}
 FLIP={f.GetReference():f.IsFlipped() for f in FP}
+VIAS=[(t.GetPosition().x,t.GetPosition().y,t.GetWidth(pcbnew.F_Cu) if hasattr(t,'GetWidth') else 700000) for t in b.GetTracks() if t.GetClass()=='PCB_VIA']
 CY={}
 for f in FP:
     c=f.GetCourtyard(pcbnew.F_CrtYd).BBox(); CY[f.GetReference()]=(c.GetLeft(),c.GetTop(),c.GetRight(),c.GetBottom())
@@ -40,6 +41,10 @@ for f in FP:
             r=R(cx-rr,cy-rr,cx+rr,cy+rr,0.1)
         silk.append(r)
 obst=[q for rf,q in pads]+silk
+# Durchkontaktierungen (JLC-DFM: kein Bestueckungsdruck ueber Bohrungen)
+for vx,vy,vw in VIAS:
+    x,y,r=MM(vx)-O[0],MM(vy)-O[1],MM(vw)/2
+    obst.append(R(x-r,y-r,x+r,y+r,0.15))
 placed=[]
 def free(r):
     if r[0]<0.6 or r[1]<0.6 or r[2]>W-0.6 or r[3]>H-0.6: return False
@@ -52,7 +57,7 @@ miss=[]
 for f in sorted(FP,key=lambda f:f.GetReference()):
     t=REF[f.GetReference()]
     if f.GetReference().startswith(('H','X')) or FLIP[f.GetReference()]: continue
-    size=0.8; t.SetTextSize(pcbnew.VECTOR2I(mm(size),mm(size))); t.SetTextThickness(mm(0.12)); t.SetLayer(pcbnew.F_SilkS)
+    size=0.8; t.SetTextSize(pcbnew.VECTOR2I(mm(size),mm(size))); t.SetTextThickness(mm(0.15)); t.SetLayer(pcbnew.F_SilkS)
     l,tp,rt,bt=CY[f.GetReference()]
     x0,y0,x1,y1=MM(l)-O[0],MM(tp)-O[1],MM(rt)-O[0],MM(bt)-O[1]
     cx,cyy=(x0+x1)/2,(y0+y1)/2; n=len(f.GetReference())
@@ -71,15 +76,16 @@ for f in sorted(FP,key=lambda f:f.GetReference()):
     else:
         t.SetLayer(pcbnew.F_Fab); t.SetTextAngleDegrees(0); t.SetPosition(pcbnew.VECTOR2I(mm(O[0]+cx),mm(O[1]+cyy))); miss.append(f.GetReference())
 def txt(s,x,y,size=1.0,layer=pcbnew.F_SilkS):
-    t=pcbnew.PCB_TEXT(b); t.SetText(s); t.SetLayer(layer); t.SetTextSize(pcbnew.VECTOR2I(mm(size),mm(size))); t.SetTextThickness(mm(size*0.15))
+    t=pcbnew.PCB_TEXT(b); t.SetText(s); t.SetLayer(layer); t.SetTextSize(pcbnew.VECTOR2I(mm(size),mm(size))); t.SetTextThickness(mm(max(0.15,size*0.15)))
     t.SetPosition(pcbnew.VECTOR2I(mm(O[0]+x),mm(O[1]+y)))
     if layer==pcbnew.B_SilkS: t.SetMirrored(True)
     b.Add(t)
-for ref,name in (('X1','B+'),('X2','J1'),('X3','J2'),('X4','B-')):
+for ref,name in (('X1','B+'),('X2','J1'),('X5','M'),('X3','J2'),('X4','B-')):
     y=MM(POS[ref][1])-O[1]
-    txt(name,7.0,y-2.2,1.2); txt(name,7.0,y-2.2,1.2,pcbnew.B_SilkS)
-txt('M18-Bruecke',5.6,16.4,1.0)
-txt('ESP32-S3 SuperMini',6.9,18.2,0.8)
-txt('danunt97/m18-protocol',9.0,19.0,0.8,pcbnew.B_SilkS)
+    # oben direkt rechts neben den Loetstiften auf Hoehe des Messers (zwischen den Messern sitzen Bauteile)
+    txt(name,9.5,y,1.0); txt(name,10.6,y-2.2,1.2,pcbnew.B_SilkS)
+txt('M18-Bruecke',11.8,33.9,0.9)
+txt('S3 SuperMini',11.8,35.4,0.8)
+txt('danunt97/m18-protocol',12.4,36.9,0.8,pcbnew.B_SilkS)
 for d in OLD: b.Remove(d)
 b.Save(PCB); print('Referenz nur auf F.Fab:',miss)

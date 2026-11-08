@@ -489,7 +489,7 @@
 			(pin passive line
 				(at -7.62 2.54 0)
 				(length 2.54)
-				(name "RED_K"
+				(name "K_R"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -507,7 +507,7 @@
 			(pin passive line
 				(at 7.62 0 180)
 				(length 2.54)
-				(name "COMMON_A"
+				(name "A"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -525,7 +525,7 @@
 			(pin passive line
 				(at -7.62 -2.54 0)
 				(length 2.54)
-				(name "GREEN_K"
+				(name "K_G"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -543,7 +543,7 @@
 			(pin passive line
 				(at -7.62 0 0)
 				(length 2.54)
-				(name "BLUE_K"
+				(name "K_B"
 					(effects
 						(font
 							(size 1.27 1.27)

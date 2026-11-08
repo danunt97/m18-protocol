@@ -1,0 +1,71 @@
+(footprint "Loetpad_SMD_1.6x2.0mm"
+	(version 20260206)
+	(generator "pcbnew")
+	(generator_version "10.0")
+	(layer "F.Cu")
+	(descr "SMD-Loetfeld 1,6 x 2,0 mm (z. B. fuer einen Draht an den mittleren Akkukontakt)")
+	(property "Reference" "REF**"
+		(at 0 -1.8 0)
+		(layer "F.SilkS")
+		(uuid "24ebaac5-2f25-4bb3-b183-a805d84605b9")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "Loetpad_SMD_1.6x2.0mm"
+		(at 0 1.8 0)
+		(layer "F.Fab")
+		(uuid "9df79b78-1117-4f94-808d-dd98ce4502a1")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "b2bf6ffb-b10e-4f13-abc3-13fb04d91e8b")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "98fdcd00-cbef-4867-9909-eb6c723529ea")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_rect
+		(start -1.05 -1.25)
+		(end 1.05 1.25)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "cae574ab-2f79-489a-af7b-72d86fec043c")
+	)
+	(pad "1" smd roundrect
+		(at 0 0)
+		(size 1.6 2)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.15)
+		(uuid "72cf5912-640a-45e5-9c0c-1a6972869710")
+	)
+	(embedded_fonts no)
+)

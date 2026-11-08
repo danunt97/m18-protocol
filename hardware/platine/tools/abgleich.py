@@ -79,9 +79,11 @@ for a,e in footprints(s):
     out.append(s[last:a]); out.append(blk); last=e
 out.append(s[last:]); s=''.join(out)
 open(PCB,'w').write(s)
-# Netzklassen-Muster auf '/'-Namen
+# Netzklassen-Muster an die Netznamen des Schaltplans anpassen
 p=json.load(open(PRO))
+alle=set(nets.values())
 for pat in p['net_settings'].get('netclass_patterns',[]):
-    if not pat['pattern'].startswith('/'): pat['pattern']='/'+pat['pattern']
+    b=pat['pattern'].lstrip('/')
+    pat['pattern']=b if b in alle else '/'+b   # Versorgungssymbole (GND, +5V, +3V3) ohne '/'
 open(PRO,'w').write(json.dumps(p,indent=2))
 print('ok', len(comps),'Bauteile', len(names),'Netze')

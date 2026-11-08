@@ -49,7 +49,7 @@
 			)
 		)
 	)
-	(duplicate_pad_numbers_are_jumpers no)
+	(duplicate_pad_numbers_are_jumpers yes)
 	(fp_rect
 		(start -9.2 -1.45)
 		(end 9.1 1.45)

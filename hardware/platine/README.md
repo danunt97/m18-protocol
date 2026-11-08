@@ -1,6 +1,6 @@
 # Platine: M18-Brücke mit ESP32-S3 SuperMini
 
-Eigene Leiterplatte für die [Akku-Brücke](../../esp32-bridge/README.md). Die vier Akkukontakte sitzen direkt auf der Platine. Der SuperMini wird mit seinen mitgelieferten Stiftleisten direkt eingelötet. Der Pegelwandler ist durch zwei kleine Transistorstufen ersetzt, der
+Eigene Leiterplatte für die [Akku-Brücke](../../esp32-bridge/README.md). Die fünf Akkukontakte sitzen direkt auf der Platine. Der SuperMini wird mit seinen mitgelieferten Stiftleisten direkt eingelötet. Der Pegelwandler ist durch zwei kleine Transistorstufen ersetzt, der
 Step-down-Wandler durch einen RECOM-Schaltregler. Alles ist von Hand lötbar (SMD ab 0805 / SOT-23 / SMA).
 
 | Oben | Unten (Akkuseite) |
@@ -18,38 +18,46 @@ Step-down-Wandler durch einen RECOM-Schaltregler. Alles ist von Hand lötbar (SM
 |---|---|
 | Größe | **58 × 38 mm**, 2 Lagen, 1,6 mm, 35 µm Kupfer |
 | Befestigung | 4 × **M3** (Bohrung 3,2 mm), Mitte 4 mm von den Kanten, Lochabstand **50 × 30 mm** |
-| Akkukontakte | 4 × TE **928814-1** (FASTON 6,35 × 0,81 mm) auf der **Unterseite**, Messerspitzen bündig mit der linken Kante |
+| Akkukontakte | 5 × TE **928814-1** (FASTON 6,35 × 0,81 mm) im Raster **5,625 mm** auf der **Unterseite**. Lötstifte am linken Rand, die Messer zeigen unter die Platine, die damit über dem Akku liegt |
 | Versorgung | aus dem Akku (B+ 15–21 V) oder über USB-C des SuperMini |
 | Ruhestrom aus B+ | nur der Eigenverbrauch des Reglers (R-78E, Wert im Datenblatt nachsehen und am Muster messen) und der Schlafstrom des ESP. Die J2-Stufe zieht im Ruhezustand nichts. |
 | Laden | vorbereitet: Lötlöcher CHG+/CHG− für 1,5-mm²-Litze und 6-poliger Steuerstecker, nichts bestückt |
 
-Bezugspunkt aller Maße ist die linke obere Ecke der Draufsicht (x nach rechts = Einsteckrichtung, y nach unten).
+Bezugspunkt aller Maße ist die linke obere Ecke der Draufsicht (x nach rechts = Richtung der Messerspitzen = Einsteckrichtung, y nach unten).
 
 ## Akkukontakte
 
-Draufsicht, Messerspitzen links (zeigen zum Akku hin):
+Draufsicht, Lötstifte am linken Rand, Messerspitzen zeigen nach rechts unter die Platine:
 
 | Kontakt | Bauteil | Mitte y | Abstand zum Nachbarn |
 |---|---|---|---|
-| **B−** | X4 | 8,45 mm | – |
-| **J2** | X3 | 13,80 mm | 5,35 mm |
-| **J1** | X2 | 24,30 mm | 10,50 mm |
-| **B+** | X1 | 29,55 mm | 5,25 mm |
+| **B+** | X1 | 7,750 mm | – |
+| **J1** | X2 | 13,375 mm | 5,625 mm |
+| **M** (Mitte) | X5 | 19,000 mm | 5,625 mm |
+| **J2** | X3 | 24,625 mm | 5,625 mm |
+| **B−** | X4 | 30,250 mm | 5,625 mm |
 
-- Von oben in Einsteckrichtung gesehen, Spitzen nach vorne: **links B+, J1, J2, rechts B−**.
-- Die Abstände sind aus dem bisherigen Gehäuse übernommen, also aus den Schlitzen im STL des Printables-Modells „Milwaukee M18 All Pins“.
-  Gemessen wurden Schlitzmitten bei −10,55 / −5,20 / 0 / +5,30 / +10,55 mm. Der mittlere Schlitz bleibt frei.
-- Die Lötstifte liegen bei x = 12,18 und 17,26 mm, das Messer reicht von x = 0,7 bis 16,7 mm. Es ist 6,35 mm hoch und steht senkrecht auf der Unterseite.
-- Unter den Messern ist auf der Unterseite keine Kupferfläche (Sperrflächen), damit kein Messer auf einer Massefläche aufliegt.
+- Von oben in Einsteckrichtung gesehen (Spitzen zeigen von dir weg): **links B+, J1, M, J2, rechts B−**. In der Draufsicht oben ist deshalb B+.
+- Raster 5,625 mm von Mitte zu Mitte, wie in der Skizze des Printables-Modells „Milwaukee M18 All Pins“. Die Platinenmitte (y = 19) ist der mittlere Kontakt.
+- Der **mittlere Kontakt M** (X5) ist mit nichts verbunden, er führt nur auf das Lötfeld **TP3** zwischen seinen beiden Stiften.
+  Welche Funktion er im Akku hat, ist noch unbekannt. Über TP3 lässt er sich später mit einem Draht anschließen.
+- Die Lötstifte liegen bei x = 1,74 und 6,82 mm, das Messer reicht von x = 2,3 bis 18,3 mm (Spitze rechts). Es ist 6,35 mm hoch und steht senkrecht auf der Unterseite.
+  Die beiden Stifte eines Messers sind nur über das Messer selbst verbunden (im Footprint als Jumper-Pads eingetragen).
+- Unter den Messern sind auf der Unterseite keine Leiterbahnen, Durchkontaktierungen und Kupferflächen erlaubt (Sperrflächen),
+  damit kein Messer nur durch den Lötstopplack getrennt auf einem fremden Netz aufliegt.
   Oben über den Messern sitzen nur SMD-Teile, die Unterseite bleibt dort glatt.
+- Oben zwischen den Messern sitzt die Eingangsstufe: F1, D1, C1 und D2. Die Signale J1 und J2 wechseln deshalb gleich neben
+  ihren Lötstiften über ein Via auf die Unterseite und laufen dort im freien Kanal zwischen den Messern nach rechts.
 - ⚠ **PRÜFEN:** Ohne TE-Datenblatt stammen Lochbild und 3D-Modell aus dem SamacSys-Modell in `quellen/LIB_928814-1`.
   Höhe und Lage des Messers am ersten Muster mit dem Akku ausprobieren, bevor das Gehäuse fertig konstruiert wird.
 
 ## Pinbelegung ESP32-S3 SuperMini
 
-Draufsicht auf den SuperMini, USB-C zeigt nach rechts (Platinenkante). Reihenabstand 15,24 mm, je 9 Pins.
+Draufsicht. Der SuperMini sitzt rechts unten, **USB-C zeigt zur unteren Platinenkante** (Seite B−). Von oben in Einsteckrichtung gesehen ist das rechts,
+so bleibt die Buchse beim Aufstecken frei und läuft nicht gegen den Akku. Die Modulkante liegt bündig mit der Platinenkante, die Buchse steht ~1 mm über.
+Reihenabstand 15,24 mm, je 9 Pins, Pin 1 und 10 an der USB-Seite (y = 35,8).
 
-| Pin | Obere Reihe (y = 11,38) | Funktion | Untere Reihe (y = 26,62) | Funktion |
+| Pin | Rechte Reihe (x = 48,80) | Funktion | Linke Reihe (x = 33,56) | Funktion |
 |---|---|---|---|---|
 | 1 / 10 (USB-Seite) | GPIO43 (U0TXD) | frei | 5V | Versorgung über D3 (B140) aus dem Regler |
 | 2 / 11 | GPIO44 (U0RXD) | frei | GND | Masse = B− |
@@ -76,8 +84,8 @@ Draufsicht auf den SuperMini, USB-C zeigt nach rechts (Platinenkante). Reihenabs
 | **TP2** CHG− | B− direkt am Akkukontakt | Lötloch 1,8 mm, für ~5 A |
 
 Die Ladeleitungen sind breit ausgeführt:
-- **B+ → CHG+:** 2,5 mm auf beiden Lagen.
-- **B− → CHG−:** 3 mm auf der Unterseite plus Massefläche.
+- **B+ → CHG+:** 2,5 mm auf der Oberseite (CHG+ liegt oben bei B+).
+- **B− → CHG−:** 3 mm auf der Oberseite plus Massefläche (CHG− liegt unten bei B−).
 
 Der Ladestrom fließt **nicht** durch F1. Eine spätere Ladeplatine braucht deshalb ihre eigene Absicherung.
 
@@ -108,6 +116,7 @@ Schaltplan: [`m18-bruecke.kicad_sch`](m18-bruecke.kicad_sch), als PDF in [`ferti
 **RGB-LED** (5 mm, gemeinsame Anode; bestellt: Lumetheus RGB, Pinfolge R, A, G, B)
 - Grün und Blau brauchen ~3,2 V und gehen deshalb nicht an 3,3 V. Die Anode liegt an +5 V, jede Kathode an einem MMBT3904 (Q5–Q7, Basis 2,2 kΩ).
 - Vorwiderstände: rot 270 Ω, grün/blau 150 Ω, das ergibt ca. 7–9 mA bei voller Helligkeit.
+- Lage: links unten neben dem Regler, außerhalb des Displays und vor keinem Stecker. Die Treiber Q5–Q7 und die Widerstände sitzen unter dem SuperMini.
 - Die Firmware zeigt auf der LED dieselben Farben wie auf der WS2812.
 - Pinfolge: Rot kommt ins eckige Pad 1, die Anode (längster Pin) in Pad 2, dann Grün (Pad 3, GPIO11) und Blau (Pad 4, GPIO12).
   So ist die Lumetheus-LED belegt, und so sind Schaltplan und Firmware ausgelegt. Eine Dialight 521-8559F hat Blau und Grün vertauscht (R, A, B, G).
@@ -132,7 +141,15 @@ Im [Web-Flasher](https://danunt97.github.io/m18-protocol/) gibt es dafür einen 
 | `fertigung/m18-bruecke-schaltplan.pdf` | Schaltplan |
 
 Einstellungen beim Hersteller: 2 Lagen, 1,6 mm FR4, 1 oz Kupfer, HASL oder ENIG. Minimale Werte im Design: Leiterbahn 0,3 mm,
-Abstand 0,2 mm, Via 0,7/0,35 mm, Kupfer zum Rand 0,4 mm.
+Abstand 0,2 mm, Via 0,7/0,35 mm, Kupfer zum Rand 0,4 mm, Lötstopp-Freistellung 0,05 mm, Vias abgedeckt.
+
+**JLC-DFM:** Siebdruck liegt nicht über Bohrungen (Via-Sperrflächen entlang aller Bestückungsdruck-Linien). Der Bestückungsdruck wird mit 0,22 mm
+Freistellung um die Pads exportiert, Siebdruck näher als 0,15 mm an der Lacköffnung fällt dadurch weg (`neu_routen.sh`).
+Die Meldung „THT zu SMD“ (Abstand Lötloch zu SMD-Pad < 1 mm, v. a. unter dem SuperMini und an den Akkukontakten) betrifft nur
+maschinelles Wellen-/Selektivlöten und ist bei Handbestückung bedeutungslos.
+
+**Schaltplan:** in Funktionsblöcke gegliedert (Akkuanschluss, Versorgung, SuperMini, RGB-LED, J2 senden, J1 empfangen, OLED/Lade-Steuerung),
+GND/+5V/+3V3 als Versorgungssymbole, Verbindungen zwischen den Blöcken über Netznamen.
 
 **Prüfung:** ERC 0 Fehler/Warnungen. DRC (alle Schweregrade) 0 Verstöße, 0 offene Verbindungen, Schaltplan und Platine stimmen überein.
 
@@ -145,7 +162,7 @@ Abstand 0,2 mm, Via 0,7/0,35 mm, Kupfer zum Rand 0,4 mm.
    SuperMini auflegen, oben und unten verlöten. Der Kunststoffhalter der Stiftleiste (~2,5 mm) ist der Abstand zu den SMD-Teilen darunter.
    Am besten vorher die Firmware über den Web-Flasher aufspielen und den SuperMini einmal testen.
 4. RGB-LED: Die Pads sind versetzt. Die vier Beinchen leicht abwechselnd nach vorne und hinten biegen. Der lange Anschluss (Anode) gehört an Pin 2.
-5. Zuletzt die vier Akkukontakte von **unten** einsetzen und oben verlöten. Die Messer müssen senkrecht stehen.
+5. Zuletzt die fünf Akkukontakte von **unten** einsetzen und oben verlöten. Die Messer müssen senkrecht stehen.
 6. Erster Test am Netzteil (12–20 V an B+/B−, Strom auf 100 mA begrenzen): am 5V-Pin ~4,6 V, die LED zeigt den WLAN-Status.
    Am besten schon nach Schritt 2 (vor dem SuperMini) einmal die 4,6 V an den Lötaugen von Pin 5V prüfen.
 7. Mit Akku prüfen: **J2 gegen B− unter 1 V**.
@@ -153,7 +170,7 @@ Abstand 0,2 mm, Via 0,7/0,35 mm, Kupfer zum Rand 0,4 mm.
 ## ⚠ Vor der Bestellung prüfen
 
 1. **Reihenabstand des SuperMini** (15,24 mm) am echten Board nachmessen. Die Pinbelegung ist geprüft.
-2. **Kontaktreihenfolge**: links B+, J1, J2, rechts B−, von oben in Einsteckrichtung gesehen. Sonst sind B+ und B− vertauscht.
+2. **Kontaktreihenfolge**: links B+, J1, M, J2, rechts B−, von oben in Einsteckrichtung gesehen. Sonst sind B+ und B− vertauscht.
    D1 schützt dann zwar die Elektronik, die Brücke funktioniert aber nicht.
 3. **TE 928814-1**: Datenblatt fehlte, Maße aus dem SamacSys-Modell. Lochdurchmesser 1,45 mm und Messerhöhe prüfen.
 4. **Mengen im Mouser-Warenkorb** gegen die Bestellliste prüfen (Bedarf für 20 Platinen).
@@ -165,9 +182,9 @@ Abstand 0,2 mm, Via 0,7/0,35 mm, Kupfer zum Rand 0,4 mm.
 | Datei | Inhalt |
 |---|---|
 | `m18-bruecke.kicad_pro/.kicad_sch/.kicad_pcb` | KiCad-10-Projekt |
-| `lib/m18.kicad_sym`, `lib/m18.pretty`, `lib/3d` | Projektbibliothek: SuperMini-Lochbild (2 × 9, Footprint „ESP32-S3_SuperMini_Sockel“), TE 928814-1, Harwin-Buchse, RGB-LED (KiCad-Footprint ohne den Silk-Bogen an Pad 4), Lötloch |
+| `lib/m18.kicad_sym`, `lib/m18.pretty`, `lib/3d` | Projektbibliothek: SuperMini-Lochbild (2 × 9, Footprint „ESP32-S3_SuperMini_Sockel“), TE 928814-1, Harwin-Buchse, RGB-LED (KiCad-Footprint ohne den Silk-Bogen an Pad 4), Lötloch (THT) und SMD-Lötfeld |
 | `quellen/` | Herstellerbibliotheken (TE 928814-1, Dialight 521-8559F, Harwin M20-7820442) |
-| `tools/` | Skripte, mit denen die Platine entstanden ist (KiCad-Python). **`neu_routen.sh`** baut alles neu auf: Netze und Felder aus dem Schaltplan, Bauteillage (`lage.py`), feste Leitungen (`vorrouten.py`: Akkuleitungen, Q3B, GND-Via an Q5), Freerouting, GND-Flächen und Sperrflächen (`flaechen.py`), Bestückungsdruck (`beschriftung.py`), ERC/DRC, Gerber, PDFs, Bilder und Bestellliste. KiCad vorher schließen. |
+| `tools/` | Skripte, mit denen die Platine entstanden ist (KiCad-Python). **`neu_routen.sh`** baut alles neu auf: Netze und Felder aus dem Schaltplan, Bauteillage (`lage.py`), feste Leitungen (`vorrouten.py`: Akkuleitungen, J1/J2 über Vias in die Kanäle zwischen den Messern, LED-Kathoden unten durch die Stiftreihe, SDA zwischen den Steckern), Sperrflächen (`sperrflaechen.py`: unter den Messern, Rand, keine Vias unter Siebdruck), Freerouting, GND-Flächen und Sperrflächen (`flaechen.py`), Bestückungsdruck (`beschriftung.py`), ERC/DRC, Gerber, PDFs, Bilder und Bestellliste. KiCad vorher schließen. Dazu: `schaltplan.py` zeichnet den Schaltplan (Lage, Leitungen, Texte) neu, `netze_umbenennen.py` zieht danach geänderte Netznamen in die Platine nach, `fp_aktualisieren.py` übernimmt geänderte Grafik der Projekt-Footprints. |
 
 Geroutet wurde mit [Freerouting](https://github.com/freerouting/freerouting) 2.2.4 (braucht Java 25, erwartet unter `~/.kicad-mcp/`).
 Die Akkuleitungen sind von Hand gelegt und gesperrt. Wer in KiCad von Hand weiterarbeitet, braucht die Skripte nicht. `neu_routen.sh` würde Handänderungen an Leiterbahnen überschreiben.

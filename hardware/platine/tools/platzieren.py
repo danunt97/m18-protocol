@@ -7,12 +7,14 @@ PCB=os.path.join(PRJ,'m18-bruecke.kicad_pcb')
 O=(100.0,100.0)
 W,H=float(os.environ.get('M18_W','58')),float(os.environ.get('M18_H','38'))
 YC=H/2
-# Akkukontakte: Abstaende aus dem alten Gehaeuse (Printables "Milwaukee M18 All Pins"), Mitte = YC
-# Blick in Einsteckrichtung (Spitzen nach vorne, von oben): links B+, J1, J2, rechts B-  -> B+ unten
-KONTAKT_Y={'X1':YC+10.55,'X2':YC+5.30,'X3':YC-5.20,'X4':YC-10.55}
-KONTAKT_X=9.5   # Ursprung des TE-Footprints; Messer 0,66..16,66, Loetstifte bei 12,18 und 17,26
+# Akkukontakte: 5 Messer im Raster 5,625 mm (Printables "Milwaukee M18 All Pins"), Mitte = YC
+# Messerspitzen zeigen nach +x unter die Platine (Platine liegt ueber dem Akku), Loetstifte am linken Rand.
+# Blick von oben in Einsteckrichtung (+x): links B+, J1, M, J2, rechts B-  -> B+ oben (kleines y)
+RASTER=5.625
+KONTAKT_Y={'X1':YC-2*RASTER,'X2':YC-RASTER,'X5':YC,'X3':YC+RASTER,'X4':YC+2*RASTER}
+KONTAKT_X=9.5   # Ursprung des TE-Footprints; Loetstifte bei 1,74 und 6,82, Messer 2,34..18,34 (Spitze bei 18,34)
 P={}  # ref -> (x,y,rot,side)
-for r,y in KONTAKT_Y.items(): P[r]=(KONTAKT_X,y,180,'B')
+for r,y in KONTAKT_Y.items(): P[r]=(KONTAKT_X,y,0,'B')
 exec(open(os.path.join(HERE,'lage.py')).read())   # fuellt P mit den uebrigen Bauteilen
 
 def mm(x,y): return pcbnew.VECTOR2I(pcbnew.FromMM(O[0]+x),pcbnew.FromMM(O[1]+y))

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Platine komplett neu aufbauen: Netze/Felder aus dem Schaltplan, Bauteillage (lage.py),
-# Akkuleitungen vorrouten, Freerouting, GND-Flaechen, Beschriftung, DRC, Exporte.
+# Akkuleitungen vorrouten, Sperrflaechen unter den Messern, Freerouting, GND-Flaechen, Beschriftung, DRC, Exporte.
 # KiCad (Platine/Schaltplan) vorher schliessen. Aufruf aus hardware/platine: tools/neu_routen.sh
 set -e
 cd "$(dirname "$0")/.."
@@ -13,6 +13,7 @@ k() { "$KPY" "$@" 2>&1 | grep -v -E "wxApp|memory leak|Debug: Adding" || true; }
 python3 tools/abgleich.py
 k tools/platzieren.py
 k tools/vorrouten.py
+k tools/sperrflaechen.py
 k - <<PY
 import pcbnew
 b=pcbnew.LoadBoard('m18-bruecke.kicad_pcb'); print('DSN', pcbnew.ExportSpecctraDSN(b,'$TMP/m18.dsn'))
@@ -47,6 +48,12 @@ PY
 # Fertigungsdaten, Bilder, Bestellliste
 rm -rf fertigung/gerber && mkdir -p fertigung/gerber bilder
 "$CLI" pcb export gerbers -o fertigung/gerber/ -l F.Cu,B.Cu,F.Paste,B.Paste,F.SilkS,B.SilkS,F.Mask,B.Mask,Edge.Cuts --subtract-soldermask m18-bruecke.kicad_pcb >/dev/null 2>&1
+# Bestueckungsdruck mit 0,22 mm Freistellung um die Pads (nur fuer diesen Export): Siebdruck naeher als 0,15 mm
+# an der echten Lackoeffnung (Pad + 0,05 mm) wird abgeschnitten (JLC-DFM "Siebdruck zu Pad")
+mkdir -p "$TMP/silk" && sed 's/(pad_to_mask_clearance [0-9.]*)/(pad_to_mask_clearance 0.22)/' m18-bruecke.kicad_pcb > "$TMP/silk/m18-bruecke.kicad_pcb"
+cp m18-bruecke.kicad_pro "$TMP/silk/"
+"$CLI" pcb export gerbers -o "$TMP/silk/" -l F.SilkS,B.SilkS --subtract-soldermask "$TMP/silk/m18-bruecke.kicad_pcb" >/dev/null 2>&1
+cp "$TMP/silk/m18-bruecke-F_Silkscreen.gto" "$TMP/silk/m18-bruecke-B_Silkscreen.gbo" fertigung/gerber/
 "$CLI" pcb export drill -o fertigung/gerber/ --format excellon --excellon-units mm --excellon-separate-th --generate-map --map-format pdf m18-bruecke.kicad_pcb >/dev/null 2>&1
 rm -f fertigung/m18-bruecke-gerber.zip && (cd fertigung/gerber && zip -q ../m18-bruecke-gerber.zip *)
 "$CLI" sch export pdf -o fertigung/m18-bruecke-schaltplan.pdf m18-bruecke.kicad_sch >/dev/null 2>&1
@@ -55,5 +62,6 @@ rm -f fertigung/m18-bruecke-gerber.zip && (cd fertigung/gerber && zip -q ../m18-
 "$CLI" pcb render --side top --width 1600 --height 1100 --quality high -o bilder/platine-oben.png m18-bruecke.kicad_pcb >/dev/null 2>&1
 "$CLI" pcb render --side bottom --width 1600 --height 1100 --quality high -o bilder/platine-unten.png m18-bruecke.kicad_pcb >/dev/null 2>&1
 "$CLI" pcb render --side top --rotate "-35,0,25" --perspective --width 1600 --height 1100 --quality high -o bilder/platine-3d.png m18-bruecke.kicad_pcb >/dev/null 2>&1
+"$CLI" pcb export step --force --subst-models -o m18-bruecke.step m18-bruecke.kicad_pcb >/dev/null 2>&1   # 3D-Modell fuer das Gehaeuse (Fusion)
 python3 tools/bestellliste.py
 ls fertigung
