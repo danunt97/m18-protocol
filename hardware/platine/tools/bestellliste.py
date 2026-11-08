@@ -27,8 +27,8 @@ INFO={ # MPN: (Beschreibung, Bauform, Staffelmenge, Hinweis)
  'RC0805FR-07100KL':('Widerstand 100 kΩ 1 %','0805',100,''),
  'RC0805FR-07270RL':('Widerstand 270 Ω 1 % (LED rot)','0805',100,''),
  'RC0805FR-07150RL':('Widerstand 150 Ω 1 % (LED grün/blau)','0805',100,''),
- 'GRM31CR71H475KA12L':('Keramikkondensator 4,7 µF 50 V X7R','1206',0,''),
- 'GRM31CR71E106KA12L':('Keramikkondensator 10 µF 25 V X7R','1206',0,''),
+'GJ831CR71H475KA12L':('Keramikkondensator 4,7 µF 50 V X7R','1206',0,''),
+'CC1206KKX7R8BB106':('Keramikkondensator 10 µF 25 V X7R','1206',0,''),
  'B1100-13-F':('Schottky-Diode 100 V 1 A (Verpolschutz)','SMA',0,''),
  'B140-13-F':('Schottky-Diode 40 V 1 A (5V-Entkopplung)','SMA',0,''),
  'SMBJ24A':('TVS-Diode 24 V unidirektional 600 W','SMB',0,''),
@@ -42,8 +42,8 @@ INFO={ # MPN: (Beschreibung, Bauform, Staffelmenge, Hinweis)
  '521-8559F':('RGB-LED 5 mm, gemeinsame Anode','THT 5 mm',0,'Beinchen versetzt einlöten (Footprint mit versetzten Pads)'),
  '61300611121':('Stiftleiste 1×6, 2,54 mm (Lade-Steuerung)','THT',0,'Nicht bestücken (DNP), nur für spätere Ladeplatine'),
 }
-WK={'GRM31CR71H475KA12L':('Murata','81-GRM31CR71H475KA2L'),'SMBJ24A':('Bourns','652-SMBJ24A')}
-SKIP={'M20-7820942','521-8559F'}  # SuperMini direkt eingelötet; RGB-LED von Amazon (Blatt Sonstiges)
+WK={'SMBJ24A':('Bourns','652-SMBJ24A')}
+SKIP={'M20-7820942','521-8559F','ESP32-S3 SuperMini','2001001007'}  # SuperMini direkt eingelötet; RGB-LED von Amazon (Blatt Sonstiges)
 rows=[]
 for mpn,p in parts.items():
     if mpn in SKIP: continue

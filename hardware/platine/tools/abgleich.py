@@ -16,6 +16,7 @@ for m in re.finditer(r'\(comp\s*\(ref "([^"]+)"\)(.*?)\n\t\t\)', n, re.S):
     ds=re.search(r'\(datasheet "([^"]*)"\)',blk)
     if ds and ds.group(1) not in ('','~'): f['Datasheet']=ds.group(1)
     d=re.search(r'\(description "([^"]*)"\)',blk)
+    v=re.search(r'\(value "([^"]*)"\)',blk); f['_value']=v.group(1) if v else None
     f['Description']=d.group(1) if d else ''
     comps[ref]=f
 # Netze
@@ -55,13 +56,19 @@ for a,e in footprints(s):
         nm=nets.get((ref,num))
         if nm and '(net ' not in p:
             p=p.replace('\t\t\t(uuid','\t\t\t(net "%s")\n\t\t\t(uuid'%nm,1)
+        elif nm:
+            p=re.sub(r'\(net "[^"]*"\)','(net "%s")'%nm.replace('\\','\\\\'),p,count=1)   # Netz aus dem Schaltplan
         return p
     blk=re.sub(r'\(pad "([^"]*)" .*?\n\t\t\)',padfix,blk,flags=re.S)
     # 3) Felder Hersteller/MPN/Mouser + Beschreibung
     for key in ('Hersteller','MPN','Mouser'):
+        if key in f and '(property "%s"'%key in blk:
+            blk=re.sub(r'\(property "%s" "[^"]*"'%key, lambda m,k=key:'(property "%s" "%s"'%(k,f[k]), blk, count=1)
         if key in f and '(property "%s"'%key not in blk:
             prop='\t\t(property "%s" "%s"\n\t\t\t(at 0 0 0)\n\t\t\t(layer "F.Fab")\n\t\t\t(hide yes)\n\t\t\t(uuid "%s")\n\t\t\t(effects\n\t\t\t\t(font\n\t\t\t\t\t(size 1 1)\n\t\t\t\t\t(thickness 0.15)\n\t\t\t\t)\n\t\t\t)\n\t\t)\n'%(key,f[key],uuid.uuid4())
             j=blk.find('\t\t(attr'); blk=blk[:j]+prop+blk[j:]
+    if f.get('_value'):
+        blk=re.sub(r'\(property "Value" "[^"]*"', lambda m:'(property "Value" "%s"'%f['_value'], blk, count=1)
     if f.get('Datasheet'):
         blk=re.sub(r'\(property "Datasheet" "[^"]*"','(property "Datasheet" "%s"'%f['Datasheet'],blk,count=1)
     if f.get('Description') is not None:

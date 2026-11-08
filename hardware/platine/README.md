@@ -55,8 +55,8 @@ Draufsicht auf den SuperMini, USB-C zeigt nach rechts (Platinenkante). Reihenabs
 | 2 / 11 | GPIO44 (U0RXD) | frei | GND | Masse = B− |
 | 3 / 12 | GPIO1 | frei | 3V3 | Versorgung OLED, Pull-ups, Steuerstecker |
 | 4 / 13 | GPIO2 | frei | GPIO13 | RGB-LED **rot** (Q5 → Pad 1) |
-| 5 / 14 | GPIO3 (Strapping) | frei | GPIO12 | RGB-LED Pad 4 (Q6), bei der Lumetheus-LED **blau** |
-| 6 / 15 | GPIO4 | **Reserve** → Steuerstecker Pin 6 | GPIO11 | RGB-LED Pad 3 (Q7), bei der Lumetheus-LED **grün** |
+| 5 / 14 | GPIO3 (Strapping) | frei | GPIO12 | RGB-LED **blau** (Q6 → Pad 4) |
+| 6 / 15 | GPIO4 | **Reserve** → Steuerstecker Pin 6 | GPIO11 | RGB-LED **grün** (Q7 → Pad 3) |
 | 7 / 16 | GPIO5 | **CHG_EN** → Steuerstecker Pin 5 | GPIO10 | frei |
 | 8 / 17 | GPIO6 | **RX** ← J1-Stufe | GPIO9 | **SCL** (4,7 kΩ Pull-up) |
 | 9 / 18 | GPIO7 | **TX** → J2-Stufe | GPIO8 | **SDA** (4,7 kΩ Pull-up) |
@@ -70,7 +70,7 @@ Draufsicht auf den SuperMini, USB-C zeigt nach rechts (Platinenkante). Reihenabs
 
 | Bauteil | Pin 1 → n | Hinweis |
 |---|---|---|
-| **J1** OLED, Buchse 1×4 (Harwin M20-7820442) | **GND, VCC (3V3), SCL, SDA** | Pin 1 ist der rechte Pin (eckiges Pad). Passt zum QIQIAZI-0,96″-Modul (Aufdruck GND VCC SCL SDA). Eingesteckt zeigt das Display nach außen, also zur oberen Platinenkante. |
+| **J1** OLED, Buchse 1×4 (Harwin M20-7820442) | **GND, VCC (3V3), SCL, SDA** | Von oben gesehen von links nach rechts, Pin 1 (GND) ist das eckige Pad links. Passt zum QIQIAZI-0,96″-Modul (Aufdruck GND VCC SCL SDA). Das Display schaut über den SuperMini. |
 | **J2** Lade-Steuerung, Stiftleiste 1×6 | 3V3, GND, SDA, SCL, CHG_EN, Reserve (GPIO4) | **nicht bestücken** (DNP) |
 | **TP1** CHG+ | B+ direkt am Akkukontakt, **vor** der Sicherung | Lötloch 1,8 mm, für ~5 A |
 | **TP2** CHG− | B− direkt am Akkukontakt | Lötloch 1,8 mm, für ~5 A |
@@ -109,8 +109,8 @@ Schaltplan: [`m18-bruecke.kicad_sch`](m18-bruecke.kicad_sch), als PDF in [`ferti
 - Grün und Blau brauchen ~3,2 V und gehen deshalb nicht an 3,3 V. Die Anode liegt an +5 V, jede Kathode an einem MMBT3904 (Q5–Q7, Basis 2,2 kΩ).
 - Vorwiderstände: rot 270 Ω, grün/blau 150 Ω, das ergibt ca. 7–9 mA bei voller Helligkeit.
 - Die Firmware zeigt auf der LED dieselben Farben wie auf der WS2812.
-- Pinfolge: Rot kommt ins eckige Pad 1, die Anode (längster Pin) in Pad 2. Bei der Lumetheus-LED liegt dann Grün auf Pad 3 und Blau auf Pad 4,
-  und die Firmware ist darauf eingestellt. Die im Schaltplan eingetragene Dialight 521-8559F hat Blau und Grün vertauscht (R, A, B, G).
+- Pinfolge: Rot kommt ins eckige Pad 1, die Anode (längster Pin) in Pad 2, dann Grün (Pad 3, GPIO11) und Blau (Pad 4, GPIO12).
+  So ist die Lumetheus-LED belegt, und so sind Schaltplan und Firmware ausgelegt. Eine Dialight 521-8559F hat Blau und Grün vertauscht (R, A, B, G).
   Mit ihr in `m18_bridge.ino` `PIN_RGB_G` und `PIN_RGB_B` tauschen.
 - Hinweis: Die Basen von Q5–Q7 haben keinen Pull-down. Beim Einschalten kann die LED kurz schwach glimmen, bis die Firmware die Pins setzt.
   Im Tiefschlaf hält die Firmware die Pins auf Low.
@@ -165,9 +165,9 @@ Abstand 0,2 mm, Via 0,7/0,35 mm, Kupfer zum Rand 0,4 mm.
 | Datei | Inhalt |
 |---|---|
 | `m18-bruecke.kicad_pro/.kicad_sch/.kicad_pcb` | KiCad-10-Projekt |
-| `lib/m18.kicad_sym`, `lib/m18.pretty`, `lib/3d` | Projektbibliothek: SuperMini-Sockel, TE 928814-1, Harwin-Buchse, RGB-LED (KiCad-Footprint ohne den Silk-Bogen an Pad 4), Lötloch |
+| `lib/m18.kicad_sym`, `lib/m18.pretty`, `lib/3d` | Projektbibliothek: SuperMini-Lochbild (2 × 9, Footprint „ESP32-S3_SuperMini_Sockel“), TE 928814-1, Harwin-Buchse, RGB-LED (KiCad-Footprint ohne den Silk-Bogen an Pad 4), Lötloch |
 | `quellen/` | Herstellerbibliotheken (TE 928814-1, Dialight 521-8559F, Harwin M20-7820442) |
-| `tools/` | Skripte, mit denen die Platine entstanden ist (KiCad-Python): `platzieren.py` + `lage.py` (Bauteillage), `vorrouten.py` (breite Akkuleitungen, gesperrt), `flaechen.py` (GND-Flächen, Sperrflächen unter den Messern), `beschriftung.py` (Bestückungsdruck), `abgleich.py` (Platine an Schaltplan angleichen), `bestellliste.py` (Excel-Liste) |
+| `tools/` | Skripte, mit denen die Platine entstanden ist (KiCad-Python). **`neu_routen.sh`** baut alles neu auf: Netze und Felder aus dem Schaltplan, Bauteillage (`lage.py`), feste Leitungen (`vorrouten.py`: Akkuleitungen, Q3B, GND-Via an Q5), Freerouting, GND-Flächen und Sperrflächen (`flaechen.py`), Bestückungsdruck (`beschriftung.py`), ERC/DRC, Gerber, PDFs, Bilder und Bestellliste. KiCad vorher schließen. |
 
-Geroutet wurde mit [Freerouting](https://github.com/freerouting/freerouting) 2.2.4. Die Akkuleitungen sind von Hand gelegt und gesperrt.
-Wer in KiCad weiterarbeitet, braucht die Skripte nicht.
+Geroutet wurde mit [Freerouting](https://github.com/freerouting/freerouting) 2.2.4 (braucht Java 25, erwartet unter `~/.kicad-mcp/`).
+Die Akkuleitungen sind von Hand gelegt und gesperrt. Wer in KiCad von Hand weiterarbeitet, braucht die Skripte nicht. `neu_routen.sh` würde Handänderungen an Leiterbahnen überschreiben.

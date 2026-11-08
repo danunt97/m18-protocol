@@ -2798,7 +2798,7 @@
 					)
 				)
 			)
-			(property "Description" "Dialight 521-8559F, RGB-LED 5 mm THT, gemeinsame Anode (1 R-K, 2 A, 3 B-K, 4 G-K)"
+			(property "Description" "RGB-LED 5 mm THT, gemeinsame Anode, Pinfolge 1 R-K, 2 A, 3 G-K, 4 B-K (z. B. Lumetheus 5 mm RGB). Dialight 521-8559F hat 3 und 4 vertauscht."
 				(at 0 -10.16 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -2862,7 +2862,7 @@
 				(pin passive line
 					(at -7.62 -2.54 0)
 					(length 2.54)
-					(name "BLUE_K"
+					(name "GREEN_K"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2880,7 +2880,7 @@
 				(pin passive line
 					(at -7.62 0 0)
 					(length 2.54)
-					(name "GREEN_K"
+					(name "BLUE_K"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2898,107 +2898,106 @@
 			)
 			(embedded_fonts no)
 		)
-	
-        	(symbol "Mechanical:MountingHole"
-    		(pin_names
-    			(offset 1.016)
-    		)
-    		(exclude_from_sim no)
-    		(in_bom no)
-    		(on_board yes)
-    		(in_pos_files yes)
-    		(duplicate_pin_numbers_are_jumpers no)
-    		(property "Reference" "H"
-    			(at 0 5.08 0)
-    			(show_name no)
-    			(do_not_autoplace no)
-    			(effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    		)
-    		(property "Value" "MountingHole"
-    			(at 0 3.175 0)
-    			(show_name no)
-    			(do_not_autoplace no)
-    			(effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    		)
-    		(property "Footprint" ""
-    			(at 0 0 0)
-    			(show_name no)
-    			(do_not_autoplace no)
-    			(hide yes)
-    			(effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    		)
-    		(property "Datasheet" ""
-    			(at 0 0 0)
-    			(show_name no)
-    			(do_not_autoplace no)
-    			(hide yes)
-    			(effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    		)
-    		(property "Description" "Mounting Hole without connection"
-    			(at 0 0 0)
-    			(show_name no)
-    			(do_not_autoplace no)
-    			(hide yes)
-    			(effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    		)
-    		(property "ki_keywords" "mounting hole"
-    			(at 0 0 0)
-    			(show_name no)
-    			(do_not_autoplace no)
-    			(hide yes)
-    			(effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    		)
-    		(property "ki_fp_filters" "MountingHole*"
-    			(at 0 0 0)
-    			(show_name no)
-    			(do_not_autoplace no)
-    			(hide yes)
-    			(effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    		)
-    		(symbol "MountingHole_0_1"
-    			(circle
-    				(center 0 0)
-    				(radius 1.27)
-    				(stroke
-    					(width 1.27)
-    					(type default)
-    				)
-    				(fill
-    					(type none)
-    				)
-    			)
-    		)
-    		(embedded_fonts no)
-    	)
-  )
+		(symbol "Mechanical:MountingHole"
+			(pin_names
+				(offset 1.016)
+			)
+			(exclude_from_sim no)
+			(in_bom no)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "H"
+				(at 0 5.08 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "MountingHole"
+				(at 0 3.175 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Description" "Mounting Hole without connection"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "mounting hole"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "MountingHole*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "MountingHole_0_1"
+				(circle
+					(center 0 0)
+					(radius 1.27)
+					(stroke
+						(width 1.27)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+	)
 	(symbol
 		(lib_id "m18:M18_Kontakt")
 		(at 25.4 40.64 0)
@@ -3750,7 +3749,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "GRM31CR71H475KA12L"
+		(property "MPN" "GJ831CR71H475KA12L"
 			(at 96.52 53.34 0)
 			(effects
 				(font
@@ -3759,7 +3758,7 @@
 				(hide yes)
 			)
 		)
-		(property "Mouser" "81-GRM31CR71H475KA12"
+		(property "Mouser" "81-GJ831CR71H475KA2L"
 			(at 96.52 53.34 0)
 			(effects
 				(font
@@ -3961,7 +3960,7 @@
 				)
 			)
 		)
-		(property "Hersteller" "Murata"
+		(property "Hersteller" "Yageo"
 			(at 134.62 53.34 0)
 			(effects
 				(font
@@ -3970,7 +3969,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "GRM31CR71E106KA12L"
+		(property "MPN" "CC1206KKX7R8BB106"
 			(at 134.62 53.34 0)
 			(effects
 				(font
@@ -3979,7 +3978,7 @@
 				(hide yes)
 			)
 		)
-		(property "Mouser" "81-GRM31CR71E106KA12"
+		(property "Mouser" "603-CC126KKX7R8BB106"
 			(at 134.62 53.34 0)
 			(effects
 				(font
@@ -6683,7 +6682,7 @@
 				)
 			)
 		)
-		(property "Hersteller" "Harwin (2x Buchsenleiste 1x9, 8,5 mm)"
+		(property "Hersteller" "diverse (ESP32-S3FH4R2, HW-747)"
 			(at 210.82 106.68 0)
 			(effects
 				(font
@@ -6692,7 +6691,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "M20-7820942"
+		(property "MPN" "ESP32-S3 SuperMini"
 			(at 210.82 106.68 0)
 			(effects
 				(font
@@ -6701,7 +6700,7 @@
 				(hide yes)
 			)
 		)
-		(property "Mouser" "855-M20-7820942"
+		(property "Mouser" "-"
 			(at 210.82 106.68 0)
 			(effects
 				(font
@@ -7612,7 +7611,7 @@
 				)
 			)
 		)
-		(property "Value" "521-8559F"
+		(property "Value" "RGB 5mm gem. Anode (R,A,G,B)"
 			(at 271.78 55.88 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7655,7 +7654,7 @@
 				)
 			)
 		)
-		(property "Hersteller" "Dialight"
+		(property "Hersteller" "Lumetheus"
 			(at 271.78 50.8 0)
 			(effects
 				(font
@@ -7664,7 +7663,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "521-8559F"
+		(property "MPN" "2001001007"
 			(at 271.78 50.8 0)
 			(effects
 				(font
@@ -7673,7 +7672,7 @@
 				(hide yes)
 			)
 		)
-		(property "Mouser" "645-5218559F"
+		(property "Mouser" "-"
 			(at 271.78 50.8 0)
 			(effects
 				(font
@@ -8701,26 +8700,6 @@
 		)
 		(uuid "56ed6c23-9ff2-4cac-b8d1-950d0ecc436b")
 	)
-	(label "LED_BK"
-		(at 264.15999999999997 53.339999999999996 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "cf7c62a9-3f03-4c6a-9da9-f0429a7c6a77")
-	)
-	(label "LED_GK"
-		(at 264.15999999999997 50.8 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "51978ac6-52a2-4e11-b535-de80bf0fe265")
-	)
 	(label "Q5C"
 		(at 223.52 46.989999999999995 90)
 		(effects
@@ -8751,16 +8730,6 @@
 		)
 		(uuid "c08fdbad-633a-4252-9515-0527108c6094")
 	)
-	(label "LED_GK"
-		(at 236.22 54.61 270)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "002efe0f-6454-4cc3-8ef6-fb18a8e85a66")
-	)
 	(label "Q7C"
 		(at 248.92 46.989999999999995 90)
 		(effects
@@ -8770,16 +8739,6 @@
 			(justify left bottom)
 		)
 		(uuid "624c9677-0a94-45eb-b523-4fa111deb464")
-	)
-	(label "LED_BK"
-		(at 248.92 54.61 270)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "f49c3a0c-da2a-4719-8ef8-f815ba0dc960")
 	)
 	(label "Q5B"
 		(at 215.89999999999998 71.12 180)
@@ -8891,16 +8850,6 @@
 		)
 		(uuid "43b00faf-2d8c-4ac4-95fc-7f00f66594dc")
 	)
-	(label "LED_G"
-		(at 227.32999999999998 83.82 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "6aa4a29c-3676-43b9-bbd6-0f1466f7d2e9")
-	)
 	(wire
 		(pts
 			(xy 234.95 83.82) (xy 236.22 71.12)
@@ -8910,16 +8859,6 @@
 			(type default)
 		)
 		(uuid "580a1ca6-018c-4ce6-9345-3d3fa9bcbf3f")
-	)
-	(label "LED_B"
-		(at 247.65 83.82 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "74a517c3-594a-401b-b346-2a5915001297")
 	)
 	(wire
 		(pts
@@ -8940,26 +8879,6 @@
 			(justify left bottom)
 		)
 		(uuid "0968122d-b0d3-4da6-aeab-0e69c1159ea4")
-	)
-	(label "LED_G"
-		(at 220.98 106.68 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "da2c37d8-538a-425f-b0a9-0a3d2f97dbc2")
-	)
-	(label "LED_B"
-		(at 220.98 109.22000000000001 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "a80a4811-9794-4579-95fa-10ec1f1b1917")
 	)
 	(label "GPIO4_RES"
 		(at 200.66 109.22000000000001 180)
@@ -9011,267 +8930,379 @@
 		)
 		(uuid "32a27a6f-bcb1-4a6a-bc41-f02bd16db0d2")
 	)
-	  (symbol (lib_id "Mechanical:MountingHole") (at 241.3 30.48 0) (unit 1)
-    (body_style 1) (exclude_from_sim no) (in_bom no) (on_board yes) (in_pos_files yes) (dnp no)
-    (uuid "2be15d57-9b9f-4cf2-a48d-8aba653fabef")
-    (property "Reference" "H1"
-      (at 241.3 27.94 0)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Value" "M3"
-      (at 241.3 33.02 0)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
-      (at 241.3 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Datasheet" ""
-      (at 241.3 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Description" "Mounting Hole without connection"
-      (at 241.3 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (instances
-      (project "m18-bruecke"
-        (path "/17a608c4-b0fe-469a-a51b-914fe9710e8e"
-          (reference "H1")
-          (unit 1)
-        )
-      )
-    )
-  )
-    (symbol (lib_id "Mechanical:MountingHole") (at 251.46 30.48 0) (unit 1)
-    (body_style 1) (exclude_from_sim no) (in_bom no) (on_board yes) (in_pos_files yes) (dnp no)
-    (uuid "8d1b03d2-249d-45b5-9fac-670cc2b9cc07")
-    (property "Reference" "H2"
-      (at 251.46 27.94 0)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Value" "M3"
-      (at 251.46 33.02 0)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
-      (at 251.46 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Datasheet" ""
-      (at 251.46 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Description" "Mounting Hole without connection"
-      (at 251.46 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (instances
-      (project "m18-bruecke"
-        (path "/17a608c4-b0fe-469a-a51b-914fe9710e8e"
-          (reference "H2")
-          (unit 1)
-        )
-      )
-    )
-  )
-    (symbol (lib_id "Mechanical:MountingHole") (at 261.62 30.48 0) (unit 1)
-    (body_style 1) (exclude_from_sim no) (in_bom no) (on_board yes) (in_pos_files yes) (dnp no)
-    (uuid "ce2a1714-1d81-4117-9ad5-aa625a190307")
-    (property "Reference" "H3"
-      (at 261.62 27.94 0)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Value" "M3"
-      (at 261.62 33.02 0)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
-      (at 261.62 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Datasheet" ""
-      (at 261.62 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Description" "Mounting Hole without connection"
-      (at 261.62 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (instances
-      (project "m18-bruecke"
-        (path "/17a608c4-b0fe-469a-a51b-914fe9710e8e"
-          (reference "H3")
-          (unit 1)
-        )
-      )
-    )
-  )
-    (symbol (lib_id "Mechanical:MountingHole") (at 271.78 30.48 0) (unit 1)
-    (body_style 1) (exclude_from_sim no) (in_bom no) (on_board yes) (in_pos_files yes) (dnp no)
-    (uuid "45e67592-54ad-4e06-ab5f-99911c729b9f")
-    (property "Reference" "H4"
-      (at 271.78 27.94 0)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Value" "M3"
-      (at 271.78 33.02 0)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
-      (at 271.78 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Datasheet" ""
-      (at 271.78 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (property "Description" "Mounting Hole without connection"
-      (at 271.78 30.48 0)
-      (hide yes)
-      (show_name no)
-      (do_not_autoplace no)
-      (effects
-    				(font
-    					(size 1.27 1.27)
-    				)
-    			)
-    )
-    (instances
-      (project "m18-bruecke"
-        (path "/17a608c4-b0fe-469a-a51b-914fe9710e8e"
-          (reference "H4")
-          (unit 1)
-        )
-      )
-    )
-  )
-  (sheet_instances
+	(symbol
+		(lib_id "Mechanical:MountingHole")
+		(at 241.3 30.48 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "2be15d57-9b9f-4cf2-a48d-8aba653fabef")
+		(property "Reference" "H1"
+			(at 241.3 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "M3"
+			(at 241.3 33.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
+			(at 241.3 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 241.3 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Mounting Hole without connection"
+			(at 241.3 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(instances
+			(project "m18-bruecke"
+				(path "/17a608c4-b0fe-469a-a51b-914fe9710e8e"
+					(reference "H1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mechanical:MountingHole")
+		(at 251.46 30.48 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "8d1b03d2-249d-45b5-9fac-670cc2b9cc07")
+		(property "Reference" "H2"
+			(at 251.46 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "M3"
+			(at 251.46 33.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
+			(at 251.46 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 251.46 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Mounting Hole without connection"
+			(at 251.46 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(instances
+			(project "m18-bruecke"
+				(path "/17a608c4-b0fe-469a-a51b-914fe9710e8e"
+					(reference "H2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mechanical:MountingHole")
+		(at 261.62 30.48 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "ce2a1714-1d81-4117-9ad5-aa625a190307")
+		(property "Reference" "H3"
+			(at 261.62 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "M3"
+			(at 261.62 33.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
+			(at 261.62 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 261.62 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Mounting Hole without connection"
+			(at 261.62 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(instances
+			(project "m18-bruecke"
+				(path "/17a608c4-b0fe-469a-a51b-914fe9710e8e"
+					(reference "H3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Mechanical:MountingHole")
+		(at 271.78 30.48 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "45e67592-54ad-4e06-ab5f-99911c729b9f")
+		(property "Reference" "H4"
+			(at 271.78 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "M3"
+			(at 271.78 33.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
+			(at 271.78 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 271.78 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Mounting Hole without connection"
+			(at 271.78 30.48 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(instances
+			(project "m18-bruecke"
+				(path "/17a608c4-b0fe-469a-a51b-914fe9710e8e"
+					(reference "H4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(label "LED_B"
+		(at 220.98 106.68 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "57b2260c-a6a6-4e5a-9fdb-ce677a54e454")
+	)
+	(label "LED_G"
+		(at 220.98 109.22000000000001 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "1d5a4a6f-60a6-4869-bb54-37f6f79b2f94")
+	)
+	(label "LED_B"
+		(at 227.32999999999998 83.82 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "bfaaf3f7-fb06-477b-bfe2-08f92b32112b")
+	)
+	(label "LED_G"
+		(at 247.65 83.82 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "57169a6d-aa2e-4960-975f-a6db680e4198")
+	)
+	(label "LED_BK"
+		(at 236.22 54.61 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "c1bb0434-0567-4d81-b9fc-bba117fcc07e")
+	)
+	(label "LED_GK"
+		(at 248.92 54.61 270)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "ad7c613c-7181-4cd0-b4ca-517f22fd63ae")
+	)
+	(label "LED_GK"
+		(at 264.15999999999997 53.339999999999996 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "dbfaec65-adc3-4d59-b02e-b896034f33d1")
+	)
+	(label "LED_BK"
+		(at 264.15999999999997 50.8 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "b727cea6-d360-4f16-af16-e7f315db37b1")
+	)
+	(sheet_instances
 		(path "/"
 			(page "1")
 		)

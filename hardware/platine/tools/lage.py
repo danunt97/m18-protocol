@@ -23,7 +23,8 @@ P.update({
  # J1-Empfangsstufe + I2C unter dem Modul
  'R8':(36.6,14.4,0,'F'), 'Q3':(36.8,18.0,0,'F'), 'R9':(41.4,14.4,0,'F'),
  'Q4':(42.2,18.2,0,'F'), 'R10':(46.0,15.0,90,'F'),
- 'R11':(34.5,2.6,90,'F'), 'R12':(36.5,2.6,90,'F'),
- # Stecker oben: J2 Lade-Steuerung (Reihe y=7.2), J1 OLED (Reihe y=2.6)
- 'J2':(30.4,7.2,90,'F'), 'J1':(47.5,2.6,180,'F'),
+ 'R11':(40.6,23.4,0,'F'), 'R12':(44.45,23.4,0,'F'),
+ # Stecker oben: J2 Lade-Steuerung (Reihe y=7.2), J1 OLED (Reihe y=2.6, von oben links->rechts GND VCC SCL SDA,
+ # Display schaut ueber den SuperMini)
+ 'J2':(30.4,7.2,90,'F'), 'J1':(39.88,2.6,0,'F'),
 })

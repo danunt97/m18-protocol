@@ -461,7 +461,7 @@
 				)
 			)
 		)
-		(property "Description" "Dialight 521-8559F, RGB-LED 5 mm THT, gemeinsame Anode (1 R-K, 2 A, 3 B-K, 4 G-K)"
+		(property "Description" "RGB-LED 5 mm THT, gemeinsame Anode, Pinfolge 1 R-K, 2 A, 3 G-K, 4 B-K (z. B. Lumetheus 5 mm RGB). Dialight 521-8559F hat 3 und 4 vertauscht."
 			(at 0 -10.16 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -525,7 +525,7 @@
 			(pin passive line
 				(at -7.62 -2.54 0)
 				(length 2.54)
-				(name "BLUE_K"
+				(name "GREEN_K"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -543,7 +543,7 @@
 			(pin passive line
 				(at -7.62 0 0)
 				(length 2.54)
-				(name "GREEN_K"
+				(name "BLUE_K"
 					(effects
 						(font
 							(size 1.27 1.27)
