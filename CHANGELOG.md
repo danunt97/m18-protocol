@@ -4,6 +4,8 @@
 - **https://akkuscan.app/** ist die Produktseite (Funktionen, So geht's, Für Betriebe, FAQ). Angemeldete Nutzer kommen von dort direkt ins Portal.
 - Das Portal (App mit Bluetooth, Konto, Meine Akkus) liegt unter **/app/**, der Firmware-Flasher unter **/flasher/**, dazu **/impressum/** und **/datenschutz/** (Angaben werden noch ergänzt).
 - „Anmelden“ und „Konto anlegen“ auf der Produktseite öffnen in der App direkt das passende Formular. Bestätigungs- und Passwort-Mails führen in die App.
+- Produktseite überarbeitet: scharfe, unverzerrte Bilder der echten App (Handy: Auslesen und „Meine Akkus“, PC: Portal im Browserfenster).
+  FAQ in einfacher Sprache für Kunden ohne IT-Kenntnisse. Neuer Abschnitt „Modul kaufen & unterstützen“; der eBay-Link wird an einer Stelle (`EBAY_URL` in `webland/index.html`) eingetragen.
 
 ## 1.12 – Eine App, Cloud als Rückgrat
 - **Eine App für WLAN und Bluetooth:** Die Akku-App auf GitHub Pages ist jetzt die Weboberfläche der Brücke selbst, mit einem Bluetooth-Adapter (`webble/ble-shim.js`).

@@ -27,7 +27,7 @@
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 a{color:inherit}
-img{max-width:100%;display:block}
+img{max-width:100%;height:auto;display:block}
 .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
 /* header */
 header{position:sticky;top:0;z-index:10;background:rgba(22,24,27,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
@@ -55,15 +55,24 @@ h1 em{font-style:normal;color:var(--red2)}
 .lead{color:var(--muted);font-size:clamp(17px,1.6vw,20px);margin:20px 0 28px;max-width:560px}
 .ctas{display:flex;gap:12px;flex-wrap:wrap}
 .small{color:var(--faint);font-size:13.5px;margin-top:14px}
-.phones{position:relative;height:560px}
-.phone{position:absolute;width:258px;border-radius:34px;border:9px solid #0b0c0e;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 1px #2c3036;overflow:hidden;background:#000}
+.phones{display:flex;justify-content:center;align-items:flex-start;gap:22px}
+.phone{flex:0 0 auto;width:236px;border-radius:36px;border:8px solid #0b0c0e;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 1px #2c3036;overflow:hidden;background:#16181b}
 .phone img{width:100%}
-.phone.a{right:150px;top:0;transform:rotate(-4deg)}
-.phone.b{right:0;top:56px;transform:rotate(5deg);opacity:.92}
-@media(max-width:900px){.hero .wrap{grid-template-columns:1fr}.phones{height:470px;max-width:440px;margin:0 auto;width:100%}
-  .phone{width:210px}.phone.a{right:auto;left:0}.phone.b{right:0}}
-@media(max-width:560px){.hero{padding-top:48px}.phones{height:420px}.phone.b{display:none}
-  .phone.a{width:230px;left:50%;transform:translateX(-50%) rotate(-3deg)}}
+.phone.b{margin-top:52px}
+@media(max-width:1060px){.phone{width:210px}}
+@media(max-width:900px){.hero .wrap{grid-template-columns:1fr}.phone{width:220px}}
+@media(max-width:560px){.hero{padding-top:48px}.phones{gap:12px}.phone{width:calc(50% - 6px);max-width:200px;border-width:6px;border-radius:26px}.phone.b{margin-top:34px}}
+/* browser window around the desktop screenshot */
+.browser{border-radius:14px;border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.45);overflow:hidden;background:#1b1d20}
+.browser .bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:#24282d;border-bottom:1px solid var(--line)}
+.browser .bar i{width:11px;height:11px;border-radius:50%;background:#3a4048}
+.browser .bar span{margin-left:10px;flex:1;background:#16181b;border-radius:7px;padding:4px 12px;font-size:12.5px;color:var(--muted)}
+/* buy / support */
+.buy{display:grid;grid-template-columns:1.2fr .8fr;gap:32px;align-items:center;background:linear-gradient(135deg,rgba(228,0,43,.16),rgba(228,0,43,.04));
+  border:1px solid rgba(228,0,43,.35);border-radius:20px;padding:36px}
+.buy .price{font-size:15px;color:var(--muted);margin-top:14px}
+.buy .ctas{justify-content:flex-end}
+@media(max-width:800px){.buy{grid-template-columns:1fr;padding:26px}.buy .ctas{justify-content:flex-start}}
 /* trust strip */
 .strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg2)}
 .strip .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:22px 20px}
@@ -122,7 +131,7 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
   <a class="brand" href="/?info" aria-label="Akkuscan Startseite">
     <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="110" fill="#e4002b"/><rect x="150" y="150" width="212" height="250" rx="22" fill="none" stroke="#fff" stroke-width="28"/><rect x="210" y="104" width="92" height="46" rx="10" fill="#fff"/><path d="M266 196 214 286h46l-14 74 54-92h-46z" fill="#fff"/></svg>
     akkuscan</a>
-  <nav class="links"><a href="#funktionen">Funktionen</a><a href="#so-gehts">So geht's</a><a href="#betriebe">Für Betriebe</a><a href="#faq">FAQ</a></nav>
+  <nav class="links"><a href="#funktionen">Funktionen</a><a href="#so-gehts">So geht's</a><a href="#betriebe">Für Betriebe</a><a href="#faq">FAQ</a><a href="#kaufen">Modul kaufen</a></nav>
   <div class="hbtns"><a class="btn" href="/app/#konto">Anmelden</a><a class="btn red" href="/app/">App öffnen</a></div>
 </div></header>
 
@@ -134,11 +143,12 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
     <p class="lead">Akkuscan liest den Speicher im Akku aus: Ladezyklen, Zellspannungen, Überhitzungen, Tiefentladungen – und bewertet daraus den Zustand.
       Einfach aufstecken und mit dem Handy verbinden. Ohne Schrauben, ohne Ladegerät.</p>
     <div class="ctas"><a class="btn red big" href="/app/">App öffnen</a><a class="btn big" href="/app/#registrieren">Kostenloses Konto anlegen</a></div>
-    <p class="small">Läuft im Browser – Android: Chrome, iPhone: kostenlose App „Bluefy“. Kein App-Store nötig.</p>
+    <p class="small">Läuft im Browser – Android: Chrome, iPhone: kostenlose App „Bluefy“. Kein App-Store nötig.
+      Dazu brauchst du das Akkuscan-Modul – <a href="#kaufen">hier erhältlich</a>.</p>
   </div>
   <div class="phones" aria-hidden="true">
-    <div class="phone a"><img src="/img/phone-akku.webp" alt="" width="560" height="1212"></div>
-    <div class="phone b"><img src="/img/phone-werte.webp" alt="" width="560" height="1212"></div>
+    <div class="phone a"><img src="/img/phone-akku.webp" alt="" width="780" height="1688"></div>
+    <div class="phone b"><img src="/img/phone-cloud.webp" alt="" width="780" height="1688"></div>
   </div>
 </div></div>
 
@@ -210,18 +220,19 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
 
 <section id="betriebe"><div class="wrap">
   <h2>Für Betriebe: die ganze Akku-Flotte im Blick.</h2>
-  <p class="sub">Jede Messung landet automatisch in deinem Konto – egal von welchem Handy oder Modul. So erkennst du alternde Akkus, bevor sie auf der Baustelle ausfallen.</p>
+  <p class="sub">Mit einem kostenlosen Konto landet jede Messung automatisch in „Meine Akkus“ – egal von welchem Handy oder Modul. So erkennst du alternde Akkus, bevor sie auf der Baustelle ausfallen.</p>
   <div class="split">
     <div><ul class="checks">
         <li>Meine Akkus <span>– alle Akkus mit aktuellem Zustand und Standort</span></li>
-        <li>Verlauf je Akku <span>– Alterung über Monate, mit jeder einzelnen Messung</span></li>
-        <li>Warnungen <span>– wenn ein Akku deutlich nachlässt oder Schaden genommen hat</span></li>
-        <li>QR-Etiketten <span>– für P-touch und Brother QL, ein Scan führt zum Akku</span></li>
-        <li>Berichte &amp; CSV <span>– für Prüfprotokolle, Inventur und Excel</span></li>
-        <li>Für das ganze Team <span>– eine Firma, mehrere Geräte, ein Datenbestand</span></li>
+        <li>Verlauf je Akku <span>– jede Messung bleibt gespeichert, so sieht man die Alterung</span></li>
+        <li>Standort und Notiz <span>– z. B. „Transporter 1“ oder „Kunde Huber“</span></li>
+        <li>Mehrere Handys und Module <span>– alles landet im selben Konto</span></li>
+        <li>Am Handy und am PC <span>– einfach auf akkuscan.app anmelden</span></li>
+        <li>Lädt von selbst hoch <span>– das Modul schickt Messungen, sobald es im WLAN ist</span></li>
       </ul>
       <div class="ctas" style="margin-top:26px"><a class="btn red" href="/app/#registrieren">Konto anlegen</a></div></div>
-    <div class="media"><img class="shot" src="/img/flotte.webp" alt="Flottenübersicht mit Zustand, Verlauf und Warnungen" width="1200" height="759" loading="lazy"></div>
+    <div class="media"><div class="browser"><div class="bar"><i></i><i></i><i></i><span>akkuscan.app/app/</span></div>
+      <img src="/img/app-browser.webp" alt="Die Akkuscan-App am PC: Meine Akkus mit Zustand und der Messverlauf eines Akkus" width="1720" height="1440" loading="lazy"></div></div>
   </div>
   <div class="tags">
     <span class="tag"><b>Werkstatt &amp; Handwerk</b> – Akkus regelmäßig prüfen</span>
@@ -235,27 +246,47 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
   <h2>Häufige Fragen</h2>
   <div class="faq">
     <details><summary>Brauche ich eine App aus dem App Store?</summary>
-      <p>Nein. Akkuscan läuft im Browser. Auf Android in Chrome, auf dem iPhone in der kostenlosen App „Bluefy“ (Safari unterstützt kein Bluetooth im Browser).
-        Im WLAN des Moduls geht es sogar mit jedem Browser.</p></details>
+      <p>Nein. Du öffnest einfach die Seite <b>akkuscan.app</b> – auf Android-Handys in Chrome. Auf dem iPhone brauchst du die kostenlose App „Bluefy“
+        aus dem App Store, weil Safari kein Bluetooth kann. Tipp: Seite zum Startbildschirm hinzufügen, dann ist sie wie eine App immer zur Hand.</p></details>
+    <details><summary>Wie verbinde ich das Handy mit dem Modul?</summary>
+      <p>Am einfachsten per Bluetooth: Modul auf den Akku stecken, in der App auf „Verbinden“ tippen und das Modul in der Liste auswählen. Fertig.
+        Alternativ hat das Modul ein eigenes WLAN: Handy damit verbinden, dann öffnet sich dieselbe Seite – das geht mit jedem Handy und jedem Browser.</p></details>
+    <details><summary>Geht das auch am Computer?</summary>
+      <p>Ja. Es ist dieselbe Seite – am Laptop oder PC einfach akkuscan.app in Chrome oder Edge öffnen und per Bluetooth verbinden, oder über das WLAN des Moduls.
+        Du musst nichts installieren. Wenn du angemeldet bist, siehst du „Meine Akkus“ auf jedem Gerät.</p></details>
+    <details><summary>Brauche ich ein Konto?</summary>
+      <p>Zum Auslesen nicht. Mit einem kostenlosen Konto werden deine Messungen aber gespeichert – dann siehst du alle Akkus und wie sie sich über die Zeit verändern,
+        auch auf anderen Geräten.</p></details>
     <details><summary>Welche Akkus werden unterstützt?</summary>
-      <p>Milwaukee® M18™ Li-Ion-Akkus – von älteren 5,0-Ah-Akkus bis zu High-Output und Forge™. Ältere Akkus liefern einzelne Werte nicht; die werden dann als „nicht verfügbar“ angezeigt.</p></details>
+      <p>Milwaukee® M18™ Akkus – von älteren 5,0-Ah-Akkus bis zu High-Output und Forge™. Sehr alte Akkus speichern manche Werte nicht; die stehen dann als „nicht verfügbar“ da.</p></details>
     <details><summary>Kann das Auslesen dem Akku schaden?</summary>
-      <p>Akkuscan liest nur. Die Datenleitung bleibt in Ruhe auf einem sicheren Pegel, damit der Akku keinen Ladevorgang erkennt, und die Versorgung des Moduls ist abgesichert.</p></details>
+      <p>Nein. Akkuscan liest nur die gespeicherten Werte – am Akku wird nichts verändert. Das Modul braucht nur ganz wenig Strom und geht von selbst schlafen, wenn du es nicht benutzt.</p></details>
     <details><summary>Wie genau ist die Zustandsbewertung?</summary>
-      <p>Der Akku speichert keinen „Gesundheitswert“. Akkuscan schätzt ihn aus den gespeicherten Zählern und den Zellspannungen. Am aussagekräftigsten ist der Verlauf über mehrere Messungen.</p></details>
-    <details><summary>Wo werden meine Daten gespeichert?</summary>
-      <p>Mit Konto in einer Datenbank in Frankfurt (EU). Jede Firma sieht nur ihre eigenen Daten. Ohne Konto bleiben die Messungen auf dem Handy und auf dem Modul. Das Konto lässt sich jederzeit samt allen Daten löschen.</p></details>
+      <p>Der Akku merkt sich, wie oft er geladen wurde, ob er zu heiß oder zu leer war und wie gleichmäßig seine Zellen sind. Daraus berechnet Akkuscan eine Note von 0 bis 100.
+        Das ist eine gute Einschätzung, aber keine Labormessung. Am aussagekräftigsten ist es, einen Akku ab und zu wieder zu prüfen und den Verlauf anzuschauen.</p></details>
     <details><summary>Funktioniert es ohne Internet?</summary>
-      <p>Ja. Messungen werden auf dem Modul und in der App gespeichert und automatisch hochgeladen, sobald wieder Internet da ist.</p></details>
-    <details><summary>Gibt es auch eine PC-Software?</summary>
-      <p>Ja – eine Akku-Verwaltung für Windows, Mac, Linux oder als Docker-Container auf dem NAS, mit Flottenübersicht, Alterungsdiagrammen, QR-Etiketten und Berichten.</p></details>
+      <p>Ja. Auslesen geht immer, auch im Keller oder auf der Baustelle. Die Messungen werden gemerkt und automatisch in dein Konto geladen, sobald wieder Internet da ist.</p></details>
+    <details><summary>Wo werden meine Daten gespeichert?</summary>
+      <p>Auf Servern in Frankfurt (EU). Nur du – bzw. deine Firma – siehst deine Akkus. Du kannst dein Konto jederzeit mit allen Daten löschen.</p></details>
+    <details><summary>Wo bekomme ich das Modul?</summary>
+      <p>Das Akkuscan-Modul gibt es <a href="#kaufen">bei eBay</a>. Es kommt fertig eingerichtet – auspacken, aufstecken, loslegen.</p></details>
+  </div>
+</div></section>
+
+<section id="kaufen"><div class="wrap">
+  <div class="buy">
+    <div><h2>Modul kaufen &amp; Akkuscan unterstützen</h2>
+      <p class="sub">Akkuscan ist ein kleines, unabhängiges Projekt. Mit dem Kauf eines Moduls bekommst du alles, was du zum Prüfen brauchst –
+        und unterstützt die Weiterentwicklung der App.</p>
+      <p class="price" id="ebaynote">Das eBay-Angebot ist in Kürze verfügbar.</p></div>
+    <div class="ctas"><a class="btn red big" data-ebay href="#kaufen">Modul bei eBay kaufen</a></div>
   </div>
 </div></section>
 
 <section class="final"><div class="wrap">
   <h2>Prüf deinen ersten Akku.</h2>
   <p class="sub">Modul aufstecken, App öffnen, verbinden – fertig.</p>
-  <div class="ctas"><a class="btn red big" href="/app/">App öffnen</a><a class="btn big" href="/flasher/">Firmware installieren</a></div>
+  <div class="ctas"><a class="btn red big" href="/app/">App öffnen</a><a class="btn big" data-ebay href="#kaufen">Modul kaufen</a></div>
 </div></section>
 </main>
 
@@ -265,5 +296,13 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
   <p class="legal">Milwaukee®, M18™ und FORGE™ sind Marken der Milwaukee Electric Tool Corporation. Akkuscan ist ein unabhängiges Produkt und steht in keiner Verbindung zu Milwaukee.
     Arbeiten an Lithium-Ionen-Akkus erfolgen auf eigene Verantwortung.</p>
 </div></footer>
+<script>
+  /* Link zum eBay-Angebot – hier eintragen, dann zeigen alle „Modul kaufen“-Knöpfe dorthin. */
+  var EBAY_URL = "";
+  if (EBAY_URL) {
+    document.querySelectorAll("[data-ebay]").forEach(function (a) { a.href = EBAY_URL; a.target = "_blank"; a.rel = "noopener"; });
+    var n = document.getElementById("ebaynote"); if (n) n.remove();
+  }
+</script>
 </body>
 </html>
