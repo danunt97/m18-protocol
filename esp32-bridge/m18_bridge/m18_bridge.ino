@@ -38,10 +38,14 @@
 #include <driver/gpio.h>
 #include <esp_sleep.h>
 #include <esp_task_wdt.h>
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLE2902.h>
 #include <stdarg.h>
 #include <time.h>
 #include "m18_commands.h"
 #include "m18_log.h"
+#include "m18_blewire.h"
 #include "web_ui.h"
 
 #define FW_BUILD __DATE__ " " __TIME__
@@ -352,6 +356,8 @@ volatile bool gotIp = false;
 uint32_t unlockUntil = 0;
 
 String lastScan = "{}";
+volatile bool bleConnected = false;        // a phone is connected over Bluetooth (see "Bluetooth" below)
+bool bleOn = false;
 String webPass;                               // optional web/HTTP password (user "m18"), empty = off
 uint32_t authFails = 0;
 volatile bool scanRunning = false;
@@ -783,7 +789,8 @@ void updateInfo() {
               ",\"reading\":" + (scanRunning ? "true" : "false") + ",\"auth\":" + (webPass.length() ? "true" : "false") +
               ",\"storage\":\"" + storage.kind + "\",\"time_src\":\"" + (unixNow() ? timeSource : String("none")) + "\",\"boot\":" + String((unsigned long)bootId) +
               ",\"sleep_min\":" + String((unsigned long)sleepMin) + ",\"sleep_in_s\":" + String((long)sleepInSeconds()) +
-              ",\"brownouts\":" + String((unsigned long)brownouts) + ",\"tx_low\":" + (lowTxPower ? "true" : "false");
+              ",\"brownouts\":" + String((unsigned long)brownouts) + ",\"tx_low\":" + (lowTxPower ? "true" : "false") +
+              ",\"ble\":\"" + (bleOn ? apName : String("")) + "\",\"ble_connected\":" + (bleConnected ? "true" : "false");
   uint32_t now = unixNow();
   if (now) {
     char b[32];
@@ -932,6 +939,177 @@ bool startScan() {
     return false;
   }
   return true;
+}
+
+// --------------------------------------------------------------- Bluetooth
+// Bluetooth LE for the phone app (webble/, runs in Chrome on Android and in "Bluefy" on the iPhone):
+// Nordic UART Service, the same text commands as USB and /cmd (see m18_blewire.h). The Wi-Fi
+// hotspot and web page stay as they are - the phone keeps its mobile internet while connected.
+//   AUTH <password>     needed first when the bridge has a password
+//   META <loc>|<comment> location/comment for the next SCAN
+//   SCAN                read-out in the background: "PROG <percent>" lines, then OK/ERR {json}
+//   everything else     as over USB (INFO, TIME, HSTAT, HLIST, HGET, HACK, HDEL, LOG, ...)
+#define NUS_SERVICE "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+#define NUS_RX      "6e400002-b5a3-f393-e0a9-e50e24dcca9e"   // phone -> bridge (write)
+#define NUS_TX      "6e400003-b5a3-f393-e0a9-e50e24dcca9e"   // bridge -> phone (notify)
+
+BLEServer* bleServer = nullptr;
+BLECharacteristic* bleTx = nullptr;
+SemaphoreHandle_t bleMutex = nullptr;
+std::string bleRxBuf;                      // bytes written by the phone (Bluetooth task -> loop)
+volatile uint16_t bleMtu = 23;
+volatile int bleEvent = 0;                 // 1 connected, 2 disconnected (handled in loop)
+char blePeer[20] = "";
+m18::BleLineIn bleIn(700);
+std::string bleOut;                        // reply bytes still to notify
+bool bleAuthed = false, bleScanPending = false, bleMetaSet = false;
+String bleMetaLoc, bleMetaComment;
+uint32_t bleProgAt = 0;
+
+class BleServerCb : public BLEServerCallbacks {
+  // no "override": the parameter variants differ between Arduino-ESP32 2.x and 3.x
+  void onConnect(BLEServer*) { bleConnected = true; bleEvent = 1; }
+  void onConnect(BLEServer*, esp_ble_gatts_cb_param_t* p) {
+    const uint8_t* a = p->connect.remote_bda;
+    snprintf(blePeer, sizeof(blePeer), "%02X:%02X:%02X:%02X:%02X:%02X", a[0], a[1], a[2], a[3], a[4], a[5]);
+    bleConnected = true;
+    bleEvent = 1;
+  }
+  void onDisconnect(BLEServer*) { bleConnected = false; bleEvent = 2; }
+  void onMtuChanged(BLEServer*, esp_ble_gatts_cb_param_t* p) { bleMtu = p->mtu.mtu; }
+};
+
+class BleRxCb : public BLECharacteristicCallbacks {
+  void onWrite(BLECharacteristic* c) {
+    auto v = c->getValue();                  // std::string (core 2.x) or String (core 3.x)
+    if (xSemaphoreTake(bleMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+      if (bleRxBuf.size() < 4096) bleRxBuf.append(v.c_str(), v.length());
+      xSemaphoreGive(bleMutex);
+    }
+  }
+};
+
+void bleSetup() {
+  bleMutex = xSemaphoreCreateMutex();
+  BLEDevice::init(apName.c_str());
+  BLEDevice::setMTU(247);                    // bigger notifications if the phone agrees
+  bleServer = BLEDevice::createServer();
+  bleServer->setCallbacks(new BleServerCb());
+  BLEService* svc = bleServer->createService(NUS_SERVICE);
+  bleTx = svc->createCharacteristic(NUS_TX, BLECharacteristic::PROPERTY_NOTIFY);
+  bleTx->addDescriptor(new BLE2902());
+  BLECharacteristic* rx = svc->createCharacteristic(NUS_RX, BLECharacteristic::PROPERTY_WRITE |
+                                                              BLECharacteristic::PROPERTY_WRITE_NR);
+  rx->setCallbacks(new BleRxCb());
+  svc->start();
+  // Advertising: the 128-bit service UUID (the app filters for it), the name in the scan response.
+  BLEAdvertising* adv = BLEDevice::getAdvertising();
+  BLEAdvertisementData ad, sr;
+  ad.setFlags(0x06);
+  ad.setCompleteServices(BLEUUID(NUS_SERVICE));
+  sr.setName(apName.c_str());
+  adv->setAdvertisementData(ad);
+  adv->setScanResponseData(sr);
+  BLEDevice::startAdvertising();
+  bleOn = true;
+  ev("BLE", 0, "Bluetooth bereit als \"%s\"", apName.c_str());
+}
+
+void bleReply(const String& line) {
+  bleOut.append(line.c_str(), line.length());
+  bleOut += '\n';
+}
+
+void bleHandle(const m18::BleLine& in) {
+  if (in.tooLong) { bleReply("ERR TOOLONG"); return; }
+  String line = in.text.c_str();
+  line.trim();
+  if (!line.length()) return;
+  String up = line;
+  up.toUpperCase();
+  noteActivity();
+  if (up.startsWith("AUTH")) {
+    String pw = line.length() > 5 ? line.substring(5) : String("");
+    if (webPass.isEmpty() || pw == webPass) { bleAuthed = true; bleReply("OK"); return; }
+    ev("BLE", 1, "Falsches Passwort über Bluetooth (%s)", blePeer);
+    delay(500);
+    bleReply("ERR AUTH (Passwort falsch)");
+    return;
+  }
+  if (webPass.length() && !bleAuthed) { bleReply("ERR AUTH (Passwort nötig: AUTH <passwort>)"); return; }
+  if (up.startsWith("META")) {
+    String rest = line.length() > 5 ? line.substring(5) : String("");
+    int bar = rest.indexOf('|');
+    bleMetaLoc = (bar < 0 ? rest : rest.substring(0, bar)).substring(0, 60);
+    bleMetaComment = (bar < 0 ? String("") : rest.substring(bar + 1)).substring(0, 200);
+    bleMetaSet = true;
+    bleReply("OK");
+    return;
+  }
+  if (up.startsWith("SCAN")) {               // in the background, like the web page: progress + result
+    if (scanRunning || bleScanPending) { bleReply("ERR BUSY (Akku wird gerade ausgelesen)"); return; }
+    scanLoc = bleMetaSet ? bleMetaLoc : String("");
+    scanComment = bleMetaSet ? bleMetaComment : String("");
+    bleMetaSet = false;
+    if (!startScan()) { bleReply("ERR BUSY (Akku-Leitung belegt)"); return; }
+    ev("BLE", 0, "Auslesen über Bluetooth gestartet (%s)%s%s", blePeer, scanLoc.length() ? ", Standort: " : "",
+       scanLoc.c_str());
+    bleScanPending = true;
+    bleProgAt = 0;
+    return;
+  }
+  cmdSource = String("BLE ") + blePeer;
+  bleReply(runCommand(line, unlocked()));   // settings only after a BOOT press, like over Wi-Fi
+}
+
+void bleLoop() {
+  if (!bleOn) return;
+  int evt = bleEvent;
+  if (evt) {
+    bleEvent = 0;
+    if (evt == 1) {
+      ev("BLE", 0, "Handy verbunden (%s)", blePeer);
+      bleAuthed = false;
+      noteActivity();
+    } else {
+      ev("BLE", 0, "Handy getrennt (%s)", blePeer);
+      bleOut.clear();
+      bleIn.clear();
+      bleMtu = 23;
+      delay(50);
+      BLEDevice::startAdvertising();         // visible again for the next connection
+    }
+  }
+  std::string rx;
+  if (xSemaphoreTake(bleMutex, 0) == pdTRUE) {
+    rx.swap(bleRxBuf);
+    xSemaphoreGive(bleMutex);
+  }
+  if (!rx.empty()) {
+    std::vector<m18::BleLine> lines;
+    bleIn.feed(rx.data(), rx.size(), lines);
+    for (auto& l : lines) bleHandle(l);
+  }
+  if (bleScanPending) {
+    if (scanRunning) {
+      if (millis() - bleProgAt > 500) { bleProgAt = millis(); bleReply("PROG " + String(reader.progressPercent())); }
+    } else {
+      xSemaphoreTake(stateMutex, portMAX_DELAY);
+      String r = lastScan;
+      xSemaphoreGive(stateMutex);
+      bleReply((r.indexOf("\"ok\":true") >= 0 ? "OK " : "ERR ") + r);
+      bleScanPending = false;
+    }
+  }
+  if (!bleConnected) { bleOut.clear(); return; }
+  // Send a few notifications per loop() so the web server and USB stay responsive.
+  for (int i = 0; i < 6 && !bleOut.empty(); i++) {
+    size_t n = std::min(m18::blePayload(bleMtu), bleOut.size());
+    bleTx->setValue((uint8_t*)bleOut.data(), n);
+    bleTx->notify();
+    bleOut.erase(0, n);
+    delay(6);                                // give the Bluetooth stack time to send
+  }
 }
 
 // ------------------------------------------------------------------- HTTP
@@ -1332,6 +1510,7 @@ void setup() {
   startMdns();
   disc.begin(DISCOVERY_PORT);
   setupHttp();
+  bleSetup();
   setupWatchdog();
   enableLoopWDT();                              // loop() must come back within the watchdog timeout
   logf("\nM18BRIDGE READY %s host=%s.local ip=%s reset=%s\n", M18BRIDGE_VERSION, hostName.c_str(),
@@ -1351,6 +1530,7 @@ void loop() {
   server.handleClient();
   if (dnsActive) dns.processNextRequest();
   discoveryLoop();
+  bleLoop();
   usbIn.poll();
 #if ARDUINO_USB_CDC_ON_BOOT
   uartIn.poll();
@@ -1386,7 +1566,7 @@ void loop() {
 
   // Energy saving: nobody used the bridge for sleepMin minutes -> deep sleep.
   if (apActive && WiFi.softAPgetStationNum() > 0) noteActivity();   // phone on the setup AP
-  if (sleepMin && !scanRunning && !otaRunning && wstate != WState::CONNECTING && !held &&
+  if (sleepMin && !scanRunning && !otaRunning && !bleConnected && wstate != WState::CONNECTING && !held &&
       millis() - lastUserActivity > sleepMin * 60000UL) {
     bool idleLine = false;
     if (xSemaphoreTake(batMutex, 0) == pdTRUE) { idleLine = batLink.isIdle(); xSemaphoreGive(batMutex); }

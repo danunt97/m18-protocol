@@ -7,6 +7,7 @@ static const char WEB_UI[] PROGMEM = R"HTML(<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>M18 Akku-Brücke</title>
 <style>
+/*SHARED-CSS-BEGIN (also used by the phone app webble/, see esp32-bridge/tools/gen_app.py)*/
 :root{--bg:#1b1d20;--panel:#23262a;--panel2:#1a1c1f;--raise:#2c3035;--line:#34383e;--text:#eceef0;--muted:#959ba3;--faint:#6b7178;
 --accent:#e4002b;--good:#3fcf7f;--watch:#e7b43a;--weak:#f0703c;--crit:#ff4d5e;--info:#5aa2ff;color-scheme:dark}
 @media (prefers-color-scheme:light){:root{--bg:#f3f4f6;--panel:#fff;--panel2:#f7f8fa;--raise:#eef0f3;--line:#dde0e5;--text:#17191c;--muted:#5e646c;--faint:#8a9098;
@@ -62,7 +63,8 @@ details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;pa
 .reg.h{grid-template-columns:minmax(96px,38%) 1fr auto}.reg .lab{color:var(--muted)}
 .reg .lab small{display:block;color:var(--faint);font-size:10.5px;font-family:ui-monospace,Consolas,monospace}
 .reg .rv{text-align:right;font-variant-numeric:tabular-nums;word-break:break-word}.faint{color:var(--faint)}
-</style></head><body>
+
+/*SHARED-CSS-END*/</style></head><body>
 <header><span class="logo">M18</span><h1>Akku-Brücke<small id="hostline">…</small></h1><span class="pill" id="pill">…</span></header>
 <nav><button data-tab="akku" class="on">Akku</button><button data-tab="verlauf">Verlauf <span id="newcount" class="pill ok" style="padding:0 7px;margin:0" hidden></span></button><button data-tab="wlan">WLAN</button><button data-tab="geraet">Gerät</button></nav>
 <main>
@@ -142,6 +144,7 @@ IDLE</textarea><button class="btn" id="cmdbtn" style="margin-top:8px">Senden</bu
 </section>
 </main>
 <script>
+/*SHARED-JS-BEGIN (also used by the phone app webble/, see esp32-bridge/tools/gen_app.py)*/
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=v=>v==null?"":String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const nf=(v,d=0)=>v==null?"–":Number(v).toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -192,33 +195,7 @@ function regCsv(k){const d=regStore[k];if(!d)return;const b=regBytes(d.mem),q=v=
     lines.push([q(REG_GROUPS[r[4]][0]),hex4(r[0]),q(r[3]),q(v?(r[2]=="u"||r[2]=="t"?v.v:v.s):""),raw.join("").toUpperCase()].join(";"));}
   regSave("m18-"+d.eserial+"-alle-werte.csv","\ufeff"+lines.join("\r\n"),"text/csv");}
 function regJson(k){const d=regStore[k];if(d)regSave("m18-"+d.eserial+".json",JSON.stringify(d,null,1),"application/json");}
-let INFO={};
-async function logLoad(){const el=$("#logbox");if(!el)return;try{const d=await j("/api/log?n=250");
-  let l=d.lines||[];if($("#logwarn").checked)l=l.filter(x=>/WARNUNG|FEHLER/.test(x));
-  el.textContent=l.length?l.join("\n"):"(keine Einträge)";el.scrollTop=el.scrollHeight;}catch(e){el.textContent="Protokoll nicht abrufbar";}}
-async function j(url,opt){const r=await fetch(url,opt);return r.json();}
-function tab(name){$$("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab==name));$$("main>section").forEach(s=>s.hidden=s.id!="tab-"+name);
-  if(name=="wlan")wifiState();if(name=="geraet"){devInfo();logLoad();}if(name=="verlauf"){histStats();histLoad(true);}}
-$$("nav button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
-
-async function info(){try{INFO=await j("/api/info");}catch(e){return;}
-  const w=INFO.wifi,p=$("#pill");
-  p.className="pill "+(w=="sta"?"ok":"ap");
-  p.textContent=w=="sta"?"WLAN: "+INFO.ssid:"Einrichtungsmodus";
-  $("#hostline").textContent=(w=="sta"?"http://"+INFO.host+" · "+INFO.ip:"WLAN „"+INFO.ap+"“ · "+INFO.ap_ip);
-  if(!$("#host").value){$("#host").value=INFO.host.replace(".local","");hostPreview();}
-  try{const hs=await j("/api/history/stats");$("#newcount").hidden=!hs.unsynced;$("#newcount").textContent=hs.unsynced||"";}catch(e){}
-  const allowed=INFO.setup_client||INFO.unlocked;
-  const lock=allowed?(INFO.unlocked?`<div class="box ok">Einstellungen entsperrt (noch ${INFO.unlock_s} s).</div>`:""):
-    `<div class="box info">🔒 Änderungen sind gesperrt. Kurz die <b>BOOT-Taste</b> am Gerät drücken – dann 2 Minuten entsperrt (LED türkis).</div>`;
-  $("#lockbox").innerHTML=lock;$("#otalock").innerHTML=lock;
-  $$("#wifiform input,#wifiform button,#forget,#fwbtn,#fwfile,#newpass,#newpass2,#passbtn").forEach(e=>e.disabled=!allowed);
-  $("#passstate").innerHTML=(INFO.auth?'<div class="box ok" style="margin-top:0">🔒 Passwortschutz ist aktiv.</div>':'<div class="box info" style="margin-top:0">Kein Passwort gesetzt – jeder im WLAN kann die Brücke nutzen.</div>')+lock;
-  return INFO;}
-function hostPreview(){$("#hostpreview").textContent="http://"+($("#host").value||"m18-bridge")+".local";}
-$("#host").oninput=hostPreview;
-
-/* ---------- Akku ---------- */
+/* result view (summary, cells, all values, trace) */
 function gauge(v,st){const r=48,c=2*Math.PI*r,f=v==null||v<0?0:Math.min(100,v)/100;
   return `<svg class="gauge" viewBox="0 0 120 120"><circle cx="60" cy="60" r="${r}" fill="none" stroke-width="10" class="bg"/>
   <circle cx="60" cy="60" r="${r}" fill="none" stroke-width="10" stroke-linecap="round" class="${st}" style="stroke:currentColor"
@@ -272,8 +249,34 @@ function render(d,when){
       <div class="row"><span>Leer gefahren / Überstrom</span><span>${nf(c.discharge_to_empty)} / ${nf(c.overcurrent)}</span></div></div>
   </div>
   ${allRegs(d)}${traceBox(d,false)}
-  <p class="hint">${when?"Ausgelesen "+when+" · ":""}${d.blocks_ok}/${d.blocks_total} Blöcke in ${nf(d.duration_ms/1000,1)} s${d.retries?` · ${d.retries} Wiederholungen`:""} ·
-    <a href="/api/last" download="m18-${esc(d.eserial)}.json" style="color:inherit">JSON</a></p>`;}
+  <p class="hint">${when?"Ausgelesen "+when+" · ":""}${d.blocks_ok}/${d.blocks_total} Blöcke in ${nf(d.duration_ms/1000,1)} s${d.retries?` · ${d.retries} Wiederholungen`:""}</p>`;}
+/*SHARED-JS-END*/
+let INFO={};
+async function logLoad(){const el=$("#logbox");if(!el)return;try{const d=await j("/api/log?n=250");
+  let l=d.lines||[];if($("#logwarn").checked)l=l.filter(x=>/WARNUNG|FEHLER/.test(x));
+  el.textContent=l.length?l.join("\n"):"(keine Einträge)";el.scrollTop=el.scrollHeight;}catch(e){el.textContent="Protokoll nicht abrufbar";}}
+async function j(url,opt){const r=await fetch(url,opt);return r.json();}
+function tab(name){$$("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab==name));$$("main>section").forEach(s=>s.hidden=s.id!="tab-"+name);
+  if(name=="wlan")wifiState();if(name=="geraet"){devInfo();logLoad();}if(name=="verlauf"){histStats();histLoad(true);}}
+$$("nav button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+
+async function info(){try{INFO=await j("/api/info");}catch(e){return;}
+  const w=INFO.wifi,p=$("#pill");
+  p.className="pill "+(w=="sta"?"ok":"ap");
+  p.textContent=w=="sta"?"WLAN: "+INFO.ssid:"Einrichtungsmodus";
+  $("#hostline").textContent=(w=="sta"?"http://"+INFO.host+" · "+INFO.ip:"WLAN „"+INFO.ap+"“ · "+INFO.ap_ip);
+  if(!$("#host").value){$("#host").value=INFO.host.replace(".local","");hostPreview();}
+  try{const hs=await j("/api/history/stats");$("#newcount").hidden=!hs.unsynced;$("#newcount").textContent=hs.unsynced||"";}catch(e){}
+  const allowed=INFO.setup_client||INFO.unlocked;
+  const lock=allowed?(INFO.unlocked?`<div class="box ok">Einstellungen entsperrt (noch ${INFO.unlock_s} s).</div>`:""):
+    `<div class="box info">🔒 Änderungen sind gesperrt. Kurz die <b>BOOT-Taste</b> am Gerät drücken – dann 2 Minuten entsperrt (LED türkis).</div>`;
+  $("#lockbox").innerHTML=lock;$("#otalock").innerHTML=lock;
+  $$("#wifiform input,#wifiform button,#forget,#fwbtn,#fwfile,#newpass,#newpass2,#passbtn").forEach(e=>e.disabled=!allowed);
+  $("#passstate").innerHTML=(INFO.auth?'<div class="box ok" style="margin-top:0">🔒 Passwortschutz ist aktiv.</div>':'<div class="box info" style="margin-top:0">Kein Passwort gesetzt – jeder im WLAN kann die Brücke nutzen.</div>')+lock;
+  return INFO;}
+function hostPreview(){$("#hostpreview").textContent="http://"+($("#host").value||"m18-bridge")+".local";}
+$("#host").oninput=hostPreview;
+
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 $("#readbtn").onclick=async()=>{const b=$("#readbtn"),pg=$("#prog");b.disabled=true;b.innerHTML='<span class="spin"></span> Lese Akku …';
   pg.hidden=false;pg.firstChild.style.width="0%";

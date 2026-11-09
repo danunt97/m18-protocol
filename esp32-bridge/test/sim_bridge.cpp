@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include "m18_commands.h"
+#include "m18_blewire.h"
 
 using m18::rev8;
 
@@ -248,6 +249,27 @@ int selftest() {
     const char* list = mode == 1 ? "abgelehnt: 4000 400A 4014 4016 4019 401B 401D 401F 6000 6002 6004 6008 600C"
                                  : "ohne Antwort: 4000 400A 4014 4016 4019 401B 401D 401F 6000 6002 6004 6008 600C";
     expect(sc.find(list) != std::string::npos ? tag + "trace lists blocks" : sc.substr(sc.find("trace"), 300), tag + "trace lists blocks");
+  }
+  {  // Bluetooth LE line protocol: joining writes, splitting notifications
+    m18::BleLineIn in(16);
+    std::vector<m18::BleLine> lines;
+    in.feed("IN", 2, lines);
+    in.feed("FO\nSCAN\r\nHGET 1", 15, lines);
+    expect(lines.size() == 2 && lines[0].text == "INFO" && lines[1].text == "SCAN" ? "ble: join lines" : "lines " + std::to_string(lines.size()), "ble: join lines");
+    in.feed("2\n", 2, lines);
+    expect(lines.size() == 3 && lines[2].text == "HGET 12" ? "ble: split write" : "bad split", "ble: split write");
+    std::string longCmd(40, 'x');
+    longCmd += "\nPING\n";
+    in.feed(longCmd.data(), longCmd.size(), lines);
+    expect(lines.size() == 5 && lines[3].tooLong && lines[4].text == "PING" && !lines[4].tooLong ? "ble: too long" : "bad overflow", "ble: too long");
+    std::string reply(500, 'a');
+    auto c20 = m18::bleChunks(reply, 23), c185 = m18::bleChunks(reply, 185), c517 = m18::bleChunks(reply, 517);
+    expect(c20.size() == 25 && c20[0].size() == 20 ? "ble: chunks mtu 23" : std::to_string(c20.size()), "ble: chunks mtu 23");
+    expect(c185.size() == 3 && c185[0].size() == 182 && c185[2].size() == 136 ? "ble: chunks mtu 185" : std::to_string(c185.size()), "ble: chunks mtu 185");
+    expect(c517.size() == 3 && c517[0].size() == 244 ? "ble: chunks capped" : std::to_string(c517.size()), "ble: chunks capped");
+    std::string joined;
+    for (auto& c : c185) joined += c;
+    expect(joined == reply ? "ble: chunks lossless" : "lost bytes", "ble: chunks lossless");
   }
   {  // event log: RAM ring, flash chunks, rotation, recovery after a crash, LOG command
     std::string dir = (fs::temp_directory_path() / ("m18log_" + std::to_string(::getpid()))).string();
