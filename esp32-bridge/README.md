@@ -292,6 +292,27 @@ python m18_bridge.py --bridge COM7
 
 Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus. Die dritte öffnet eine interaktive Shell mit `m.scan()`, `m.health()` und `m.read_id()`.
 
+## Bluetooth und Handy-App
+
+Die Brücke ist zusätzlich per **Bluetooth LE** erreichbar. Der WLAN-Hotspot und die Weboberfläche bleiben unverändert.
+Gedacht ist das für die **Akku-App: [danunt97.github.io/m18-protocol/app](https://danunt97.github.io/m18-protocol/app/)**.
+
+- **Android:** die Seite in **Chrome** öffnen (optional „Zum Startbildschirm hinzufügen“).
+- **iPhone:** Safari kann kein Bluetooth. Die kostenlose App **Bluefy – Web BLE Browser** aus dem App Store installieren und die Seite darin öffnen.
+- **Verbinden** tippen, **M18-Bridge-…** wählen, **Akku auslesen**. Das Handy behält dabei sein Internet, weil es nicht ins WLAN der Brücke wechselt.
+- Die App zeigt dasselbe wie die Weboberfläche (Zustand, Zellen, alle 185 Werte, Ablauf beim Auslesen) und dazu den Verlauf und das Protokoll der Brücke.
+  Die Messung wird auf der Brücke gespeichert und kommt wie gewohnt in die PC-Datenbank. Das letzte Ergebnis bleibt in der App, auch ohne Verbindung.
+- Ist ein Passwort gesetzt, fragt die App beim Verbinden danach. Einstellungen (WLAN, Passwort, LED) lassen sich über Bluetooth nur nach einem Druck auf die BOOT-Taste ändern.
+- Solange ein Handy verbunden ist, geht die Brücke nicht in den Tiefschlaf.
+
+Technik: Nordic-UART-Dienst (`6e400001-b5a3-f393-e0a9-e50e24dcca9e`, RX `…0002` schreiben, TX `…0003` Benachrichtigungen).
+Es gelten dieselben Textbefehle wie über USB, eine Zeile pro Befehl, eine Antwortzeile `OK …`/`ERR …`, aufgeteilt nach der Paketgröße.
+Zusätzlich gibt es über Bluetooth `AUTH <passwort>`, `META <standort>|<kommentar>` (für das nächste Auslesen) und `SCAN`.
+`SCAN` läuft im Hintergrund und schickt bis zum Ergebnis `PROG <prozent>`-Zeilen. Mit nRF Connect o. ä. lässt sich das auch von Hand testen.
+
+Die App (`webble/app.html`) wird aus `webble/app-vorlage.html` und dem gemeinsamen Anzeige-Code der Weboberfläche erzeugt:
+`python esp32-bridge/tools/gen_app.py` (die Tests prüfen, dass sie aktuell ist).
+
 ## Protokoll
 
 Die Brücke schreibt mit, was sie und der Akku tun. Die Einträge stehen unter **Gerät → Protokoll**, lassen sich dort als Datei herunterladen

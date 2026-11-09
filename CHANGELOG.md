@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.11 – Bluetooth und Handy-App
+- **Bluetooth LE** in der Firmware (Nordic-UART-Dienst) mit denselben Textbefehlen wie USB und WLAN, dazu `AUTH`, `META` und `SCAN` mit Fortschritt.
+  WLAN-Hotspot und Weboberfläche bleiben, Verbindungen und Auslesen per Bluetooth stehen im Protokoll.
+- **Akku-App im Browser** (`webble/`, auf GitHub Pages unter `/app/`): Android in Chrome, iPhone in der kostenlosen App „Bluefy“.
+  Auslesen mit Standort und Kommentar, alle Werte, Verlauf und Protokoll der Brücke, Passwortabfrage. Kein App Store und kein Entwicklerkonto nötig.
+- Die Anzeige (Stil und Ergebnisdarstellung) ist ein gemeinsamer Block der Weboberfläche. Die App wird daraus erzeugt (`tools/gen_app.py`), dadurch sehen beide gleich aus.
+- Web-Flasher-Seite verweist auf die App.
+
 ## 1.10 – Protokolle für Akku und System
 - **Brücke:** Ereignisprotokoll im Flash. Es enthält Start mit Neustartgrund, Einstellungen, WLAN-Ereignisse, Befehle vom PC und von der Webseite (mit Absender),
   falsche Passwörter, Updates, Neustarts, Tiefschlaf und alle 30 min eine Statuszeile. Es übersteht Neustarts.

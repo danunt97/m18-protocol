@@ -28,6 +28,8 @@ jobs:
           ./sim_bridge test
       - name: Registertabelle der Weboberfläche aktuell (aus m18.py)
         run: python esp32-bridge/tools/gen_regs.py --check
+      - name: Handy-App aktuell (aus Vorlage + Anzeige-Code der Brücke)
+        run: python esp32-bridge/tools/gen_app.py --check
       - name: Brücke Ende-zu-Ende (USB, WLAN, Verlauf, Passwort)
         run: python -m unittest esp32-bridge/test/test_bridge.py esp32-bridge/test/test_history.py -v
 

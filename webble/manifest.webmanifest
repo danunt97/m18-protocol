@@ -1,0 +1,12 @@
+{
+  "name": "M18 Akku-App",
+  "short_name": "M18 Akku",
+  "description": "Milwaukee-M18-Akkus über die ESP32-Brücke per Bluetooth auslesen",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1b1d20",
+  "theme_color": "#1b1d20",
+  "lang": "de",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -7,7 +7,7 @@ name: Firmware & Web-Flasher
 on:
   push:
     branches: [master]
-    paths: ["esp32-bridge/**", "webflash/**", ".github/workflows/firmware.yml"]
+    paths: ["esp32-bridge/**", "webflash/**", "webble/**", ".github/workflows/firmware.yml"]
   release:
     types: [published]
   workflow_dispatch:
@@ -44,6 +44,9 @@ jobs:
           ls -la build
           mkdir -p site/firmware
           cp webflash/index.html site/
+          mkdir -p site/app
+          cp webble/app.html site/app/index.html
+          cp webble/manifest.webmanifest webble/icon.svg site/app/
           cp build/m18_bridge.ino.bin site/firmware/m18-bruecke-update.bin
           if [ -f build/m18_bridge.ino.merged.bin ]; then
             cp build/m18_bridge.ino.merged.bin site/firmware/m18-bruecke.bin
