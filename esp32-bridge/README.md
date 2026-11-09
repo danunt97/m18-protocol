@@ -110,7 +110,7 @@ lauffähig.
 
 ## Flashen im Browser (ohne Arduino IDE)
 
-**[danunt97.github.io/m18-protocol](https://danunt97.github.io/m18-protocol/)** in Chrome oder Edge öffnen, das Board per USB-C anstecken und auf
+**[akkuscan.app/flasher](https://akkuscan.app/flasher/)** in Chrome oder Edge öffnen, das Board per USB-C anstecken und auf
 **Installieren** klicken.
 - Bei der ersten Installation „Gerät löschen“ anhaken.
 - **Bei Updates nicht** anhaken, sonst gehen WLAN-Daten und gespeicherte Messungen verloren.
@@ -297,7 +297,7 @@ Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus.
 Es gibt **eine** App: die Weboberfläche der Brücke. Sie läuft auf zwei Wegen und kann auf beiden dasselbe.
 
 - **Im WLAN:** direkt von der Brücke (`http://192.168.4.1` im Einrichtungs-WLAN bzw. `http://m18-bridge-xxxx.local`).
-- **Per Bluetooth:** als **Akku-App** unter **[danunt97.github.io/m18-protocol/app](https://danunt97.github.io/m18-protocol/app/)**.
+- **Per Bluetooth:** als **Akku-App** unter **[akkuscan.app](https://akkuscan.app/)**.
   - **Android:** in **Chrome** öffnen (optional „Zum Startbildschirm hinzufügen“).
   - **iPhone:** Safari kann kein Bluetooth. Die kostenlose App **Bluefy – Web BLE Browser** installieren und die Seite darin öffnen.
   - **Verbinden** tippen, **M18-Bridge-…** wählen. Das Handy behält sein Internet, weil es nicht ins WLAN der Brücke wechselt.

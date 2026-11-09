@@ -26,7 +26,7 @@ Der öffentliche Schlüssel (publishable/anon) darf in der App stehen; der servi
 ## Einstellungen (gesetzt über die Supabase-Verwaltung)
 
 - Anmeldung per E-Mail und Passwort (mindestens 8 Zeichen), Bestätigungs-Mail an.
-- Site URL `https://danunt97.github.io/m18-protocol/app/`, erlaubte Weiterleitung `https://danunt97.github.io/m18-protocol/**`.
+- Site URL `https://akkuscan.app/`, erlaubte Weiterleitungen `https://akkuscan.app/**` und (alt) `https://danunt97.github.io/m18-protocol/**`.
 - E-Mail-Texte: Im Gratis-Tarif mit dem eingebauten Mailversand sind nur die englischen Standardtexte möglich und nur
   wenige Mails pro Stunde. Für deutsche Texte und mehr Mails einen eigenen SMTP-Versand eintragen (Authentication → Emails → SMTP).
 

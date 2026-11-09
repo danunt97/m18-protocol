@@ -42,7 +42,7 @@ Das Projekt baut auf der Protokoll-Forschung von [mnh-jansson/m18-protocol](http
 - **Ergebnis auf der LED:** Nach jedem Auslesen leuchtet sie 30 s grün, gelb oder rot, auch wenn der PC ausliest.
 - **Firmware im Browser installieren** (ESP Web Tools), ganz ohne Arduino IDE.
 - **Cloud (Supabase):** Konto, „Meine Akkus“ mit Verlauf. Jede Messung landet komplett in der Cloud, aus der App oder direkt von der Brücke, wenn sie im WLAN Internet hat.
-- **Bluetooth fürs Handy:** Die [Akku-App](https://danunt97.github.io/m18-protocol/app/) läuft im Browser (Android: Chrome, iPhone: kostenlose App „Bluefy“).
+- **Bluetooth fürs Handy:** Die [Akku-App](https://akkuscan.app/) läuft im Browser (Android: Chrome, iPhone: kostenlose App „Bluefy“).
   Ohne WLAN-Wechsel: Akku auslesen, alle Werte, Verlauf und Protokoll der Brücke. Keine App-Store-App und kein Entwicklerkonto nötig.
 
 **Betrieb auf dem NAS:** Docker-Image mit **automatischem Abgleich**. Die Messungen der Brücken landen von selbst in der Datenbank.
@@ -125,7 +125,7 @@ Es gibt zwei Möglichkeiten, den Akku anzuschließen:
 
 ![Verdrahtung ESP32-S3](docs/images/verdrahtung-esp32s3.svg)
 
-**Firmware ohne Arduino IDE installieren:** Die Seite **[danunt97.github.io/m18-protocol](https://danunt97.github.io/m18-protocol/)**
+**Firmware ohne Arduino IDE installieren:** Die Seite **[akkuscan.app/flasher](https://akkuscan.app/flasher/)**
 öffnen (Chrome oder Edge), das Board per USB anstecken und auf **Installieren** klicken.
 
 Oder mit der Arduino IDE 2 flashen. Ins Werkzeuge-Menü gehören diese Einstellungen:

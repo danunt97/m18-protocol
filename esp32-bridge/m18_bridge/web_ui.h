@@ -411,7 +411,7 @@ try{$("#loc").value=localStorage.getItem("m18.loc")||"";}catch(e){}
 
 /* ---------- Cloud (Supabase): Konto, Meine Akkus, Hochladen, Brücke verknüpfen ---------- */
 const SB={url:"https://seccxaldsjhukavoilnm.supabase.co",key:"sb_publishable_KSiLpnnPHzgOvS3cTPnl_A_OVknKkj1",
-  app:"https://danunt97.github.io/m18-protocol/app/"};
+  app:"https://akkuscan.app/"};
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},
   set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 let SESS=ls.get("m18.sb.sess"),ORG=ls.get("m18.sb.org"),CMSG="";

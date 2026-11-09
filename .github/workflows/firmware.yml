@@ -42,26 +42,28 @@ jobs:
         run: |
           set -e
           ls -la build
-          mkdir -p site/firmware
-          cp webflash/index.html site/
-          mkdir -p site/app
-          cp webble/app.html site/app/index.html
-          cp webble/manifest.webmanifest webble/icon.svg site/app/
-          cp build/m18_bridge.ino.bin site/firmware/m18-bruecke-update.bin
+          # akkuscan.app: portal (app) at the root, flasher under /flasher/, old /app/ links redirect to /
+          mkdir -p site/flasher/firmware site/app
+          cp webble/app.html site/index.html
+          cp webble/manifest.webmanifest webble/icon.svg site/
+          cp webflash/index.html site/flasher/
+          cp webble/redirect.html site/app/index.html
+          echo akkuscan.app > site/CNAME
+          cp build/m18_bridge.ino.bin site/flasher/firmware/m18-bruecke-update.bin
           if [ -f build/m18_bridge.ino.merged.bin ]; then
-            cp build/m18_bridge.ino.merged.bin site/firmware/m18-bruecke.bin
+            cp build/m18_bridge.ino.merged.bin site/flasher/firmware/m18-bruecke.bin
           else
             # Fallback: Bootloader + Partitionen + boot_app0 + App selbst zusammenfügen
             ESPTOOL=$(find ~/.arduino15/packages/esp32/tools -name 'esptool' -type f -perm -u+x | head -1)
             BOOTAPP=$(find ~/.arduino15/packages/esp32/hardware -name boot_app0.bin | head -1)
-            "$ESPTOOL" --chip esp32s3 merge_bin -o site/firmware/m18-bruecke.bin --flash_mode keep --flash_size 16MB \
+            "$ESPTOOL" --chip esp32s3 merge_bin -o site/flasher/firmware/m18-bruecke.bin --flash_mode keep --flash_size 16MB \
               0x0 build/m18_bridge.ino.bootloader.bin 0x8000 build/m18_bridge.ino.partitions.bin \
               0xe000 "$BOOTAPP" 0x10000 build/m18_bridge.ino.bin
           fi
           # Das Arduino-Image ist auf die vollen 16 MB aufgefüllt (fast nur 0xFF). Leere Bytes am Ende
           # abschneiden: Der Browser muss dann nur ~1,3 MB schreiben statt 16 MB (sonst steht er minutenlang bei 98 %).
           python3 - <<'PY'
-          p = "site/firmware/m18-bruecke.bin"
+          p = "site/flasher/firmware/m18-bruecke.bin"
           d = open(p, "rb").read()
           end = len(d.rstrip(b"\xff"))
           end = (end + 0xFFF) & ~0xFFF
@@ -69,7 +71,7 @@ jobs:
           print(f"Web-Flasher-Image: {len(d)} -> {end} Bytes")
           PY
           VERSION=$(grep -oP '#define M18BRIDGE_VERSION "\K[^"]+' esp32-bridge/m18_bridge/m18_proto.h)
-          cat > site/manifest.json <<JSON
+          cat > site/flasher/manifest.json <<JSON
           {
             "name": "M18 Akku-Brücke",
             "version": "$VERSION",
@@ -81,14 +83,14 @@ jobs:
             ]
           }
           JSON
-          cat site/manifest.json
-          ls -la site site/firmware
+          cat site/flasher/manifest.json
+          ls -laR site
       - name: Image prüfen (Bootloader, Partitionen, App)
         run: |
           python3 - <<'PY'
           import struct, sys
-          d = open("site/firmware/m18-bruecke.bin", "rb").read()
-          app = open("site/firmware/m18-bruecke-update.bin", "rb").read()
+          d = open("site/flasher/firmware/m18-bruecke.bin", "rb").read()
+          app = open("site/flasher/firmware/m18-bruecke-update.bin", "rb").read()
           ok = True
           def check(cond, msg):
               global ok
@@ -114,7 +116,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: m18-bruecke-firmware
-          path: site/firmware/
+          path: site/flasher/firmware/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
@@ -122,7 +124,7 @@ jobs:
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" site/firmware/*.bin --clobber
+        run: gh release upload "${{ github.event.release.tag_name }}" site/flasher/firmware/*.bin --clobber
 
   pages:
     needs: build
