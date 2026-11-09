@@ -7,7 +7,7 @@ name: Firmware & Web-Flasher
 on:
   push:
     branches: [master]
-    paths: ["esp32-bridge/**", "webflash/**", "webble/**", ".github/workflows/firmware.yml"]
+    paths: ["esp32-bridge/**", "webflash/**", "webble/**", "webland/**", ".github/workflows/firmware.yml"]
   release:
     types: [published]
   workflow_dispatch:
@@ -42,12 +42,14 @@ jobs:
         run: |
           set -e
           ls -la build
-          # akkuscan.app: portal (app) at the root, flasher under /flasher/, old /app/ links redirect to /
+          # akkuscan.app: product page at the root (logged-in users go on to /app/), the app (portal, Bluetooth)
+          # under /app/, the web flasher under /flasher/, legal pages
           mkdir -p site/flasher/firmware site/app
-          cp webble/app.html site/index.html
-          cp webble/manifest.webmanifest webble/icon.svg site/
+          cp -r webland/. site/
+          cp webble/icon.svg site/
+          cp webble/app.html site/app/index.html
+          cp webble/manifest.webmanifest webble/icon.svg site/app/
           cp webflash/index.html site/flasher/
-          cp webble/redirect.html site/app/index.html
           echo akkuscan.app > site/CNAME
           cp build/m18_bridge.ino.bin site/flasher/firmware/m18-bruecke-update.bin
           if [ -f build/m18_bridge.ino.merged.bin ]; then

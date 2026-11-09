@@ -1,9 +1,9 @@
 # Changelog
 
 ## Eigene Domain: akkuscan.app
-- Das Portal (Akku-App mit Bluetooth, Konto, Meine Akkus) liegt unter **https://akkuscan.app/**, der Firmware-Flasher unter **https://akkuscan.app/flasher/**.
-  Alte Links auf `/app/` leiten weiter, github.io-Adressen leitet GitHub auf die Domain um.
-- Supabase: Bestätigungs- und Passwort-Mails führen auf akkuscan.app.
+- **https://akkuscan.app/** ist die Produktseite (Funktionen, So geht's, Für Betriebe, FAQ). Angemeldete Nutzer kommen von dort direkt ins Portal.
+- Das Portal (App mit Bluetooth, Konto, Meine Akkus) liegt unter **/app/**, der Firmware-Flasher unter **/flasher/**, dazu **/impressum/** und **/datenschutz/** (Angaben werden noch ergänzt).
+- „Anmelden“ und „Konto anlegen“ auf der Produktseite öffnen in der App direkt das passende Formular. Bestätigungs- und Passwort-Mails führen in die App.
 
 ## 1.12 – Eine App, Cloud als Rückgrat
 - **Eine App für WLAN und Bluetooth:** Die Akku-App auf GitHub Pages ist jetzt die Weboberfläche der Brücke selbst, mit einem Bluetooth-Adapter (`webble/ble-shim.js`).

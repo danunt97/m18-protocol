@@ -411,7 +411,7 @@ try{$("#loc").value=localStorage.getItem("m18.loc")||"";}catch(e){}
 
 /* ---------- Cloud (Supabase): Konto, Meine Akkus, Hochladen, Brücke verknüpfen ---------- */
 const SB={url:"https://seccxaldsjhukavoilnm.supabase.co",key:"sb_publishable_KSiLpnnPHzgOvS3cTPnl_A_OVknKkj1",
-  app:"https://akkuscan.app/"};
+  app:"https://akkuscan.app/app/"};
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},
   set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
 let SESS=ls.get("m18.sb.sess"),ORG=ls.get("m18.sb.org"),CMSG="";
@@ -448,6 +448,9 @@ function cloudInit(){
     sb("/auth/v1/user").then(u=>{SESS.email=u.email;ls.set("m18.sb.sess",SESS);cloudHead();}).catch(()=>{});
     if(h.get("type")=="recovery")setTimeout(()=>{tab("cloud");cloudPwForm();},300);else setTimeout(()=>tab("cloud"),300);}
   else if(h.get("error_description"))CMSG=h.get("error_description");
+  else if(location.hash=="#konto"||location.hash=="#registrieren"){const reg=location.hash=="#registrieren";   /* links from akkuscan.app */
+    history.replaceState(null,"",location.pathname+location.search);
+    setTimeout(()=>{tab("cloud");if(!SESS&&reg)cloudLogin("signup");},200);}
   cloudBadge();setTimeout(cloudFlush,1500);setInterval(cloudFlush,120000);addEventListener("online",cloudFlush);}
 function cbox(html){$("#cloudbox").innerHTML=html;}
 function cloudHead(){if(!SESS){cloudLogin();return;}const n=cq().length;
