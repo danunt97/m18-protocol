@@ -474,7 +474,12 @@ function cloudLogin(mode){mode=mode||"login";
     ${mode=="signup"?'<label>Passwort wiederholen</label><input id="cpw2" type="password" autocomplete="new-password"><p class="hint">Mindestens 8 Zeichen.</p>':""}
     <button class="btn primary big" id="cgo" style="margin-top:14px">${mode=="signup"?"Konto anlegen":mode=="reset"?"Link zum Zurücksetzen senden":"Anmelden"}</button>
     <div id="cmsg">${CMSG?`<div class="box info">${esc(CMSG)}</div>`:""}</div>
-    <p class="hint" style="margin-top:12px">${mode!="login"?'<a href="#" data-m="login" style="color:inherit">Anmelden</a> · ':""}${mode!="signup"?'<a href="#" data-m="signup" style="color:inherit">Neues Konto anlegen</a> · ':""}${mode!="reset"?'<a href="#" data-m="reset" style="color:inherit">Passwort vergessen</a>':""}</p></div>`);
+    ${mode=="login"?`<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:14px;text-align:center">
+      <div class="hint" style="margin:0 0 8px">Noch kein Konto?</div>
+      <button class="btn big" data-m="signup" style="font-weight:650">Neues Konto anlegen</button></div>`
+     :`<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:14px;text-align:center">
+      <button class="btn big" data-m="login" style="font-weight:650">${mode=="signup"?"Ich habe schon ein Konto – Anmelden":"Zurück zum Anmelden"}</button></div>`}
+    ${mode!="reset"?'<p class="hint" style="margin-top:12px;text-align:center"><a href="#" data-m="reset" style="color:inherit">Passwort vergessen?</a></p>':""}</div>`);
   $$("#cloudbox [data-m]").forEach(a=>a.onclick=e=>{e.preventDefault();CMSG="";cloudLogin(a.dataset.m);});
   const msg=(t,ok)=>$("#cmsg").innerHTML=`<div class="box ${ok?"ok":"err"}">${esc(t)}</div>`;
   $("#cgo").onclick=async()=>{const mail=$("#cmail").value.trim();ls.set("m18.sb.mail",mail);if(!mail){msg("Bitte E-Mail eingeben");return;}
