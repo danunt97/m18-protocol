@@ -7,7 +7,6 @@ static const char WEB_UI[] PROGMEM = R"HTML(<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>M18 Akku-Brücke</title>
 <style>
-/*SHARED-CSS-BEGIN (also used by the phone app webble/, see esp32-bridge/tools/gen_app.py)*/
 :root{--bg:#1b1d20;--panel:#23262a;--panel2:#1a1c1f;--raise:#2c3035;--line:#34383e;--text:#eceef0;--muted:#959ba3;--faint:#6b7178;
 --accent:#e4002b;--good:#3fcf7f;--watch:#e7b43a;--weak:#f0703c;--crit:#ff4d5e;--info:#5aa2ff;color-scheme:dark}
 @media (prefers-color-scheme:light){:root{--bg:#f3f4f6;--panel:#fff;--panel2:#f7f8fa;--raise:#eef0f3;--line:#dde0e5;--text:#17191c;--muted:#5e646c;--faint:#8a9098;
@@ -63,10 +62,9 @@ details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;pa
 .reg.h{grid-template-columns:minmax(96px,38%) 1fr auto}.reg .lab{color:var(--muted)}
 .reg .lab small{display:block;color:var(--faint);font-size:10.5px;font-family:ui-monospace,Consolas,monospace}
 .reg .rv{text-align:right;font-variant-numeric:tabular-nums;word-break:break-word}.faint{color:var(--faint)}
-
-/*SHARED-CSS-END*/</style></head><body>
+</style></head><body>
 <header><span class="logo">M18</span><h1>Akku-Brücke<small id="hostline">…</small></h1><span class="pill" id="pill">…</span></header>
-<nav><button data-tab="akku" class="on">Akku</button><button data-tab="verlauf">Verlauf <span id="newcount" class="pill ok" style="padding:0 7px;margin:0" hidden></span></button><button data-tab="wlan">WLAN</button><button data-tab="geraet">Gerät</button></nav>
+<nav><button data-tab="akku" class="on">Akku</button><button data-tab="verlauf">Verlauf <span id="newcount" class="pill ok" style="padding:0 7px;margin:0" hidden></span></button><button data-tab="cloud">Cloud <span id="qcount" class="pill" style="padding:0 7px;margin:0" hidden></span></button><button data-tab="wlan">WLAN</button><button data-tab="geraet">Gerät</button></nav>
 <main>
 <section id="tab-akku">
   <div class="card">
@@ -86,6 +84,9 @@ details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;pa
   <div class="card"><div id="hlist"></div><button class="btn" id="hmore" hidden style="margin-top:10px">Ältere laden</button></div>
   <div id="hview"></div>
 </section>
+<section id="tab-cloud" hidden>
+  <div id="cloudbox"></div><div id="cloudview"></div>
+</section>
 <section id="tab-wlan" hidden>
   <div class="card"><h2>Verbindung</h2><div id="wifistate">…</div></div>
   <div class="card"><h2>Mit WLAN verbinden</h2><div id="lockbox"></div>
@@ -100,6 +101,7 @@ details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;pa
     <p class="hint">Alternativ die BOOT-Taste 5 Sekunden gedrückt halten. Danach startet der Einrichtungsmodus (WLAN „M18-Bridge-…“).</p></div>
 </section>
 <section id="tab-geraet" hidden>
+  <div class="card"><h2>Cloud</h2><div id="cloudlink"><p class="hint" style="margin-top:0">…</p></div></div>
   <div class="two"><div class="card"><h2>Status</h2><div id="devinfo"></div></div>
   <div class="card"><h2>Verbindungstest</h2><button class="btn" id="testbtn">Akku testen</button>
     <p class="hint">Sendet Reset und prüft, ob der Akku mit 0xAA antwortet.</p><div id="testres"></div></div></div>
@@ -144,7 +146,6 @@ IDLE</textarea><button class="btn" id="cmdbtn" style="margin-top:8px">Senden</bu
 </section>
 </main>
 <script>
-/*SHARED-JS-BEGIN (also used by the phone app webble/, see esp32-bridge/tools/gen_app.py)*/
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=v=>v==null?"":String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const nf=(v,d=0)=>v==null?"–":Number(v).toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -250,14 +251,13 @@ function render(d,when){
   </div>
   ${allRegs(d)}${traceBox(d,false)}
   <p class="hint">${when?"Ausgelesen "+when+" · ":""}${d.blocks_ok}/${d.blocks_total} Blöcke in ${nf(d.duration_ms/1000,1)} s${d.retries?` · ${d.retries} Wiederholungen`:""}</p>`;}
-/*SHARED-JS-END*/
 let INFO={};
 async function logLoad(){const el=$("#logbox");if(!el)return;try{const d=await j("/api/log?n=250");
   let l=d.lines||[];if($("#logwarn").checked)l=l.filter(x=>/WARNUNG|FEHLER/.test(x));
   el.textContent=l.length?l.join("\n"):"(keine Einträge)";el.scrollTop=el.scrollHeight;}catch(e){el.textContent="Protokoll nicht abrufbar";}}
 async function j(url,opt){const r=await fetch(url,opt);return r.json();}
 function tab(name){$$("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab==name));$$("main>section").forEach(s=>s.hidden=s.id!="tab-"+name);
-  if(name=="wlan")wifiState();if(name=="geraet"){devInfo();logLoad();}if(name=="verlauf"){histStats();histLoad(true);}}
+  if(name=="wlan")wifiState();if(name=="geraet"){devInfo();logLoad();cloudLinkLoad();}if(name=="cloud")cloudView();if(name=="verlauf"){histStats();histLoad(true);}}
 $$("nav button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 
 async function info(){try{INFO=await j("/api/info");}catch(e){return;}
@@ -287,6 +287,7 @@ $("#readbtn").onclick=async()=>{const b=$("#readbtn"),pg=$("#prog");b.disabled=t
     for(let i=0;i<120;i++){await sleep(500);let st;try{st=await j("/api/status");}catch(e){continue;}
       pg.firstChild.style.width=st.progress+"%";if(!st.reading)break;}
     const d=await j("/api/last");render(d,new Date().toLocaleTimeString("de-DE"));
+    cloudAfterRead(d,{ts:Math.floor(Date.now()/1000),ts_src:window.M18_BLE?"app":"browser",loc:$("#loc").value,comment:$("#comment").value});
     if(d.history_id)$("#readhint").textContent="Gespeichert als Messung #"+d.history_id+" – wird bei der nächsten Übernahme in die PC-Datenbank übertragen.";
     $("#comment").value="";info();}
   catch(e){$("#result").innerHTML=`<div class="card"><div class="box err">Keine Antwort vom Gerät.</div></div>`;}
@@ -407,7 +408,144 @@ $("#logclr").onclick=async()=>{if(!confirm("Protokoll der Brücke löschen?"))re
   if(!r.ok){const e=await r.json().catch(()=>({}));alert(e.error||"Fehler");}logLoad();};
 
 try{$("#loc").value=localStorage.getItem("m18.loc")||"";}catch(e){}
-(async()=>{await info();try{const d=await j("/api/last");if(d&&d.eserial!==undefined)render(d,"zuletzt");}catch(e){}
-  if(INFO.wifi!="sta")tab("wlan");
-  setInterval(()=>{const t=$("nav button.on").dataset.tab;info();if(t=="wlan")wifiState();},3000);})();
+
+/* ---------- Cloud (Supabase): Konto, Meine Akkus, Hochladen, Brücke verknüpfen ---------- */
+const SB={url:"https://seccxaldsjhukavoilnm.supabase.co",key:"sb_publishable_KSiLpnnPHzgOvS3cTPnl_A_OVknKkj1",
+  app:"https://danunt97.github.io/m18-protocol/app/"};
+const ls={get(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},
+  set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+let SESS=ls.get("m18.sb.sess"),ORG=ls.get("m18.sb.org"),CMSG="";
+async function sbRaw(path,opt={}){const h={apikey:SB.key,"Content-Type":"application/json"};if(opt.token)h.Authorization="Bearer "+opt.token;
+  let r;try{r=await fetch(SB.url+path,{method:opt.method||"GET",headers:h,body:opt.body?JSON.stringify(opt.body):undefined});}
+  catch(e){throw new Error("Keine Internetverbindung");}
+  const t=await r.text();let d=null;try{d=t?JSON.parse(t):null;}catch(e){d=t;}
+  if(!r.ok)throw new Error(sbErr(d)||("HTTP "+r.status));return d;}
+function sbErr(d){const m=d&&(d.msg||d.message||d.error_description||d.error);if(!m)return"";
+  const de={"Invalid login credentials":"E-Mail oder Passwort falsch","Email not confirmed":"E-Mail-Adresse noch nicht bestätigt – bitte den Link in der Mail öffnen",
+    "User already registered":"Für diese E-Mail gibt es schon ein Konto","email rate limit exceeded":"Zu viele E-Mails – bitte später nochmal versuchen"};
+  for(const k in de)if(String(m).indexOf(k)>=0)return de[k];return String(m);}
+function setSess(d){SESS=d?{at:d.access_token,rt:d.refresh_token,exp:Date.now()/1000+(+d.expires_in||3600)-60,
+    email:(d.user&&d.user.email)||(SESS&&SESS.email)||""}:null;ls.set("m18.sb.sess",SESS);if(!d){ORG=null;ls.set("m18.sb.org",null);}}
+async function sbToken(){if(!SESS)return null;if(Date.now()/1000<SESS.exp)return SESS.at;
+  try{setSess(await sbRaw("/auth/v1/token?grant_type=refresh_token",{method:"POST",body:{refresh_token:SESS.rt}}));return SESS.at;}
+  catch(e){if(e.message!="Keine Internetverbindung")setSess(null);throw e;}}
+async function sb(path,opt={}){const token=await sbToken();if(!token)throw new Error("Nicht angemeldet");return sbRaw(path,{...opt,token});}
+async function sbOrg(){if(ORG)return ORG;const o=await sb("/rest/v1/orgs?select=id,name&order=created_at&limit=1");ORG=o[0]||null;ls.set("m18.sb.org",ORG);return ORG;}
+function cq(){return ls.get("m18.sb.queue")||[];}
+function cloudBadge(){const n=cq().length,e=$("#qcount");if(e){e.hidden=!n;e.textContent=n?"↑"+n:"";}}
+async function cloudAfterRead(d,meta){if(!d||!d.ok||!d.mem)return;const q=cq();q.push({scan:d,meta,src:window.M18_BLE?"app-ble":"app-wlan"});
+  ls.set("m18.sb.queue",q.slice(-200));cloudBadge();if(SESS)cloudFlush();}
+async function cloudFlush(){let q=cq(),sent=0;if(!SESS||!q.length){cloudBadge();return sent;}
+  try{const org=await sbOrg();if(!org)throw new Error("keine Firma gefunden");
+    while(q.length){const it=q[0];const r=await sb("/rest/v1/rpc/app_ingest",{method:"POST",body:{p_org:org.id,p_payload:{scan:it.scan,meta:it.meta},p_source:it.src}});
+      if(!r||(!r.ok&&!/gültige/.test(r.error||"")))throw new Error((r&&r.error)||"Fehler");q.shift();ls.set("m18.sb.queue",q);sent++;}
+    CMSG="";}catch(e){CMSG="Noch nicht hochgeladen: "+e.message+" – wird später erneut versucht.";}
+  cloudBadge();if($("#tab-cloud")&&!$("#tab-cloud").hidden)cloudHead();return sent;}
+function cloudInit(){
+  const h=new URLSearchParams(location.hash.replace(/^#/,""));          /* link from a confirmation / password mail */
+  if(h.get("access_token")){setSess({access_token:h.get("access_token"),refresh_token:h.get("refresh_token"),expires_in:h.get("expires_in")});
+    history.replaceState(null,"",location.pathname+location.search);
+    sb("/auth/v1/user").then(u=>{SESS.email=u.email;ls.set("m18.sb.sess",SESS);cloudHead();}).catch(()=>{});
+    if(h.get("type")=="recovery")setTimeout(()=>{tab("cloud");cloudPwForm();},300);else setTimeout(()=>tab("cloud"),300);}
+  else if(h.get("error_description"))CMSG=h.get("error_description");
+  cloudBadge();setTimeout(cloudFlush,1500);setInterval(cloudFlush,120000);addEventListener("online",cloudFlush);}
+function cbox(html){$("#cloudbox").innerHTML=html;}
+function cloudHead(){if(!SESS){cloudLogin();return;}const n=cq().length;
+  cbox(`<div class="card"><h2>Konto</h2><div class="row"><span>Angemeldet</span><span>${esc(SESS.email||"…")}</span></div>
+    <div class="row"><span>Firma</span><span>${esc(ORG?ORG.name:"…")}</span></div>
+    <div class="row"><span>Warten auf Upload</span><span>${n?n+" Messung"+(n>1?"en":""):"nichts – alles in der Cloud"}</span></div>
+    ${CMSG?`<div class="box info">${esc(CMSG)}</div>`:""}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${n?'<button class="btn primary" id="cqsend">Jetzt hochladen</button>':""}
+      <button class="btn" id="clogout">Abmelden</button><button class="btn" id="cdel">Konto löschen</button></div></div>`);
+  if($("#cqsend"))$("#cqsend").onclick=async()=>{$("#cqsend").disabled=true;await cloudFlush();cloudView();};
+  $("#clogout").onclick=async()=>{try{await sbRaw("/auth/v1/logout",{method:"POST",token:SESS.at});}catch(e){}setSess(null);cloudView();};
+  $("#cdel").onclick=async()=>{if(!confirm("Konto und alle Daten deiner Firma in der Cloud endgültig löschen?"))return;
+    if(!confirm("Wirklich? Das lässt sich nicht rückgängig machen."))return;
+    try{await sb("/rest/v1/rpc/delete_my_account",{method:"POST",body:{}});setSess(null);ls.set("m18.sb.queue",null);cloudView();}
+    catch(e){alert("Löschen fehlgeschlagen: "+e.message);}};
+  if(!ORG)sbOrg().then(()=>cloudHead()).catch(()=>{});}
+function cloudLogin(mode){mode=mode||"login";
+  const f=mode=="signup"?`<label>Firma / Name</label><input id="cfirm" maxlength="100" placeholder="z. B. Elektro Huber">`:"";
+  cbox(`<div class="card"><h2>${mode=="signup"?"Konto anlegen":mode=="reset"?"Passwort vergessen":"Anmelden"}</h2>
+    <p class="hint" style="margin-top:0">Mit einem Konto landen alle Messungen in der Cloud – von jedem Handy, jeder Brücke und dem PC an einem Ort.
+      Ohne Internet (z. B. im Einrichtungs-WLAN der Brücke) werden Messungen gemerkt und später hochgeladen.</p>
+    ${f}<label>E-Mail</label><input id="cmail" type="email" autocomplete="email" value="${esc(ls.get("m18.sb.mail")||"")}">
+    ${mode=="reset"?"":`<label>Passwort</label><input id="cpw" type="password" autocomplete="${mode=="signup"?"new-password":"current-password"}">`}
+    ${mode=="signup"?'<label>Passwort wiederholen</label><input id="cpw2" type="password" autocomplete="new-password"><p class="hint">Mindestens 8 Zeichen.</p>':""}
+    <button class="btn primary big" id="cgo" style="margin-top:14px">${mode=="signup"?"Konto anlegen":mode=="reset"?"Link zum Zurücksetzen senden":"Anmelden"}</button>
+    <div id="cmsg">${CMSG?`<div class="box info">${esc(CMSG)}</div>`:""}</div>
+    <p class="hint" style="margin-top:12px">${mode!="login"?'<a href="#" data-m="login" style="color:inherit">Anmelden</a> · ':""}${mode!="signup"?'<a href="#" data-m="signup" style="color:inherit">Neues Konto anlegen</a> · ':""}${mode!="reset"?'<a href="#" data-m="reset" style="color:inherit">Passwort vergessen</a>':""}</p></div>`);
+  $$("#cloudbox [data-m]").forEach(a=>a.onclick=e=>{e.preventDefault();CMSG="";cloudLogin(a.dataset.m);});
+  const msg=(t,ok)=>$("#cmsg").innerHTML=`<div class="box ${ok?"ok":"err"}">${esc(t)}</div>`;
+  $("#cgo").onclick=async()=>{const mail=$("#cmail").value.trim();ls.set("m18.sb.mail",mail);if(!mail){msg("Bitte E-Mail eingeben");return;}
+    const b=$("#cgo");b.disabled=true;
+    try{if(mode=="login"){setSess(await sbRaw("/auth/v1/token?grant_type=password",{method:"POST",body:{email:mail,password:$("#cpw").value}}));
+        CMSG="";await sbOrg().catch(()=>{});await cloudFlush();cloudView();return;}
+      if(mode=="signup"){if($("#cpw").value.length<8){msg("Passwort: mindestens 8 Zeichen");return;}
+        if($("#cpw").value!=$("#cpw2").value){msg("Passwörter stimmen nicht überein");return;}
+        const r=await sbRaw("/auth/v1/signup?redirect_to="+encodeURIComponent(SB.app),{method:"POST",
+          body:{email:mail,password:$("#cpw").value,data:{org_name:$("#cfirm").value.trim()}}});
+        if(r&&r.access_token){setSess(r);cloudView();return;}
+        CMSG="Fast fertig: Wir haben dir eine E-Mail an "+mail+" geschickt. Bitte den Link darin öffnen, danach hier anmelden.";cloudLogin("login");return;}
+      await sbRaw("/auth/v1/recover?redirect_to="+encodeURIComponent(SB.app),{method:"POST",body:{email:mail}});
+      msg("Wenn es ein Konto für diese Adresse gibt, kommt gleich eine E-Mail mit einem Link zum Zurücksetzen.",true);}
+    catch(e){msg(e.message);}finally{b.disabled=false;}};}
+function cloudPwForm(){cbox(`<div class="card"><h2>Neues Passwort</h2><label>Neues Passwort</label><input id="cnp" type="password" autocomplete="new-password">
+    <button class="btn primary" id="cnpgo" style="margin-top:10px">Speichern</button><div id="cnpmsg"></div></div>`);
+  $("#cnpgo").onclick=async()=>{if($("#cnp").value.length<8){$("#cnpmsg").innerHTML='<div class="box err">Mindestens 8 Zeichen</div>';return;}
+    try{await sb("/auth/v1/user",{method:"PUT",body:{password:$("#cnp").value}});CMSG="Passwort geändert.";cloudView();}
+    catch(e){$("#cnpmsg").innerHTML=`<div class="box err">${esc(e.message)}</div>`;}};}
+const fdt2=s=>s?new Date(s).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"}):"–";
+const SRCN={"app-ble":"App (Bluetooth)","app-wlan":"App (WLAN)",bridge:"Brücke",pc:"PC"};
+async function cloudView(){cloudHead();const v=$("#cloudview");if(!SESS){v.innerHTML="";return;}
+  v.innerHTML='<div class="card"><h2>Meine Akkus</h2><p class="hint" style="margin-top:0">Lade …</p></div>';
+  try{const bs=await sb("/rest/v1/battery_overview?select=*&order=last_measured_at.desc.nullslast");
+    v.innerHTML=`<div class="card"><h2>Meine Akkus · ${bs.length}</h2>${bs.length?`<div class="nets">${bs.map(b=>`<div class="net" data-b="${b.id}">
+      <span><b>${esc(b.name||b.eserial)}</b> ${esc(b.model||"")}<br><span class="hint">${b.name?esc(b.eserial)+" · ":""}${fdt2(b.last_measured_at)}${b.location?" · "+esc(b.location):""} · ${b.readings} Messung${b.readings==1?"":"en"}</span></span>
+      <span class="badge ${b.last_status||"unknown"}">${b.last_health!=null?b.last_health:"–"}</span></div>`).join("")}</div>`
+      :'<p class="hint">Noch keine Akkus in der Cloud. Nach dem nächsten Auslesen erscheinen sie hier.</p>'}</div><div id="cbat"></div>`;
+    $$("#cloudview [data-b]").forEach(n=>n.onclick=()=>cloudBattery(n.dataset.b,bs.find(x=>x.id==n.dataset.b)));}
+  catch(e){v.innerHTML=`<div class="card"><div class="box err">${esc(e.message)}</div></div>`;}}
+async function cloudBattery(id,b){const el=$("#cbat");el.innerHTML='<p class="hint">Lade …</p>';
+  try{const rs=await sb(`/rest/v1/readings?battery_id=eq.${id}&select=id,measured_at,health,status,source,location,comment,pack_v&order=measured_at.desc&limit=100`);
+    el.innerHTML=`<div class="card"><h2>${esc(b.name||b.eserial)} · Messverlauf</h2><div class="nets">${rs.map(r=>`<div class="net" data-r="${r.id}">
+      <span>${fdt2(r.measured_at)} <span class="hint">· ${esc(SRCN[r.source]||r.source)}${r.location?" · "+esc(r.location):""}</span>${r.comment?`<br><span class="hint">${esc(r.comment)}</span>`:""}</span>
+      <span class="badge ${r.status||"unknown"}">${r.health!=null?r.health:"–"}</span></div>`).join("")}</div></div><div id="cread"></div>`;
+    $$("#cbat [data-r]").forEach(n=>n.onclick=()=>cloudReading(n.dataset.r));el.scrollIntoView({behavior:"smooth"});}
+  catch(e){el.innerHTML=`<div class="box err">${esc(e.message)}</div>`;}}
+async function cloudReading(id){const el=$("#cread");
+  try{const r=(await sb(`/rest/v1/readings?id=eq.${id}&select=scan,measured_at,location,comment,source`))[0];
+    const prev=$("#result").innerHTML;render(r.scan,fdt2(r.measured_at));const html=$("#result").innerHTML;$("#result").innerHTML=prev;
+    el.innerHTML=`<div class="card"><h2>Messung ${fdt2(r.measured_at)}${r.location?" · "+esc(r.location):""}</h2>${r.comment?`<p>${esc(r.comment)}</p>`:""}
+      <p class="hint" style="margin-top:0">Quelle: ${esc(SRCN[r.source]||r.source)}</p></div>`+html;el.scrollIntoView({behavior:"smooth"});}
+  catch(e){el.innerHTML=`<div class="box err">${esc(e.message)}</div>`;}}
+/* Link this bridge to the account: the bridge then uploads its stored read-outs itself when it has internet. */
+async function cloudLinkLoad(){const el=$("#cloudlink");if(!el)return;let st;
+  try{st=await j("/api/cloud");}catch(e){el.innerHTML='<p class="hint" style="margin-top:0">Firmware zu alt für die Cloud (ab 1.12).</p>';return;}
+  const last=st.last_ok?new Date(st.last_ok*1000).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"}):"noch nie";
+  el.innerHTML=st.configured?`<div class="row"><span>Verknüpft</span><span>${esc(st.host)}</span></div>
+      <div class="row"><span>Warten auf Upload</span><span>${st.pending}</span></div><div class="row"><span>Zuletzt hochgeladen</span><span>${last}</span></div>
+      <div class="row"><span>Internet</span><span>${st.online?"ja (WLAN)":"nein – lädt hoch, sobald die Brücke im WLAN mit Internet ist"}</span></div>
+      ${st.error?`<div class="box err">${esc(st.error)}</div>`:""}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn" id="clsync">Jetzt hochladen</button><button class="btn" id="cloff">Verknüpfung lösen</button></div><div id="clmsg"></div>`
+    :`<p class="hint" style="margin-top:0">Verknüpfte Brücken laden ihre Messungen selbst in die Cloud, sobald sie im WLAN Internet haben – auch ohne Handy.</p>
+      ${SESS?'<button class="btn primary" id="cllink">Mit meinem Konto verknüpfen</button>':'<p class="hint">Dazu zuerst im Tab <b>Cloud</b> anmelden.</p>'}<div id="clmsg"></div>`;
+  const msg=(t,ok)=>$("#clmsg").innerHTML=`<div class="box ${ok?"ok":"err"}">${esc(t)}</div>`;
+  const post=async(body)=>{const r=await fetch("/api/cloud",{method:"POST",body:new URLSearchParams(body)});const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||("Fehler "+r.status));return d;};
+  if($("#clsync"))$("#clsync").onclick=async()=>{try{await post({action:"sync"});msg("Hochladen angestoßen.",true);setTimeout(cloudLinkLoad,4000);}catch(e){msg(e.message);}};
+  if($("#cloff"))$("#cloff").onclick=async()=>{if(!confirm("Verknüpfung dieser Brücke lösen?"))return;try{await post({action:"off"});cloudLinkLoad();}catch(e){msg(e.message);}};
+  if($("#cllink"))$("#cllink").onclick=async()=>{$("#cllink").disabled=true;
+    try{const org=await sbOrg();const i=await info()||INFO;
+      const r=await sb("/rest/v1/rpc/bridge_register",{method:"POST",body:{p_org:org.id,p_name:i.ble||i.ap||i.host,p_mac:i.mac}});
+      if(!r.ok)throw new Error(r.error);
+      await post({action:"link",url:SB.url,key:SB.key,token:r.token});msg("Verknüpft – die Brücke lädt ab jetzt selbst hoch.",true);setTimeout(cloudLinkLoad,1500);}
+    catch(e){msg(e.message);}finally{if($("#cllink"))$("#cllink").disabled=false;}};}
+let started=false;
+async function start(){await info();try{const d=await j("/api/last");if(d&&d.eserial!==undefined)render(d,"zuletzt");}catch(e){}
+  if(!window.M18_BLE&&INFO.wifi!="sta")tab("wlan");
+  if(!started){started=true;setInterval(()=>{const t=$("nav button.on").dataset.tab;info();if(t=="wlan")wifiState();},3000);}}
+cloudInit();
+window.M18_START=start;                 /* the Bluetooth app (GitHub Pages) calls start() once connected */
+if(!window.M18_BLE)start();
 </script></body></html>)HTML";

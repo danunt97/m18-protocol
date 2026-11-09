@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.12 – Eine App, Cloud als Rückgrat
+- **Eine App für WLAN und Bluetooth:** Die Akku-App auf GitHub Pages ist jetzt die Weboberfläche der Brücke selbst, mit einem Bluetooth-Adapter (`webble/ble-shim.js`).
+  Über Bluetooth geht damit alles wie im WLAN: Auslesen, Verlauf, WLAN einrichten, LED, Energiesparen, Passwort, Protokoll, Cloud.
+  Die Firmware beantwortet alle `/api/...`-Funktionen über HTTP und über den Befehl `API …` mit derselben Umsetzung.
+- **Cloud (Supabase):** Konto mit E-Mail und Passwort, eigene Firma, „Meine Akkus“ mit Verlauf und jeder Messung komplett (alle 185 Werte).
+  Messungen werden nach dem Auslesen hochgeladen. Ohne Internet warten sie und werden nachgeholt. Konto löschen ist möglich.
+- **Brücke lädt selbst hoch:** Nach dem Verknüpfen in der App überträgt die Brücke ihre gespeicherten Messungen per HTTPS, sobald sie im WLAN Internet hat.
+  Der Messungsspeicher kennt dafür „in der Cloud“ neben „am PC übernommen“. Doppelte Uploads speichert die Datenbank nur einmal.
+- Datenbank: Schema, Zugriffsregeln und Upload-Funktionen in `supabase/migrations/`, getestet mit Testkonten gegen das echte Projekt.
+
 ## 1.11 – Bluetooth und Handy-App
 - **Bluetooth LE** in der Firmware (Nordic-UART-Dienst) mit denselben Textbefehlen wie USB und WLAN, dazu `AUTH`, `META` und `SCAN` mit Fortschritt.
   WLAN-Hotspot und Weboberfläche bleiben, Verbindungen und Auslesen per Bluetooth stehen im Protokoll.

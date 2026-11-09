@@ -292,26 +292,45 @@ python m18_bridge.py --bridge COM7
 
 Die erste Zeile sucht Brücken im Netz. Die zweite gibt einen Health-Report aus. Die dritte öffnet eine interaktive Shell mit `m.scan()`, `m.health()` und `m.read_id()`.
 
-## Bluetooth und Handy-App
+## Eine App für WLAN und Bluetooth
 
-Die Brücke ist zusätzlich per **Bluetooth LE** erreichbar. Der WLAN-Hotspot und die Weboberfläche bleiben unverändert.
-Gedacht ist das für die **Akku-App: [danunt97.github.io/m18-protocol/app](https://danunt97.github.io/m18-protocol/app/)**.
+Es gibt **eine** App: die Weboberfläche der Brücke. Sie läuft auf zwei Wegen und kann auf beiden dasselbe.
 
-- **Android:** die Seite in **Chrome** öffnen (optional „Zum Startbildschirm hinzufügen“).
-- **iPhone:** Safari kann kein Bluetooth. Die kostenlose App **Bluefy – Web BLE Browser** aus dem App Store installieren und die Seite darin öffnen.
-- **Verbinden** tippen, **M18-Bridge-…** wählen, **Akku auslesen**. Das Handy behält dabei sein Internet, weil es nicht ins WLAN der Brücke wechselt.
-- Die App zeigt dasselbe wie die Weboberfläche (Zustand, Zellen, alle 185 Werte, Ablauf beim Auslesen) und dazu den Verlauf und das Protokoll der Brücke.
-  Die Messung wird auf der Brücke gespeichert und kommt wie gewohnt in die PC-Datenbank. Das letzte Ergebnis bleibt in der App, auch ohne Verbindung.
-- Ist ein Passwort gesetzt, fragt die App beim Verbinden danach. Einstellungen (WLAN, Passwort, LED) lassen sich über Bluetooth nur nach einem Druck auf die BOOT-Taste ändern.
-- Solange ein Handy verbunden ist, geht die Brücke nicht in den Tiefschlaf.
+- **Im WLAN:** direkt von der Brücke (`http://192.168.4.1` im Einrichtungs-WLAN bzw. `http://m18-bridge-xxxx.local`).
+- **Per Bluetooth:** als **Akku-App** unter **[danunt97.github.io/m18-protocol/app](https://danunt97.github.io/m18-protocol/app/)**.
+  - **Android:** in **Chrome** öffnen (optional „Zum Startbildschirm hinzufügen“).
+  - **iPhone:** Safari kann kein Bluetooth. Die kostenlose App **Bluefy – Web BLE Browser** installieren und die Seite darin öffnen.
+  - **Verbinden** tippen, **M18-Bridge-…** wählen. Das Handy behält sein Internet, weil es nicht ins WLAN der Brücke wechselt.
 
-Technik: Nordic-UART-Dienst (`6e400001-b5a3-f393-e0a9-e50e24dcca9e`, RX `…0002` schreiben, TX `…0003` Benachrichtigungen).
-Es gelten dieselben Textbefehle wie über USB, eine Zeile pro Befehl, eine Antwortzeile `OK …`/`ERR …`, aufgeteilt nach der Paketgröße.
-Zusätzlich gibt es über Bluetooth `AUTH <passwort>`, `META <standort>|<kommentar>` (für das nächste Auslesen) und `SCAN`.
-`SCAN` läuft im Hintergrund und schickt bis zum Ergebnis `PROG <prozent>`-Zeilen. Mit nRF Connect o. ä. lässt sich das auch von Hand testen.
+Auf beiden Wegen: Akku auslesen (alle 185 Werte, Ablauf), Verlauf der Brücke, WLAN einrichten, LED, Energiesparen, Passwort, Protokoll, Cloud.
+Nur das Firmware-Update und der Download des ganzen Protokolls gehen ausschließlich im WLAN.
+Einstellungen ändern geht wie bisher nur im Einrichtungs-WLAN oder nach einem kurzen Druck auf die BOOT-Taste. Ist ein Passwort gesetzt, fragt die App danach.
+Solange ein Handy per Bluetooth verbunden ist, geht die Brücke nicht in den Tiefschlaf.
 
-Die App (`webble/app.html`) wird aus `webble/app-vorlage.html` und dem gemeinsamen Anzeige-Code der Weboberfläche erzeugt:
-`python esp32-bridge/tools/gen_app.py` (die Tests prüfen, dass sie aktuell ist).
+**Technik:**
+- Bluetooth LE mit Nordic-UART-Dienst (`6e400001-b5a3-f393-e0a9-e50e24dcca9e`, RX `…0002` schreiben, TX `…0003` Benachrichtigungen),
+  eine Textzeile pro Befehl wie über USB.
+- Die Webseite ruft `/api/...` auf. Über Bluetooth beantwortet `webble/ble-shim.js` diese Aufrufe mit dem Befehl `API <GET|POST> <pfad> <k=v&...>`.
+  Die Firmware hat für beide Wege nur **eine** Umsetzung (`apiHandle`).
+- `webble/app.html` = `web_ui.h` + `ble-shim.js`, erzeugt mit `python esp32-bridge/tools/gen_app.py`. Die Tests prüfen, dass sie aktuell ist.
+- Ältere Befehle für einfache Bluetooth-Werkzeuge (nRF Connect o. ä.): `AUTH <passwort>`, `META <standort>|<kommentar>`, `SCAN` (mit `PROG <prozent>`-Zeilen).
+
+## Cloud (Supabase)
+
+Alle Messungen landen auf Wunsch zentral in **Supabase**: alle Rohregister, also alle 185 Werte, dazu Ablauf, Standort, Kommentar und Zeitpunkt.
+Details zur Datenbank stehen in [`supabase/README.md`](../supabase/README.md).
+
+- **Konto:** Tab **Cloud**, Anmelden oder Konto anlegen (E-Mail, Passwort, Bestätigungs-Mail), Passwort vergessen, Konto löschen.
+  Jedes Konto bekommt eine eigene Firma, später lassen sich Kollegen dazuholen.
+- **Hochladen aus der App:** Nach jedem Auslesen wird die Messung hochgeladen. Ohne Internet (z. B. im Einrichtungs-WLAN) wartet sie in der App,
+  das Symbol ↑ am Tab zeigt die Anzahl, und sie wird nachgeholt.
+- **Meine Akkus:** alle Akkus der Firma mit letztem Zustand, Verlauf jedes Akkus, jede Messung komplett mit allen Werten.
+- **Brücke verknüpfen** (Tab **Gerät → Cloud**, angemeldet, BOOT-Taste kurz drücken): Die Brücke bekommt einen eigenen Geräteschlüssel.
+  Danach lädt sie ihre gespeicherten Messungen **selbst** hoch, sobald sie im WLAN Internet hat, auch ohne Handy.
+  Sie arbeitet die Messungen der Reihe nach ab, verschlüsselt per HTTPS mit Prüfung des Server-Zertifikats.
+  Hochgeladene Messungen werden markiert, die Übernahme in die PC-Datenbank bleibt davon unabhängig.
+- Lädt dieselbe Messung von App und Brücke hoch, wird sie nur einmal gespeichert.
+- Befehle: `CLOUD` (Status), `CLOUD SYNC`, `CLOUD OFF`, `CLOUD SET <url> <key> <token>` (setzt die App).
 
 ## Protokoll
 

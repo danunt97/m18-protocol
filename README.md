@@ -41,6 +41,7 @@ Das Projekt baut auf der Protokoll-Forschung von [mnh-jansson/m18-protocol](http
 - **Aufsteckgehäuse zum 3D-Drucken**, Versorgung aus dem Akku, **Energiesparmodus** (Tiefschlaf nach Ruhezeit).
 - **Ergebnis auf der LED:** Nach jedem Auslesen leuchtet sie 30 s grün, gelb oder rot, auch wenn der PC ausliest.
 - **Firmware im Browser installieren** (ESP Web Tools), ganz ohne Arduino IDE.
+- **Cloud (Supabase):** Konto, „Meine Akkus“ mit Verlauf. Jede Messung landet komplett in der Cloud, aus der App oder direkt von der Brücke, wenn sie im WLAN Internet hat.
 - **Bluetooth fürs Handy:** Die [Akku-App](https://danunt97.github.io/m18-protocol/app/) läuft im Browser (Android: Chrome, iPhone: kostenlose App „Bluefy“).
   Ohne WLAN-Wechsel: Akku auslesen, alle Werte, Verlauf und Protokoll der Brücke. Keine App-Store-App und kein Entwicklerkonto nötig.
 
@@ -168,7 +169,8 @@ gui/                    Akku-Verwaltung: Webserver, Datenbank, Alterung, QR, Ber
   bridge_import.py      Messungen der Brücke übernehmen
   qrgen.py              QR-Code-Encoder (reines Python)
   static/               Oberfläche (HTML/CSS/JS, ohne Framework)
-webble/                 Handy-App (Web-Bluetooth), wird aus Vorlage + Anzeige-Code der Brücke erzeugt
+webble/                 Bluetooth-Adapter: macht die Weboberfläche der Brücke zur Handy-App (GitHub Pages)
+supabase/               Cloud-Datenbank (Schema, Zugriffsregeln, Upload-Funktionen)
 esp32-bridge/
   m18_bridge/           Arduino-Sketch + reine C++-Header (Protokoll, Auslesen, Speicher)
   test/                 Simulator und Ende-zu-Ende-Tests

@@ -1,0 +1,180 @@
+/* Bluetooth adapter for the M18 app on GitHub Pages.
+ * The app IS the bridge's own web page (esp32-bridge/m18_bridge/web_ui.h). On the bridge it talks HTTP;
+ * here this script answers the page's fetch("/api/...") and fetch("/cmd") calls over Bluetooth LE
+ * (Nordic UART service, command "API <GET|POST> <path> <k=v&...>", one reply line "OK {json}" / "ERR <code> {json}").
+ * esp32-bridge/tools/gen_app.py puts it in front of the page's own script -> webble/app.html. */
+(function () {
+  "use strict";
+  const NUS = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+  const NUS_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+  const NUS_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+  const enc = new TextEncoder();
+  let dec = new TextDecoder(), dev = null, rxc = null, inbuf = "", pend = null, queue = Promise.resolve();
+  const ble = window.M18_BLE = { connected: false };
+
+  // ---------------------------------------------------------------- transport
+  function onChunk(dv) {
+    inbuf += dec.decode(dv, { stream: true });
+    let i;
+    while ((i = inbuf.indexOf("\n")) >= 0) {
+      const line = inbuf.slice(0, i).replace(/\r$/, "");
+      inbuf = inbuf.slice(i + 1);
+      if (line.startsWith("PROG ")) continue;
+      if (pend) { const p = pend; pend = null; clearTimeout(p.timer); p.res(line); }
+    }
+  }
+  async function writeLine(s) {
+    const b = enc.encode(s);
+    for (let o = 0; o < b.length; o += 100) {
+      const part = b.slice(o, o + 100);
+      if (rxc.writeValueWithResponse) await rxc.writeValueWithResponse(part); else await rxc.writeValue(part);
+    }
+  }
+  // One command at a time, exactly one reply line each.
+  function cmd(line, timeout) {
+    const run = () => new Promise((res, rej) => {
+      if (!rxc) { rej(new TypeError("Nicht verbunden")); return; }
+      pend = { res, rej, timer: setTimeout(() => { pend = null; rej(new TypeError("Keine Antwort über Bluetooth")); }, timeout || 20000) };
+      writeLine(line + "\n").catch(e => { if (pend) { clearTimeout(pend.timer); pend = null; } rej(e); });
+    });
+    const p = queue.then(run, run);
+    queue = p.catch(() => {});
+    return p;
+  }
+  ble.cmd = cmd;
+
+  // ------------------------------------------------------- fetch over Bluetooth
+  const realFetch = window.fetch.bind(window);
+  const json = (obj, status) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
+  window.fetch = async function (input, init) {
+    init = init || {};
+    const url = typeof input === "string" ? input : input.url;
+    if (!(url.startsWith("/api/") || url === "/cmd")) return realFetch(input, init);
+    if (!ble.connected) throw new TypeError("Nicht verbunden");
+    const method = (init.method || "GET").toUpperCase();
+    let body = init.body || "";
+    if (body instanceof URLSearchParams) body = body.toString();
+    if (typeof body !== "string") return json({ ok: false, error: "Über Bluetooth nicht möglich" }, 501);
+    if (url === "/cmd") {
+      const out = [];
+      for (const l of body.split("\n").map(s => s.trim()).filter(Boolean))
+        out.push(await cmd(l, /^SCAN/i.test(l) ? 180000 : 20000));
+      return new Response(out.join("\n") + "\n", { status: 200, headers: { "Content-Type": "text/plain" } });
+    }
+    if (url.startsWith("/api/update") || url.startsWith("/api/log.txt"))
+      return json({ ok: false, error: "Nur im WLAN der Brücke möglich" }, 501);
+    const r = await cmd("API " + method + " " + url + (body ? " " + body : ""), 30000);
+    if (/^ERR AUTH/.test(r)) { askPassword(); return json({ ok: false, error: "Passwort nötig" }, 401); }
+    const m = r.match(/^(OK|ERR)(?: (\d{3}))? ?([\s\S]*)$/);
+    let status = 400, text = r;
+    if (m) { status = m[1] === "OK" ? 200 : (+m[2] || 400); text = m[3]; }
+    if (!/^[{[]/.test(text)) text = JSON.stringify({ ok: false, error: r.replace(/^ERR\s*/, "") });
+    return new Response(text, { status, headers: { "Content-Type": "application/json" } });
+  };
+
+  // --------------------------------------------------------------- connection
+  async function connect() {
+    if (!navigator.bluetooth) { showNoBt(); return; }
+    let d;
+    try { d = await navigator.bluetooth.requestDevice({ filters: [{ services: [NUS] }] }); }
+    catch (e) { if (e.name !== "NotFoundError") setMsg("Bluetooth: " + e.message, true); return; }
+    dev = d;
+    dev.addEventListener("gattserverdisconnected", onDisconnected);
+    setBar("verbinde mit " + (dev.name || "Brücke") + " …");
+    try {
+      const g = await dev.gatt.connect(), svc = await g.getPrimaryService(NUS);
+      rxc = await svc.getCharacteristic(NUS_RX);
+      const txc = await svc.getCharacteristic(NUS_TX);
+      dec = new TextDecoder(); inbuf = "";
+      txc.addEventListener("characteristicvaluechanged", e => onChunk(e.target.value));
+      await txc.startNotifications();
+      const r = await cmd("API GET /api/info");
+      if (/^ERR AUTH/.test(r)) { await askPassword(); return; }
+      if (/^ERR UNKNOWN API/.test(r)) { setMsg("Die Firmware der Brücke ist zu alt für diese App – bitte über den Web-Flasher auf den neuesten Stand bringen.", true); disconnect(); return; }
+      ready();
+    } catch (e) { setMsg("Verbindung fehlgeschlagen: " + e.message, true); disconnect(); }
+  }
+  function ready() {
+    ble.connected = true;
+    setBar(null);
+    document.getElementById("blecard").hidden = true;
+    if (window.M18_START) window.M18_START();
+  }
+  function disconnect() { if (dev && dev.gatt.connected) dev.gatt.disconnect(); else onDisconnected(); }
+  function onDisconnected() {
+    rxc = null;
+    ble.connected = false;
+    if (pend) { clearTimeout(pend.timer); pend.rej(new TypeError("Verbindung getrennt")); pend = null; }
+    setBar(null);
+    const c = document.getElementById("blecard");
+    if (c) { c.hidden = false; setMsg(dev ? "Verbindung zu " + (dev.name || "der Brücke") + " getrennt." : "", false); }
+  }
+  function askPassword() {
+    return new Promise(res => {
+      const box = document.getElementById("bleauth");
+      box.hidden = false;
+      document.getElementById("blepw").focus();
+      document.getElementById("blepwgo").onclick = async () => {
+        const r = await cmd("AUTH " + document.getElementById("blepw").value).catch(e => "ERR " + e.message);
+        if (!/^OK/.test(r)) { document.getElementById("blepwerr").textContent = r.replace(/^ERR\s*/, ""); return; }
+        box.hidden = true;
+        ready();
+        res();
+      };
+    });
+  }
+
+  // ----------------------------------------------------------------------- UI
+  const CSS = `#blebar{display:flex;align-items:center;gap:8px;margin-left:auto}
+#blebtn{padding:7px 12px}#blestate{color:var(--muted);font-size:12px}
+@media(max-width:560px){#pill{display:none}}
+.ble-only-wlan{opacity:.55}`;
+  function setBar(text) {
+    const b = document.getElementById("blebtn"), s = document.getElementById("blestate");
+    if (!b) return;
+    s.textContent = text || (ble.connected ? (dev && dev.name) || "verbunden" : "");
+    b.textContent = ble.connected ? "Trennen" : "Verbinden";
+    b.className = "btn" + (ble.connected ? "" : " primary");
+  }
+  function setMsg(t, err) {
+    const m = document.getElementById("blemsg");
+    if (m) m.innerHTML = t ? `<div class="box ${err ? "err" : "info"}">${t.replace(/</g, "&lt;")}</div>` : "";
+  }
+  function showNoBt() {
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    setMsg(ios ? "Safari kann kein Bluetooth. Bitte die kostenlose App „Bluefy – Web BLE Browser“ aus dem App Store installieren und diese Seite darin öffnen."
+               : "Dieser Browser kann kein Web-Bluetooth. Bitte die Seite in Chrome (Android) bzw. Chrome/Edge am PC öffnen.", true);
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    const st = document.createElement("style"); st.textContent = CSS; document.head.appendChild(st);
+    const header = document.querySelector("header");
+    header.insertAdjacentHTML("beforeend", '<span id="blebar"><span id="blestate"></span><button class="btn primary" id="blebtn">Verbinden</button></span>');
+    document.getElementById("blebtn").onclick = () => ble.connected ? disconnect() : connect();
+    const host = document.getElementById("hostline"); if (host) host.textContent = "Bluetooth-App";
+    const pill = document.getElementById("pill"); if (pill) pill.hidden = true;
+    document.querySelector("main").insertAdjacentHTML("afterbegin", `
+<div class="card" id="blecard"><h2>Mit der Brücke verbinden</h2>
+  <ol style="margin:4px 0 0 18px;line-height:1.7"><li>Brücke auf den Akku stecken (oder per USB versorgen).</li>
+    <li><b>Verbinden</b> tippen und <b>M18-Bridge-…</b> wählen.</li><li><b>Akku auslesen</b> – alles Weitere wie auf der Brücke selbst.</li></ol>
+  <button class="btn primary big" id="blebig" style="margin-top:12px">Verbinden</button><div id="blemsg"></div>
+  <p class="hint">iPhone: diese Seite in der kostenlosen App <b>Bluefy</b> öffnen (Safari kann kein Bluetooth). Android: <b>Chrome</b>.
+    Das WLAN der Brücke wird nicht gebraucht – das Handy behält sein Internet. Konto und „Meine Akkus“ (Tab Cloud) gehen auch ohne Brücke.</p></div>
+<div class="card" id="bleauth" hidden><h2>Passwort der Brücke</h2><label>Passwort</label><input id="blepw" type="password" autocomplete="current-password">
+  <button class="btn primary" id="blepwgo" style="margin-top:10px">Anmelden</button><div id="blepwerr" class="hint" style="color:var(--crit)"></div></div>`);
+    document.getElementById("blebig").onclick = connect;
+    // Only possible in the bridge's Wi-Fi: firmware upload and the log file download.
+    const fw = document.getElementById("fwbtn");
+    if (fw) { const card = fw.closest(".card"); card.classList.add("ble-only-wlan");
+      card.insertAdjacentHTML("afterbegin", '<p class="hint" style="margin-top:0">Firmware-Update geht nur im WLAN der Brücke (oder über den Web-Flasher per USB).</p>');
+      fw.disabled = true; const f = document.getElementById("fwfile"); if (f) f.disabled = true; }
+    document.querySelectorAll('a[href="/api/log.txt"]').forEach(a => {
+      a.removeAttribute("download");
+      a.onclick = async e => { e.preventDefault(); if (!ble.connected) return;
+        const r = await cmd("LOG 250"); const d = JSON.parse(r.slice(3));
+        const blob = new Blob([d.lines.join("\n") + "\n"], { type: "text/plain" }), u = document.createElement("a");
+        u.href = URL.createObjectURL(blob); u.download = "m18-bruecke-protokoll.txt"; document.body.appendChild(u); u.click();
+        setTimeout(() => { URL.revokeObjectURL(u.href); u.remove(); }, 500); };
+    });
+    if (!navigator.bluetooth) showNoBt();
+  });
+})();
