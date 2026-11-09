@@ -9,6 +9,8 @@
 - Neue Seite **/modul/** „Modul kaufen“: Preis (50 €), Lieferumfang, was das Modul kann, drei Schritte, Fragen zum Kauf und Kauf-Knöpfe zu eBay.
   Auf der Startseite steht der Kauf jetzt oben (Knopf in der Hauptüberschrift, Hinweis direkt darunter).
   eBay-Link und Preis stehen an einer Stelle: `webland/shop.js`.
+- **Hosting bei Cloudflare Pages** (Projekt `akkuscan`) statt GitHub Pages – GitHub Pages erlaubt keine Seiten, die vor allem dem Verkauf dienen.
+  Der Workflow veröffentlicht mit `wrangler pages deploy` (Secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`); die Domain zeigt per CNAME auf `akkuscan.pages.dev`.
 
 ## 1.12 – Eine App, Cloud als Rückgrat
 - **Eine App für WLAN und Bluetooth:** Die Akku-App auf GitHub Pages ist jetzt die Weboberfläche der Brücke selbst, mit einem Bluetooth-Adapter (`webble/ble-shim.js`).

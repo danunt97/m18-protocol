@@ -149,7 +149,7 @@ IDLE</textarea><button class="btn" id="cmdbtn" style="margin-top:8px">Senden</bu
 </section>
 </main>
 <script>
-/* Bluetooth adapter for the M18 app on GitHub Pages.
+/* Bluetooth adapter for the M18 app on akkuscan.app/app/.
  * The app IS the bridge's own web page (esp32-bridge/m18_bridge/web_ui.h). On the bridge it talks HTTP;
  * here this script answers the page's fetch("/api/...") and fetch("/cmd") calls over Bluetooth LE
  * (Nordic UART service, command "API <GET|POST> <path> <k=v&...>", one reply line "OK {json}" / "ERR <code> {json}").
@@ -739,6 +739,6 @@ async function start(){await info();try{const d=await j("/api/last");if(d&&d.ese
   if(!window.M18_BLE&&INFO.wifi!="sta")tab("wlan");
   if(!started){started=true;setInterval(()=>{const t=$("nav button.on").dataset.tab;info();if(t=="wlan")wifiState();},3000);}}
 cloudInit();
-window.M18_START=start;                 /* the Bluetooth app (GitHub Pages) calls start() once connected */
+window.M18_START=start;                 /* the Bluetooth app (akkuscan.app/app/) calls start() once connected */
 if(!window.M18_BLE)start();
 </script></body></html>

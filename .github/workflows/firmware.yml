@@ -15,8 +15,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -53,7 +51,6 @@ jobs:
           cp webble/app.html site/app/index.html
           cp webble/manifest.webmanifest webble/icon.svg site/app/
           cp webflash/index.html site/flasher/
-          echo akkuscan.app > site/CNAME
           cp build/m18_bridge.ino.bin site/flasher/firmware/m18-bruecke-update.bin
           if [ -f build/m18_bridge.ino.merged.bin ]; then
             cp build/m18_bridge.ino.merged.bin site/flasher/firmware/m18-bruecke.bin
@@ -122,9 +119,6 @@ jobs:
         with:
           name: m18-bruecke-firmware
           path: site/flasher/firmware/
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
       - name: Auf Cloudflare Pages veröffentlichen (akkuscan.app)
         if: env.CF_READY == 'true'
         env:
@@ -140,14 +134,3 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ github.event.release.tag_name }}" site/flasher/firmware/*.bin --clobber
 
-  pages:
-    needs: build
-    runs-on: ubuntu-latest
-    # schlägt fehl, solange GitHub Pages nicht auf "GitHub Actions" gestellt ist (siehe oben)
-    continue-on-error: true
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4

@@ -169,7 +169,7 @@ gui/                    Akku-Verwaltung: Webserver, Datenbank, Alterung, QR, Ber
   bridge_import.py      Messungen der Brücke übernehmen
   qrgen.py              QR-Code-Encoder (reines Python)
   static/               Oberfläche (HTML/CSS/JS, ohne Framework)
-webble/                 Bluetooth-Adapter: macht die Weboberfläche der Brücke zur Handy-App (GitHub Pages)
+webble/                 Bluetooth-Adapter: macht die Weboberfläche der Brücke zur Handy-App (akkuscan.app/app/)
 supabase/               Cloud-Datenbank (Schema, Zugriffsregeln, Upload-Funktionen)
 esp32-bridge/
   m18_bridge/           Arduino-Sketch + reine C++-Header (Protokoll, Auslesen, Speicher)

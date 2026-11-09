@@ -554,6 +554,6 @@ async function start(){await info();try{const d=await j("/api/last");if(d&&d.ese
   if(!window.M18_BLE&&INFO.wifi!="sta")tab("wlan");
   if(!started){started=true;setInterval(()=>{const t=$("nav button.on").dataset.tab;info();if(t=="wlan")wifiState();},3000);}}
 cloudInit();
-window.M18_START=start;                 /* the Bluetooth app (GitHub Pages) calls start() once connected */
+window.M18_START=start;                 /* the Bluetooth app (akkuscan.app/app/) calls start() once connected */
 if(!window.M18_BLE)start();
 </script></body></html>)HTML";

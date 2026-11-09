@@ -1,4 +1,4 @@
-/* Bluetooth adapter for the M18 app on GitHub Pages.
+/* Bluetooth adapter for the M18 app on akkuscan.app/app/.
  * The app IS the bridge's own web page (esp32-bridge/m18_bridge/web_ui.h). On the bridge it talks HTTP;
  * here this script answers the page's fetch("/api/...") and fetch("/cmd") calls over Bluetooth LE
  * (Nordic UART service, command "API <GET|POST> <path> <k=v&...>", one reply line "OK {json}" / "ERR <code> {json}").
