@@ -11,6 +11,8 @@
   eBay-Link und Preis stehen an einer Stelle: `webland/shop.js`.
 - **Hosting bei Cloudflare Pages** (Projekt `akkuscan`) statt GitHub Pages – GitHub Pages erlaubt keine Seiten, die vor allem dem Verkauf dienen.
   Der Workflow veröffentlicht mit `wrangler pages deploy` (Secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`); die Domain zeigt per CNAME auf `akkuscan.pages.dev`.
+- App: Kann der Browser kein Bluetooth, erklärt eine deutliche Meldung Schritt für Schritt, was zu tun ist – am iPhone mit Knopf direkt zu „Bluefy“ im App Store
+  und „Adresse kopieren“, auf Android mit „In Chrome öffnen“, am PC/Mac mit dem Hinweis auf Chrome oder Edge. Ist Bluetooth ausgeschaltet, sagt die App das.
 
 ## 1.12 – Eine App, Cloud als Rückgrat
 - **Eine App für WLAN und Bluetooth:** Die Akku-App auf GitHub Pages ist jetzt die Weboberfläche der Brücke selbst, mit einem Bluetooth-Adapter (`webble/ble-shim.js`).
