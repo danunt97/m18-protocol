@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#16181b">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon.svg">
+<script src="/shop.js"></script>
 <meta property="og:title" content="Akkuscan – Zustand von M18-Akkus in Sekunden prüfen">
 <meta property="og:description" content="Aufstecken, mit dem Handy verbinden, auslesen: Zustand, Zyklen, Zellen und 185 Messwerte jedes Akkus – und der Verlauf für die ganze Flotte.">
 <meta property="og:image" content="https://akkuscan.app/img/phone-akku.webp">
@@ -67,12 +68,14 @@ h1 em{font-style:normal;color:var(--red2)}
 .browser .bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:#24282d;border-bottom:1px solid var(--line)}
 .browser .bar i{width:11px;height:11px;border-radius:50%;background:#3a4048}
 .browser .bar span{margin-left:10px;flex:1;background:#16181b;border-radius:7px;padding:4px 12px;font-size:12.5px;color:var(--muted)}
-/* buy / support */
-.buy{display:grid;grid-template-columns:1.2fr .8fr;gap:32px;align-items:center;background:linear-gradient(135deg,rgba(228,0,43,.16),rgba(228,0,43,.04));
-  border:1px solid rgba(228,0,43,.35);border-radius:20px;padding:36px}
-.buy .price{font-size:15px;color:var(--muted);margin-top:14px}
-.buy .ctas{justify-content:flex-end}
-@media(max-width:800px){.buy{grid-template-columns:1fr;padding:26px}.buy .ctas{justify-content:flex-start}}
+/* product teaser */
+.teaser{display:flex;align-items:center;gap:18px;margin:28px 0 0;padding:18px 22px;border-radius:18px;text-decoration:none;
+  background:linear-gradient(135deg,rgba(228,0,43,.18),rgba(228,0,43,.04));border:1px solid rgba(228,0,43,.38)}
+.teaser:hover{border-color:var(--red2)}
+.tico{flex:0 0 48px;height:48px;border-radius:13px;display:grid;place-items:center;background:var(--red);color:#fff}.tico svg{width:26px;height:26px}
+.ttxt{display:flex;flex-direction:column;flex:1;min-width:0}.ttxt b{font-size:18px}.ttxt span{color:var(--muted);font-size:14.5px}
+.tprice{display:flex;align-items:center;gap:16px}.tprice b{font-size:28px;font-weight:800;letter-spacing:-.5px}
+@media(max-width:640px){.teaser{flex-wrap:wrap}.tprice{width:100%;justify-content:space-between}}
 /* trust strip */
 .strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg2)}
 .strip .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:22px 20px}
@@ -131,7 +134,7 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
   <a class="brand" href="/?info" aria-label="Akkuscan Startseite">
     <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="110" fill="#e4002b"/><rect x="150" y="150" width="212" height="250" rx="22" fill="none" stroke="#fff" stroke-width="28"/><rect x="210" y="104" width="92" height="46" rx="10" fill="#fff"/><path d="M266 196 214 286h46l-14 74 54-92h-46z" fill="#fff"/></svg>
     akkuscan</a>
-  <nav class="links"><a href="#funktionen">Funktionen</a><a href="#so-gehts">So geht's</a><a href="#betriebe">Für Betriebe</a><a href="#faq">FAQ</a><a href="#kaufen">Modul kaufen</a></nav>
+  <nav class="links"><a href="#funktionen">Funktionen</a><a href="#so-gehts">So geht's</a><a href="#betriebe">Für Betriebe</a><a href="#faq">FAQ</a><a href="/modul/">Modul kaufen</a></nav>
   <div class="hbtns"><a class="btn" href="/app/#konto">Anmelden</a><a class="btn red" href="/app/">App öffnen</a></div>
 </div></header>
 
@@ -142,9 +145,9 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
     <h1>Wie fit ist dein Akku? <em>In Sekunden</em> weißt du es.</h1>
     <p class="lead">Akkuscan liest den Speicher im Akku aus: Ladezyklen, Zellspannungen, Überhitzungen, Tiefentladungen – und bewertet daraus den Zustand.
       Einfach aufstecken und mit dem Handy verbinden. Ohne Schrauben, ohne Ladegerät.</p>
-    <div class="ctas"><a class="btn red big" href="/app/">App öffnen</a><a class="btn big" href="/app/#registrieren">Kostenloses Konto anlegen</a></div>
+    <div class="ctas"><a class="btn red big" href="/modul/">Modul kaufen · <span data-price>50 €</span></a><a class="btn big" href="/app/">App öffnen</a></div>
     <p class="small">Läuft im Browser – Android: Chrome, iPhone: kostenlose App „Bluefy“. Kein App-Store nötig.
-      Dazu brauchst du das Akkuscan-Modul – <a href="#kaufen">hier erhältlich</a>.</p>
+      <a href="/app/#registrieren">Kostenloses Konto anlegen</a>.</p>
   </div>
   <div class="phones" aria-hidden="true">
     <div class="phone a"><img src="/img/phone-akku.webp" alt="" width="780" height="1688"></div>
@@ -158,6 +161,12 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
   <div><b>EU</b><span>Server in Frankfurt</span></div>
   <div><b>Offline</b><span>Messen ohne Internet</span></div>
 </div></div>
+
+<div class="wrap"><a class="teaser" href="/modul/">
+  <span class="tico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M8 7V5h8v2"/><circle cx="16" cy="11" r="1.2" fill="currentColor"/></svg></span>
+  <span class="ttxt"><b>Das Akkuscan-Modul</b><span>Fertig eingerichtet · App und Updates kostenlos · kein Abo</span></span>
+  <span class="tprice"><b data-price>50 €</b><span class="btn red">Ansehen &amp; kaufen</span></span>
+</a></div>
 
 <section id="funktionen"><div class="wrap">
   <h2>Alles, was der Akku über sich weiß.</h2>
@@ -269,40 +278,23 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
     <details><summary>Wo werden meine Daten gespeichert?</summary>
       <p>Auf Servern in Frankfurt (EU). Nur du – bzw. deine Firma – siehst deine Akkus. Du kannst dein Konto jederzeit mit allen Daten löschen.</p></details>
     <details><summary>Wo bekomme ich das Modul?</summary>
-      <p>Das Akkuscan-Modul gibt es <a href="#kaufen">bei eBay</a>. Es kommt fertig eingerichtet – auspacken, aufstecken, loslegen.</p></details>
-  </div>
-</div></section>
-
-<section id="kaufen"><div class="wrap">
-  <div class="buy">
-    <div><h2>Modul kaufen &amp; Akkuscan unterstützen</h2>
-      <p class="sub">Akkuscan ist ein kleines, unabhängiges Projekt. Mit dem Kauf eines Moduls bekommst du alles, was du zum Prüfen brauchst –
-        und unterstützt die Weiterentwicklung der App.</p>
-      <p class="price" id="ebaynote">Das eBay-Angebot ist in Kürze verfügbar.</p></div>
-    <div class="ctas"><a class="btn red big" data-ebay href="#kaufen">Modul bei eBay kaufen</a></div>
+      <p>Das Akkuscan-Modul gibt es für <span data-price>50 €</span> bei eBay – alles dazu auf der Seite <a href="/modul/">Modul kaufen</a>.
+        Es kommt fertig eingerichtet: auspacken, aufstecken, loslegen.</p></details>
   </div>
 </div></section>
 
 <section class="final"><div class="wrap">
   <h2>Prüf deinen ersten Akku.</h2>
   <p class="sub">Modul aufstecken, App öffnen, verbinden – fertig.</p>
-  <div class="ctas"><a class="btn red big" href="/app/">App öffnen</a><a class="btn big" data-ebay href="#kaufen">Modul kaufen</a></div>
+  <div class="ctas"><a class="btn red big" href="/modul/">Modul kaufen · <span data-price>50 €</span></a><a class="btn big" href="/app/">App öffnen</a></div>
 </div></section>
 </main>
 
 <footer><div class="wrap">
   <span>© 2026 Akkuscan</span>
-  <a href="/app/">App</a><a href="/flasher/">Firmware-Flasher</a><a href="/impressum/">Impressum</a><a href="/datenschutz/">Datenschutz</a>
+  <a href="/modul/">Modul kaufen</a><a href="/app/">App</a><a href="/flasher/">Firmware-Flasher</a><a href="/impressum/">Impressum</a><a href="/datenschutz/">Datenschutz</a>
   <p class="legal">Milwaukee®, M18™ und FORGE™ sind Marken der Milwaukee Electric Tool Corporation. Akkuscan ist ein unabhängiges Produkt und steht in keiner Verbindung zu Milwaukee.
     Arbeiten an Lithium-Ionen-Akkus erfolgen auf eigene Verantwortung.</p>
 </div></footer>
-<script>
-  /* Link zum eBay-Angebot – hier eintragen, dann zeigen alle „Modul kaufen“-Knöpfe dorthin. */
-  var EBAY_URL = "";
-  if (EBAY_URL) {
-    document.querySelectorAll("[data-ebay]").forEach(function (a) { a.href = EBAY_URL; a.target = "_blank"; a.rel = "noopener"; });
-    var n = document.getElementById("ebaynote"); if (n) n.remove();
-  }
-</script>
 </body>
 </html>
