@@ -565,7 +565,8 @@ String jsonEsc(String v) {
 bool unlocked() { return unlockUntil && (int32_t)(unlockUntil - millis()) > 0; }
 
 // Requests from the setup access point count as physical presence.
-bool clientOnSetupAp() { return apActive && server.client().localIP() == WiFi.softAPIP(); }
+bool inHttp = false;               // true while an HTTP handler runs (server.client() is valid)
+bool clientOnSetupAp() { return inHttp && apActive && server.client().localIP() == WiFi.softAPIP(); }
 bool settingsAllowed() { return clientOnSetupAp() || unlocked(); }
 
 String sanitizeHost(String h) {
@@ -934,6 +935,53 @@ void cloudSetup() {
                             (unsigned)(history.ready() ? history.cloudPending() : 0));
 }
 
+// ---------------------------------------------------- API for web page and app
+// The web page calls /api/... over HTTP. The same app on GitHub Pages talks to the bridge over
+// Bluetooth and sends "API <GET|POST> /api/... <k=v&k=v>" instead; both end up in apiHandle(),
+// so every function behaves the same on both ways (only firmware upload and the log file download
+// need Wi-Fi).
+struct ApiArgs {
+  virtual ~ApiArgs() {}
+  virtual bool has(const char* k) = 0;
+  virtual String get(const char* k) = 0;
+};
+struct HttpArgs : ApiArgs {
+  bool has(const char* k) override { return server.hasArg(k); }
+  String get(const char* k) override { return server.arg(k); }
+};
+struct MapArgs : ApiArgs {                  // from "k=v&k2=v2" (URL-encoded)
+  std::vector<std::pair<String, String>> kv;
+  explicit MapArgs(const String& q) {
+    int start = 0;
+    while (start < (int)q.length()) {
+      int amp = q.indexOf('&', start);
+      if (amp < 0) amp = q.length();
+      String part = q.substring(start, amp);
+      int eq = part.indexOf('=');
+      if (part.length()) kv.push_back({dec(eq < 0 ? part : part.substring(0, eq)), eq < 0 ? String("") : dec(part.substring(eq + 1))});
+      start = amp + 1;
+    }
+  }
+  bool has(const char* k) override { for (auto& p : kv) if (p.first == k) return true; return false; }
+  String get(const char* k) override { for (auto& p : kv) if (p.first == k) return p.second; return String(""); }
+  static String dec(const String& v) {
+    String o;
+    for (unsigned i = 0; i < v.length(); i++) {
+      char c = v[i];
+      if (c == '+') o += ' ';
+      else if (c == '%' && i + 2 < v.length()) { o += (char)strtol(v.substring(i + 1, i + 3).c_str(), nullptr, 16); i += 2; }
+      else o += c;
+    }
+    return o;
+  }
+};
+static const char* API_PATHS[] = {"/api/info", "/api/read", "/api/status", "/api/last", "/api/networks", "/api/wifi",
+  "/api/wifi/forget", "/api/led", "/api/power", "/api/led/test", "/api/log", "/api/log/clear", "/api/history",
+  "/api/history/item", "/api/history/stats", "/api/history/delete", "/api/history/clear", "/api/password", "/api/cloud"};
+int apiHandle(const char* method, const String& path, ApiArgs& a, bool allowed, String& out);
+uint32_t restartAt = 0;                      // deferred restart (the reply must get out first)
+const char* restartWhy = "";
+
 bool backgroundRequest = false;    // set while an HTTP handler serves an automatic background sync
 String cmdSource = "USB";          // who sent the command (for the event log)
 
@@ -948,7 +996,7 @@ String runCommand(const String& lineIn, bool physical) {
   String cmd = sp < 0 ? line : line.substring(0, sp);
   cmd.toUpperCase();
   bool err = r.startsWith("ERR");
-  static const char* quiet[] = {"PING", "INFO", "LOG", "HSTAT", "HLIST", "HGET", "HACK", "IDLE", "HIGH", "TIME", "SHOW", "READ"};
+  static const char* quiet[] = {"PING", "INFO", "LOG", "HSTAT", "HLIST", "HGET", "HACK", "IDLE", "HIGH", "TIME", "SHOW", "READ", "API"};
   bool isQuiet = false;
   for (const char* q : quiet) if (cmd == q) isQuiet = true;
   if (isQuiet && !err) return r;
@@ -979,6 +1027,22 @@ String runCommandInner(const String& lineIn, bool physical) {
   line.trim();
   String up = line;
   up.toUpperCase();
+  if (up.startsWith("API ")) {               // API <GET|POST> <path>[?query] [k=v&k=v]
+    String rest = line.substring(4);
+    rest.trim();
+    int sp1 = rest.indexOf(' ');
+    if (sp1 < 0) return "ERR ARGS (API <GET|POST> <path> [k=v&...])";
+    String method = rest.substring(0, sp1), path = rest.substring(sp1 + 1), body;
+    method.toUpperCase();
+    int sp2 = path.indexOf(' ');
+    if (sp2 >= 0) { body = path.substring(sp2 + 1); path = path.substring(0, sp2); }
+    int q = path.indexOf('?');
+    if (q >= 0) { body = path.substring(q + 1) + (body.length() ? "&" + body : String("")); path = path.substring(0, q); }
+    MapArgs a(body);
+    String out;
+    int code = apiHandle(method == "POST" ? "POST" : "GET", path, a, physical, out);
+    return (code == 200 ? String("OK ") : "ERR " + String(code) + " ") + out;
+  }
   if (up == "CLOUD" || up.startsWith("CLOUD ")) {   // CLOUD | CLOUD SET <url> <key> <token> | CLOUD OFF | CLOUD SYNC
     if (up == "CLOUD") return "OK " + cloudStatusJson();
     if (up == "CLOUD SYNC") { cloudKick(); return "OK"; }
@@ -1300,23 +1364,195 @@ std::function<void()> guarded(std::function<void()> fn) {
     backgroundRequest = server.hasHeader("X-M18-Background");
     cmdSource = String("Webseite ") + server.client().remoteIP().toString();
     if (!backgroundRequest) noteActivity();
+    inHttp = true;
     if (authOk()) fn();
+    inHttp = false;
     backgroundRequest = false;
   };
 }
 
 // Runs a history command and sends its JSON (strips "OK ").
-void sendCmdJson(const String& cmd) {
-  String r = runCommand(cmd, false);
-  if (r.startsWith("OK ")) sendJson(r.substring(3));
-  else sendJson(String("{\"ok\":false,\"error\":\"") + jsonEsc(r) + "\"}", 400);
-}
-
 bool requireSettings() {
   if (settingsAllowed()) return true;
   sendJson("{\"ok\":false,\"locked\":true,\"error\":\"Gesperrt: kurz die BOOT-Taste am Gerät drücken "
            "(entsperrt 2 Minuten) oder über das Einrichtungs-WLAN ändern.\"}", 403);
   return false;
+}
+
+// One place for every /api/... function (HTTP and the API command). Returns the HTTP status code.
+int cmdJson(const String& cmd, String& out) {
+  String r = runCommand(cmd, false);
+  if (r.startsWith("OK ")) { out = r.substring(3); return 200; }
+  out = String("{\"ok\":false,\"error\":\"") + jsonEsc(r) + "\"}";
+  return 400;
+}
+int apiLocked(String& out) {
+  out = "{\"ok\":false,\"locked\":true,\"error\":\"Gesperrt: kurz die BOOT-Taste am Gerät drücken (entsperrt 2 Minuten) "
+        "oder über das Einrichtungs-WLAN ändern.\"}";
+  return 403;
+}
+
+int apiHandle(const char* method, const String& path, ApiArgs& a, bool allowed, String& out) {
+  bool post = !strcmp(method, "POST");
+  if (path == "/api/info") {
+    updateInfo();
+    std::string r = proc.handle("INFO");
+    out = r.c_str() + 3;
+    return 200;
+  }
+  if (path == "/api/read") {
+    if (a.has("t")) setClockFrom((uint32_t)strtoul(a.get("t").c_str(), nullptr, 10), "browser");
+    if (!scanRunning) {
+      scanLoc = a.get("loc").substring(0, 60);
+      scanComment = a.get("comment").substring(0, 200);
+    }
+    if (!startScan()) { out = "{\"ok\":false,\"busy\":true}"; return 409; }
+    ev("WEB", 0, "Auslesen gestartet (%s)%s%s", cmdSource.c_str(), scanLoc.length() ? ", Standort: " : "", scanLoc.c_str());
+    out = "{\"ok\":true,\"started\":true}";
+    return 200;
+  }
+  if (path == "/api/status") {
+    out = String("{\"reading\":") + (scanRunning ? "true" : "false") + ",\"progress\":" +
+          String(scanRunning ? reader.progressPercent() : 100) + ",\"done_ms_ago\":" +
+          String(scanDoneAt ? millis() - scanDoneAt : 0) + "}";
+    return 200;
+  }
+  if (path == "/api/last") {
+    xSemaphoreTake(stateMutex, portMAX_DELAY);
+    out = lastScan;
+    xSemaphoreGive(stateMutex);
+    return 200;
+  }
+  if (path == "/api/networks") {
+    int n = WiFi.scanComplete();
+    if (n == WIFI_SCAN_FAILED) { WiFi.scanNetworks(true); out = "{\"scanning\":true}"; return 200; }
+    if (n == WIFI_SCAN_RUNNING) { out = "{\"scanning\":true}"; return 200; }
+    out = "{\"scanning\":false,\"networks\":[";
+    int shown = 0;
+    for (int i = 0; i < n && shown < 25; i++) {
+      String ssid = WiFi.SSID(i);
+      if (ssid.isEmpty()) continue;
+      if (shown++) out += ",";
+      out += "{\"ssid\":\"" + jsonEsc(ssid) + "\",\"rssi\":" + String(WiFi.RSSI(i)) +
+             ",\"secure\":" + (WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "false" : "true") + "}";
+    }
+    WiFi.scanDelete();
+    out += "]}";
+    return 200;
+  }
+  if (path == "/api/wifi" && !post) {
+    bool sta = WiFi.status() == WL_CONNECTED;
+    int closesIn = apCloseAt ? (int)((int32_t)(apCloseAt - millis()) / 1000) : 0;
+    out = String("{\"state\":\"") + stateName() + "\",\"ssid\":\"" +
+          jsonEsc(portalConnect || wstate == WState::FAILED ? pendSsid : (sta ? WiFi.SSID() : savedSsid)) +
+          "\",\"ip\":\"" + (sta ? WiFi.localIP().toString() : String("")) + "\",\"host\":\"" + hostName +
+          ".local\",\"rssi\":" + String(sta ? WiFi.RSSI() : 0) + ",\"ap\":\"" + apName +
+          "\",\"ap_closes_in\":" + String(closesIn > 0 ? closesIn : 0) + ",\"error\":\"" + jsonEsc(wifiError) +
+          "\",\"allowed\":" + (allowed ? "true" : "false") + "}";
+    return 200;
+  }
+  if (path == "/api/wifi") {
+    if (!allowed) return apiLocked(out);
+    String ssid = a.get("ssid"), pass = a.get("pass"), h = sanitizeHost(a.get("host"));
+    if (ssid.isEmpty() || ssid.length() > 32) { out = "{\"ok\":false,\"error\":\"SSID ungültig\"}"; return 400; }
+    if (pass.length() && (pass.length() < 8 || pass.length() > 63)) {
+      out = "{\"ok\":false,\"error\":\"Passwort muss 8–63 Zeichen haben (oder leer für offenes WLAN)\"}";
+      return 400;
+    }
+    pendSsid = ssid;
+    pendPass = pass;
+    if (h.length()) hostName = h;
+    portalConnect = true;
+    if (!apActive && WiFi.status() != WL_CONNECTED) startAP();
+    beginConnect(pendSsid, pendPass);
+    startMdns();                                  // re-announce with the (possibly) new name
+    out = "{\"ok\":true}";
+    return 200;
+  }
+  if (path == "/api/wifi/forget") {
+    if (!allowed) return apiLocked(out);
+    saveWifi("", "");
+    restartAt = millis() + 1500;
+    restartWhy = "WLAN-Daten gelöscht";
+    out = "{\"ok\":true}";
+    return 200;
+  }
+  if (path == "/api/led") {
+    if (a.has("pin")) {
+      int pin = a.get("pin").toInt();
+      if (!ledPinAllowed(pin)) { out = "{\"ok\":false,\"error\":\"Pin nicht erlaubt\"}"; return 400; }
+      setLedPin(pin);
+    }
+    if (a.has("brightness")) ledBright = (uint8_t)constrain(a.get("brightness").toInt(), 0, 255);
+    lastLedRgb = 0xFFFFFFFF;
+    saveLed();
+    out = "{\"ok\":true}";
+    return 200;
+  }
+  if (path == "/api/power") {
+    long m = a.get("sleep_min").toInt();
+    if (m < 0 || m > 1440) { out = "{\"ok\":false,\"error\":\"0–1440 Minuten\"}"; return 400; }
+    sleepMin = (uint32_t)m;
+    saveSleep();
+    out = "{\"ok\":true}";
+    return 200;
+  }
+  if (path == "/api/led/test") {
+    if (a.has("pin")) {
+      int pin = a.get("pin").toInt();
+      if (ledPinAllowed(pin)) setLedPin(pin);
+    }
+    ledTestUntil = millis() + 2000;
+    out = "{\"ok\":true}";
+    return 200;
+  }
+  if (path == "/api/log") return cmdJson("LOG " + (a.has("n") ? a.get("n") : String("150")), out);
+  if (path == "/api/log/clear") {
+    if (!allowed) return apiLocked(out);
+    evlog.clear();
+    ev("SYS", 0, "Protokoll gelöscht (%s)", cmdSource.c_str());
+    out = "{\"ok\":true}";
+    return 200;
+  }
+  if (path == "/api/history") {
+    String after = a.has("after") ? a.get("after") : String("0"), max = a.has("max") ? a.get("max") : String("50");
+    return cmdJson("HLIST " + String(after.toInt()) + " " + String(max.toInt()) + (a.get("filter") == "new" ? " new" : " all"), out);
+  }
+  if (path == "/api/history/item") return cmdJson("HGET " + String(a.get("id").toInt()), out);
+  if (path == "/api/history/stats") return cmdJson("HSTAT", out);
+  if (path == "/api/history/delete") {
+    String r = runCommand("HDEL " + String(a.get("id").toInt()), false);
+    out = String("{\"ok\":") + (r.startsWith("OK") ? "true" : "false") + "}";
+    return 200;
+  }
+  if (path == "/api/history/clear") {
+    String r = runCommand(a.get("all") == "1" ? "HCLEAR all" : "HCLEAR synced", false);
+    out = String("{\"ok\":true,\"deleted\":") + String(r.substring(3).toInt()) + "}";
+    return 200;
+  }
+  if (path == "/api/password") {
+    if (!allowed) return apiLocked(out);
+    String pw = a.get("pass");
+    if (pw.length() && (pw.length() < 4 || pw.length() > 63)) {
+      out = "{\"ok\":false,\"error\":\"Passwort: 4–63 Zeichen (leer = aus)\"}";
+      return 400;
+    }
+    savePassword(pw);
+    out = String("{\"ok\":true,\"auth\":") + (pw.length() ? "true" : "false") + "}";
+    return 200;
+  }
+  if (path == "/api/cloud") {                  // GET status | POST action=link|off|sync
+    if (!post) { out = cloudStatusJson(); return 200; }
+    String act = a.get("action");
+    if (act == "sync") { cloudKick(); out = "{\"ok\":true}"; return 200; }
+    String r = act == "off" ? runCommand("CLOUD OFF", allowed)
+             : runCommand("CLOUD SET " + a.get("url") + " " + a.get("key") + " " + a.get("token"), allowed);
+    if (r.startsWith("ERR LOCKED")) return apiLocked(out);
+    out = r.startsWith("OK") ? String("{\"ok\":true}") : String("{\"ok\":false,\"error\":\"") + jsonEsc(r) + "\"}";
+    return r.startsWith("OK") ? 200 : 400;
+  }
+  out = "{\"ok\":false,\"error\":\"unbekannt\"}";
+  return 404;
 }
 
 void setupHttp() {
@@ -1343,117 +1579,6 @@ void setupHttp() {
     }
     server.send(200, "text/plain; charset=utf-8", out);
   }));
-  server.on("/api/info", HTTP_GET, guarded([]() {
-    updateInfo();
-    std::string r = proc.handle("INFO");
-    sendJson(String(r.c_str() + 3));
-  }));
-  server.on("/api/read", HTTP_POST, guarded([]() {
-    if (server.hasArg("t")) setClockFrom((uint32_t)strtoul(server.arg("t").c_str(), nullptr, 10), "browser");
-    if (!scanRunning) {
-      scanLoc = server.arg("loc").substring(0, 60);
-      scanComment = server.arg("comment").substring(0, 200);
-    }
-    if (startScan()) {
-      ev("WEB", 0, "Auslesen über die Webseite gestartet (%s)%s%s", server.client().remoteIP().toString().c_str(),
-         scanLoc.length() ? ", Standort: " : "", scanLoc.c_str());
-      sendJson("{\"ok\":true,\"started\":true}");
-    } else {
-      sendJson("{\"ok\":false,\"busy\":true}", 409);
-    }
-  }));
-  server.on("/api/status", HTTP_GET, guarded([]() {
-    sendJson(String("{\"reading\":") + (scanRunning ? "true" : "false") + ",\"progress\":" +
-             String(scanRunning ? reader.progressPercent() : 100) + ",\"done_ms_ago\":" +
-             String(scanDoneAt ? millis() - scanDoneAt : 0) + "}");
-  }));
-  server.on("/api/last", HTTP_GET, guarded([]() {
-    xSemaphoreTake(stateMutex, portMAX_DELAY);
-    String copy = lastScan;
-    xSemaphoreGive(stateMutex);
-    sendJson(copy);
-  }));
-  server.on("/api/networks", HTTP_GET, guarded([]() {
-    // Asynchronous scan: first call starts it, the page polls until the list is ready.
-    int n = WiFi.scanComplete();
-    if (n == WIFI_SCAN_FAILED) { WiFi.scanNetworks(true); sendJson("{\"scanning\":true}"); return; }
-    if (n == WIFI_SCAN_RUNNING) { sendJson("{\"scanning\":true}"); return; }
-    String out = "{\"scanning\":false,\"networks\":[";
-    int shown = 0;
-    for (int i = 0; i < n && shown < 25; i++) {
-      String ssid = WiFi.SSID(i);
-      if (ssid.isEmpty()) continue;
-      if (shown++) out += ",";
-      out += "{\"ssid\":\"" + jsonEsc(ssid) + "\",\"rssi\":" + String(WiFi.RSSI(i)) +
-             ",\"secure\":" + (WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "false" : "true") + "}";
-    }
-    WiFi.scanDelete();
-    sendJson(out + "]}");
-  }));
-  server.on("/api/wifi", HTTP_GET, guarded([]() {
-    bool sta = WiFi.status() == WL_CONNECTED;
-    int closesIn = apCloseAt ? (int)((int32_t)(apCloseAt - millis()) / 1000) : 0;
-    sendJson(String("{\"state\":\"") + stateName() + "\",\"ssid\":\"" +
-             jsonEsc(portalConnect || wstate == WState::FAILED ? pendSsid : (sta ? WiFi.SSID() : savedSsid)) +
-             "\",\"ip\":\"" + (sta ? WiFi.localIP().toString() : String("")) + "\",\"host\":\"" + hostName +
-             ".local\",\"rssi\":" + String(sta ? WiFi.RSSI() : 0) + ",\"ap\":\"" + apName +
-             "\",\"ap_closes_in\":" + String(closesIn > 0 ? closesIn : 0) + ",\"error\":\"" + jsonEsc(wifiError) +
-             "\",\"allowed\":" + (settingsAllowed() ? "true" : "false") + "}");
-  }));
-  server.on("/api/wifi", HTTP_POST, guarded([]() {
-    if (!requireSettings()) return;
-    String ssid = server.arg("ssid"), pass = server.arg("pass"), h = sanitizeHost(server.arg("host"));
-    if (ssid.isEmpty() || ssid.length() > 32) { sendJson("{\"ok\":false,\"error\":\"SSID ungültig\"}", 400); return; }
-    if (pass.length() && (pass.length() < 8 || pass.length() > 63)) {
-      sendJson("{\"ok\":false,\"error\":\"Passwort muss 8–63 Zeichen haben (oder leer für offenes WLAN)\"}", 400);
-      return;
-    }
-    pendSsid = ssid;
-    pendPass = pass;
-    if (h.length()) hostName = h;
-    portalConnect = true;
-    if (!apActive && WiFi.status() != WL_CONNECTED) startAP();
-    beginConnect(pendSsid, pendPass);
-    startMdns();                                  // re-announce with the (possibly) new name
-    sendJson("{\"ok\":true}");
-  }));
-  server.on("/api/wifi/forget", HTTP_POST, guarded([]() {
-    if (!requireSettings()) return;
-    saveWifi("", "");
-    sendJson("{\"ok\":true}");
-    delay(500);
-    restartNow("WLAN-Daten über die Webseite gelöscht");
-  }));
-  server.on("/api/led", HTTP_POST, guarded([]() {
-    if (server.hasArg("pin")) {
-      int pin = server.arg("pin").toInt();
-      if (!ledPinAllowed(pin)) {
-        sendJson("{\"ok\":false,\"error\":\"Pin nicht erlaubt\"}", 400);
-        return;
-      }
-      setLedPin(pin);
-    }
-    if (server.hasArg("brightness")) ledBright = (uint8_t)constrain(server.arg("brightness").toInt(), 0, 255);
-    lastLedRgb = 0xFFFFFFFF;
-    saveLed();
-    sendJson("{\"ok\":true}");
-  }));
-  server.on("/api/power", HTTP_POST, guarded([]() {
-    long m = server.arg("sleep_min").toInt();
-    if (m < 0 || m > 1440) { sendJson("{\"ok\":false,\"error\":\"0–1440 Minuten\"}", 400); return; }
-    sleepMin = (uint32_t)m;
-    saveSleep();
-    sendJson("{\"ok\":true}");
-  }));
-  server.on("/api/led/test", HTTP_POST, guarded([]() {
-    if (server.hasArg("pin")) {
-      int pin = server.arg("pin").toInt();
-      if (ledPinAllowed(pin)) setLedPin(pin);
-    }
-    ledTestUntil = millis() + 2000;
-    sendJson("{\"ok\":true}");
-  }));
-  // Firmware update (.bin from Arduino IDE "Sketch > Export Compiled Binary").
   server.on("/api/update", HTTP_POST, []() {
     if (!authOk()) return;
     if (!settingsAllowed()) { requireSettings(); return; }
@@ -1485,10 +1610,6 @@ void setupHttp() {
     }
   });
   // Event log: last lines as JSON, the whole log (flash) as a text file, clear
-  server.on("/api/log", HTTP_GET, guarded([]() {
-    String n = server.hasArg("n") ? server.arg("n") : String("150");
-    sendCmdJson("LOG " + n);
-  }));
   server.on("/api/log.txt", HTTP_GET, guarded([]() {
     evlog.flush();
     std::string all = evlog.all();
@@ -1502,39 +1623,16 @@ void setupHttp() {
       feedWdt();
     }
   }));
-  server.on("/api/log/clear", HTTP_POST, guarded([]() {
-    if (!requireSettings()) return;
-    evlog.clear();
-    ev("SYS", 0, "Protokoll gelöscht (%s)", cmdSource.c_str());
-    sendJson("{\"ok\":true}");
-  }));
-  // Measurement history (offline read-outs, imported by the PC software)
-  server.on("/api/history", HTTP_GET, guarded([]() {
-    String after = server.hasArg("after") ? server.arg("after") : String("0");
-    String max = server.hasArg("max") ? server.arg("max") : String("50");
-    sendCmdJson("HLIST " + String(after.toInt()) + " " + String(max.toInt()) + (server.arg("filter") == "new" ? " new" : " all"));
-  }));
-  server.on("/api/history/item", HTTP_GET, guarded([]() { sendCmdJson("HGET " + String(server.arg("id").toInt())); }));
-  server.on("/api/history/stats", HTTP_GET, guarded([]() { sendCmdJson("HSTAT"); }));
-  server.on("/api/history/delete", HTTP_POST, guarded([]() {
-    String r = runCommand("HDEL " + String(server.arg("id").toInt()), false);
-    sendJson(String("{\"ok\":") + (r.startsWith("OK") ? "true" : "false") + "}");
-  }));
-  server.on("/api/history/clear", HTTP_POST, guarded([]() {
-    String r = runCommand(server.arg("all") == "1" ? "HCLEAR all" : "HCLEAR synced", false);
-    sendJson(String("{\"ok\":true,\"deleted\":") + String(r.substring(3).toInt()) + "}");
-  }));
-  // Optional password for the web interface and the PC software.
-  server.on("/api/password", HTTP_POST, guarded([]() {
-    if (!requireSettings()) return;
-    String pw = server.arg("pass");
-    if (pw.length() && (pw.length() < 4 || pw.length() > 63)) {
-      sendJson("{\"ok\":false,\"error\":\"Passwort: 4–63 Zeichen (leer = aus)\"}", 400);
-      return;
-    }
-    savePassword(pw);
-    sendJson(String("{\"ok\":true,\"auth\":") + (pw.length() ? "true" : "false") + "}");
-  }));
+  // Every other /api/... endpoint: one implementation (apiHandle) for HTTP and for the API command
+  // (Bluetooth app, USB) - see "API for web page and app" above.
+  for (const char* path : API_PATHS) {
+    server.on(path, HTTP_ANY, guarded([path]() {
+      HttpArgs a;
+      String out;
+      int code = apiHandle(server.method() == HTTP_POST ? "POST" : "GET", path, a, settingsAllowed(), out);
+      sendJson(out, code);
+    }));
+  }
   server.onNotFound([]() {
     if (captiveRedirect()) return;
     server.send(404, "text/plain", "not found");
@@ -1673,6 +1771,7 @@ void setup() {
 }
 
 void loop() {
+  if (restartAt && (int32_t)(millis() - restartAt) > 0) restartNow(restartWhy);
   static uint32_t lastStatusLog = 0;            // a status line every 30 min helps to place problems in time
   if (millis() - lastStatusLog > 1800000UL) {
     lastStatusLog = millis();
