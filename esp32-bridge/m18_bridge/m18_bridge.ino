@@ -41,11 +41,14 @@
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLE2902.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 #include <stdarg.h>
 #include <time.h>
 #include "m18_commands.h"
 #include "m18_log.h"
 #include "m18_blewire.h"
+#include "supabase_ca.h"
 #include "web_ui.h"
 
 #define FW_BUILD __DATE__ " " __TIME__
@@ -357,6 +360,11 @@ uint32_t unlockUntil = 0;
 
 String lastScan = "{}";
 volatile bool bleConnected = false;        // a phone is connected over Bluetooth (see "Bluetooth" below)
+// Cloud (Supabase): set by the app when the bridge is linked to an account (CLOUD SET), see "Cloud" below.
+String cloudUrl, cloudKey, cloudTok;
+TaskHandle_t cloudTaskHandle = nullptr;
+void cloudKick();
+bool cloudConfigured();
 bool bleOn = false;
 String webPass;                               // optional web/HTTP password (user "m18"), empty = off
 uint32_t authFails = 0;
@@ -607,6 +615,9 @@ void loadPrefs() {
   ledBright = (uint8_t)prefs.getInt("ledbright", 40);
   sleepMin = (uint32_t)prefs.getInt("sleepmin", 30);
   webPass = prefs.getString("webpass", "");
+  cloudUrl = prefs.getString("cloud_url", "");
+  cloudKey = prefs.getString("cloud_key", "");
+  cloudTok = prefs.getString("cloud_tok", "");
   prefs.end();
   uint8_t mac[6];
   WiFi.macAddress(mac);
@@ -708,6 +719,7 @@ void beginConnect(const String& ssid, const String& pass) {
 
 void onConnected() {
   wstate = WState::STA;
+  cloudKick();
   lostSince = 0;
   WiFi.setAutoReconnect(true);
   configTime(0, 0, "pool.ntp.org", "time.google.com");
@@ -790,7 +802,8 @@ void updateInfo() {
               ",\"storage\":\"" + storage.kind + "\",\"time_src\":\"" + (unixNow() ? timeSource : String("none")) + "\",\"boot\":" + String((unsigned long)bootId) +
               ",\"sleep_min\":" + String((unsigned long)sleepMin) + ",\"sleep_in_s\":" + String((long)sleepInSeconds()) +
               ",\"brownouts\":" + String((unsigned long)brownouts) + ",\"tx_low\":" + (lowTxPower ? "true" : "false") +
-              ",\"ble\":\"" + (bleOn ? apName : String("")) + "\",\"ble_connected\":" + (bleConnected ? "true" : "false");
+              ",\"ble\":\"" + (bleOn ? apName : String("")) + "\",\"ble_connected\":" + (bleConnected ? "true" : "false") +
+              ",\"cloud\":" + (cloudConfigured() ? "true" : "false");
   uint32_t now = unixNow();
   if (now) {
     char b[32];
@@ -807,6 +820,118 @@ void updateInfo() {
 static bool isBatteryCommand(const String& up) {
   return up.startsWith("RESET") || up.startsWith("IDLE") || up.startsWith("HIGH") || up.startsWith("READ") ||
          up.startsWith("NOTE") || up.startsWith("SCAN");
+}
+
+// ------------------------------------------------------------------- Cloud
+// Supabase is the backbone: once the app has linked the bridge to an account (CLOUD SET with the
+// project URL, the public key and a device token of this bridge), the bridge uploads every stored
+// read-out by itself whenever it is in a Wi-Fi with internet - one HTTPS call per record to
+// /rest/v1/rpc/bridge_ingest. Uploaded records are marked (".c.json"); the PC import is independent.
+// The device token only allows uploading for this bridge and can be revoked in the app.
+struct CloudState {
+  volatile bool busy = false;
+  uint32_t lastOk = 0;          // unix time of the last successful upload
+  uint32_t uploaded = 0;        // since boot
+  String lastError;
+} cloud;
+
+bool cloudConfigured() { return cloudUrl.length() && cloudKey.length() && cloudTok.length(); }
+void cloudKick() { if (cloudTaskHandle) xTaskNotifyGive(cloudTaskHandle); }
+
+String cloudStatusJson() {
+  String host = cloudUrl;
+  host.replace("https://", "");
+  return String("{\"configured\":") + (cloudConfigured() ? "true" : "false") + ",\"host\":\"" + jsonEsc(host) +
+         "\",\"pending\":" + String((unsigned)(history.ready() ? history.cloudPending() : 0)) +
+         ",\"uploaded\":" + String((unsigned long)cloud.uploaded) + ",\"last_ok\":" + String((unsigned long)cloud.lastOk) +
+         ",\"online\":" + (WiFi.status() == WL_CONNECTED ? "true" : "false") + ",\"busy\":" + (cloud.busy ? "true" : "false") +
+         ",\"error\":\"" + jsonEsc(cloud.lastError) + "\"}";
+}
+
+void cloudSave(const String& url, const String& key, const String& tok) {
+  prefs.begin("m18", false);
+  prefs.putString("cloud_url", url);
+  prefs.putString("cloud_key", key);
+  prefs.putString("cloud_tok", tok);
+  prefs.end();
+  cloudUrl = url;
+  cloudKey = key;
+  cloudTok = tok;
+  cloud.lastError = "";
+}
+
+// One record: {"meta":{...},"scan":{...}} -> bridge_ingest. Returns 1 uploaded, 0 retry later, -1 skip (invalid).
+int cloudUploadOne(uint32_t id) {
+  std::string rec;
+  if (!history.get(id, rec)) return -1;
+  // Records taken before the clock was set: date them from this boot's uptime, like the PC import does.
+  std::string boot = m18::jsonRawValue(rec, "boot"), up = m18::jsonRawValue(rec, "up");
+  if (m18::jsonRawValue(rec, "ts") == "0" && unixNow() && boot == std::to_string(bootId) && up.size()) {
+    uint32_t est = unixNow() - (uint32_t)((millis() - strtoul(up.c_str(), nullptr, 10)) / 1000);
+    size_t p = rec.find("\"ts\":0,");
+    if (p != std::string::npos) rec.replace(p, 7, "\"ts\":" + std::to_string(est) + ",");
+    p = rec.find("\"ts_src\":\"none\"");
+    if (p != std::string::npos) rec.replace(p, 15, "\"ts_src\":\"uptime\"");
+  }
+  std::string body = "{\"p_token\":\"" + std::string(cloudTok.c_str()) + "\",\"p_firmware\":\"" M18BRIDGE_VERSION
+                     "\",\"p_payload\":" + rec + "}";
+  WiFiClientSecure tls;
+  tls.setCACert(SUPABASE_CA);
+  HTTPClient http;
+  if (!http.begin(tls, cloudUrl + "/rest/v1/rpc/bridge_ingest")) { cloud.lastError = "URL ungültig"; return 0; }
+  http.setTimeout(20000);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("apikey", cloudKey);
+  int code = http.POST((uint8_t*)body.data(), body.size());
+  String resp = code > 0 ? http.getString() : String("");
+  http.end();
+  if (code == 200 && resp.indexOf("\"ok\":true") >= 0) return 1;
+  if (code == 200 && resp.indexOf("keine gültige Messung") >= 0) return -1;
+  cloud.lastError = code > 0 ? String("HTTP ") + code + ": " + resp.substring(0, 120) : String("keine Verbindung (") + code + ")";
+  return 0;
+}
+
+void cloudTask(void*) {
+  uint32_t backoffS = 60;
+  for (;;) {
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(backoffS * 1000UL));
+    if (!cloudConfigured() || !history.ready() || WiFi.status() != WL_CONNECTED || otaRunning || scanRunning) continue;
+    if (!unixNow()) continue;                        // certificate check needs the time (NTP)
+    if (!history.cloudPending()) { backoffS = 300; continue; }
+    cloud.busy = true;
+    int done = 0, skipped = 0;
+    String before = cloud.lastError;
+    uint32_t id = 0;
+    bool failed = false;
+    while (done + skipped < 25 && (id = history.nextForCloud(id)) != 0) {
+      if (WiFi.status() != WL_CONNECTED || scanRunning || otaRunning) break;
+      int r = cloudUploadOne(id);
+      if (r == 0) { failed = true; break; }
+      history.cloudAck(id);
+      if (r > 0) done++; else skipped++;
+      delay(50);
+    }
+    cloud.busy = false;
+    if (done) {
+      cloud.lastOk = unixNow();
+      cloud.uploaded += done;
+      cloud.lastError = "";
+      ev("CLOUD", 0, "%d Messung(en) hochgeladen, noch %u offen", done, (unsigned)history.cloudPending());
+    }
+    if (skipped) ev("CLOUD", 1, "%d ungültige Messung(en) übersprungen", skipped);
+    if (failed) {
+      if (cloud.lastError != before) ev("CLOUD", 1, "Hochladen fehlgeschlagen: %s", cloud.lastError.c_str());
+      backoffS = backoffS < 600 ? backoffS * 2 : 900;   // retry later, slower and slower
+    } else {
+      backoffS = history.cloudPending() ? 5 : 300;
+    }
+  }
+}
+
+void cloudSetup() {
+  xTaskCreatePinnedToCore(cloudTask, "m18cloud", 12288, nullptr, 1, &cloudTaskHandle, 1);
+  if (cloudConfigured()) ev("CLOUD", 0, "Cloud verknüpft (%s), %u Messungen offen", cloudUrl.c_str(),
+                            (unsigned)(history.ready() ? history.cloudPending() : 0));
 }
 
 bool backgroundRequest = false;    // set while an HTTP handler serves an automatic background sync
@@ -830,6 +955,10 @@ String runCommand(const String& lineIn, bool physical) {
   String shown = line;
   if (cmd == "WIFI") { int bar = shown.indexOf('|'); if (bar >= 0) shown = shown.substring(0, bar) + "|***"; }
   if (cmd == "PASS") shown = "PASS ***";
+  if (cmd == "CLOUD" && shown.length() > 10 && shown.substring(6, 9).equalsIgnoreCase("SET")) {
+    int sp2 = shown.indexOf(' ', 10);                     // keep the URL, hide key and device token
+    shown = (sp2 > 0 ? shown.substring(0, sp2) : shown) + " ***";
+  }
   String res = r.length() > 90 ? r.substring(0, 90) + "…" : r;
   if (cmd == "SCAN") {                       // just the essentials, the battery trace is logged separately
     auto field = [&](const char* k) {
@@ -850,6 +979,29 @@ String runCommandInner(const String& lineIn, bool physical) {
   line.trim();
   String up = line;
   up.toUpperCase();
+  if (up == "CLOUD" || up.startsWith("CLOUD ")) {   // CLOUD | CLOUD SET <url> <key> <token> | CLOUD OFF | CLOUD SYNC
+    if (up == "CLOUD") return "OK " + cloudStatusJson();
+    if (up == "CLOUD SYNC") { cloudKick(); return "OK"; }
+    if (!physical) return "ERR LOCKED (kurz die BOOT-Taste drücken, dann 2 Minuten erlaubt)";
+    if (up == "CLOUD OFF") { cloudSave("", "", ""); ev("CLOUD", 0, "Cloud-Verknüpfung entfernt"); return "OK"; }
+    if (up.startsWith("CLOUD SET ")) {
+      String rest = line.substring(10);
+      rest.trim();
+      int a = rest.indexOf(' '), b = a < 0 ? -1 : rest.indexOf(' ', a + 1);
+      if (a < 0 || b < 0) return "ERR ARGS (CLOUD SET <url> <key> <token>)";
+      String url = rest.substring(0, a), key = rest.substring(a + 1, b), tok = rest.substring(b + 1);
+      tok.trim();
+      while (url.endsWith("/")) url.remove(url.length() - 1);
+      if (!url.startsWith("https://") || url.length() > 120 || key.length() < 20 || key.length() > 400 ||
+          tok.length() < 32 || tok.length() > 128)
+        return "ERR ARGS (CLOUD SET <https-url> <key> <token>)";
+      cloudSave(url, key, tok);
+      ev("CLOUD", 0, "Mit Cloud verknüpft: %s", url.c_str());
+      cloudKick();
+      return "OK linked";
+    }
+    return "ERR ARGS (CLOUD | CLOUD SET <url> <key> <token> | CLOUD OFF | CLOUD SYNC)";
+  }
   if (up.startsWith("WIFI ") || up.startsWith("HOST ")) {
     if (!physical) return "ERR LOCKED (nur über USB, Einrichtungs-WLAN oder nach BOOT-Tastendruck)";
     if (up.startsWith("HOST ")) {
@@ -903,6 +1055,7 @@ String runCommandInner(const String& lineIn, bool physical) {
     xSemaphoreGive(stateMutex);
     scanResultOk = reader.ok();
     scanDoneAt = millis();
+    cloudKick();
     scanRunning = false;
     showScanResult(String(proc.lastScanJson()), reader.ok());
   }
@@ -926,6 +1079,7 @@ void scanTask(void*) {
   xSemaphoreGive(stateMutex);
   scanResultOk = reader.ok();
   scanDoneAt = millis();
+  cloudKick();
   showScanResult(result, reader.ok());
   scanRunning = false;
   vTaskDelete(nullptr);
@@ -1511,6 +1665,7 @@ void setup() {
   disc.begin(DISCOVERY_PORT);
   setupHttp();
   bleSetup();
+  cloudSetup();
   setupWatchdog();
   enableLoopWDT();                              // loop() must come back within the watchdog timeout
   logf("\nM18BRIDGE READY %s host=%s.local ip=%s reset=%s\n", M18BRIDGE_VERSION, hostName.c_str(),

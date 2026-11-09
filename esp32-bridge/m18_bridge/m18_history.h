@@ -99,8 +99,8 @@ class History {
         ",\"note\":" + orNull(jsonRawValue(scanJson, "note")) + ",\"loc\":\"" + jsonEscape(m.loc) +
         "\",\"comment\":\"" + jsonEscape(m.comment) + "\"}";
     makeRoom();
-    if (!st_.write(path(id, false), meta + "\n" + scanJson + "\n")) return 0;
-    ids_.push_back(Entry{id, false});
+    if (!st_.write(path(id, false, false), meta + "\n" + scanJson + "\n")) return 0;
+    ids_.push_back(Entry{id, false, false});
     return id;
   }
 
@@ -115,9 +115,9 @@ class History {
       if (e.id <= after || (unsyncedOnly && e.synced)) continue;
       if (n >= max) { more = true; break; }
       std::string line;
-      if (!st_.read(path(e.id, e.synced), line, true) || line.size() < 2 || line[0] != '{') continue;
+      if (!st_.read(path(e), line, true) || line.size() < 2 || line[0] != '{') continue;
       if (n++) out += ",";
-      out += withSynced(line, e.synced);
+      out += withSynced(line, e);
       last = e.id;
     }
     out += "],\"next\":" + std::to_string(more ? last : 0) + "," + statsFields() + "}";
@@ -130,12 +130,12 @@ class History {
     const Entry* e = find(id);
     if (!e) return false;
     std::string all;
-    if (!st_.read(path(id, e->synced), all, false)) return false;
+    if (!st_.read(path(*e), all, false)) return false;
     size_t nl = all.find('\n');
     if (nl == std::string::npos) return false;
     std::string scan = all.substr(nl + 1);
     while (!scan.empty() && (scan.back() == '\n' || scan.back() == '\r')) scan.pop_back();
-    out = "{\"meta\":" + withSynced(all.substr(0, nl), e->synced) + ",\"scan\":" + scan + "}";
+    out = "{\"meta\":" + withSynced(all.substr(0, nl), *e) + ",\"scan\":" + scan + "}";
     return true;
   }
 
@@ -144,16 +144,34 @@ class History {
     Entry* e = find(id);
     if (!e) return false;
     if (e->synced) return true;
-    if (!st_.rename(path(id, false), path(id, true))) return false;
+    if (!st_.rename(path(*e), path(id, true, e->cloud))) return false;
     e->synced = true;
     return true;
   }
+
+  bool cloudAck(uint32_t id) {           // uploaded to the cloud (Supabase) by the bridge itself
+    Guard g(this);
+    Entry* e = find(id);
+    if (!e) return false;
+    if (e->cloud) return true;
+    if (!st_.rename(path(*e), path(id, e->synced, true))) return false;
+    e->cloud = true;
+    return true;
+  }
+
+  // Oldest record not yet in the cloud (0 = none) - the bridge uploads them one by one.
+  uint32_t nextForCloud(uint32_t after = 0) {
+    Guard g(this);
+    for (const Entry& e : ids_) if (!e.cloud && e.id > after) return e.id;
+    return 0;
+  }
+  size_t cloudPending() { Guard g(this); size_t n = 0; for (auto& e : ids_) n += e.cloud ? 0 : 1; return n; }
 
   bool remove(uint32_t id) {
     Guard g(this);
     Entry* e = find(id);
     if (!e) return false;
-    bool ok = st_.remove(path(id, e->synced));
+    bool ok = st_.remove(path(*e));
     if (ok) ids_.erase(ids_.begin() + (e - ids_.data()));
     return ok;
   }
@@ -162,8 +180,8 @@ class History {
     Guard g(this);
     int n = 0;
     for (size_t i = ids_.size(); i-- > 0;) {
-      if (syncedOnly && !ids_[i].synced) continue;
-      if (st_.remove(path(ids_[i].id, ids_[i].synced))) { ids_.erase(ids_.begin() + i); n++; }
+      if (syncedOnly && !ids_[i].synced && !ids_[i].cloud) continue;
+      if (st_.remove(path(ids_[i]))) { ids_.erase(ids_.begin() + i); n++; }
     }
     return n;
   }
@@ -174,7 +192,7 @@ class History {
   std::string stats() { Guard g(this); return "{" + statsFields() + "}"; }
 
  private:
-  struct Entry { uint32_t id; bool synced; };
+  struct Entry { uint32_t id; bool synced; bool cloud; };   // synced = imported by the PC
   struct Guard {
     explicit Guard(History* h) : h_(h) { if (h_->lock_) h_->lock_(); }
     ~Guard() { if (h_->unlock_) h_->unlock_(); }
@@ -182,17 +200,24 @@ class History {
   };
   size_t unsyncedNoLock() const { size_t u = 0; for (auto& e : ids_) u += e.synced ? 0 : 1; return u; }
 
-  std::string path(uint32_t id, bool synced) const {
-    char b[24];
-    snprintf(b, sizeof(b), "/%08lu%s.json", (unsigned long)id, synced ? ".s" : "");
+  // /00000012.json, .s.json (PC), .c.json (cloud), .sc.json (both)
+  std::string path(uint32_t id, bool synced, bool cloud) const {
+    char b[28];
+    snprintf(b, sizeof(b), "/%08lu%s%s%s.json", (unsigned long)id, synced || cloud ? "." : "", synced ? "s" : "",
+             cloud ? "c" : "");
     return dir_ + b;
   }
+  std::string path(const Entry& e) const { return path(e.id, e.synced, e.cloud); }
   static std::string orNull(const std::string& v) { return v.empty() ? "null" : v; }
-  static std::string withSynced(const std::string& metaLine, bool synced) {
-    return std::string("{\"synced\":") + (synced ? "true," : "false,") + metaLine.substr(1);
+  static std::string withSynced(const std::string& metaLine, const Entry& e) {
+    return std::string("{\"synced\":") + (e.synced ? "true," : "false,") + "\"cloud\":" + (e.cloud ? "true," : "false,") +
+           metaLine.substr(1);
   }
   std::string statsFields() {
+    size_t cp = 0;
+    for (auto& e : ids_) cp += e.cloud ? 0 : 1;
     return "\"count\":" + std::to_string(ids_.size()) + ",\"unsynced\":" + std::to_string(unsyncedNoLock()) +
+           ",\"cloud_pending\":" + std::to_string(cp) +
            ",\"free_kb\":" + std::to_string((unsigned long long)(st_.freeBytes() / 1024)) +
            ",\"total_kb\":" + std::to_string((unsigned long long)(st_.totalBytes() / 1024)) +
            ",\"ready\":" + (ready_ ? "true" : "false");
@@ -212,21 +237,22 @@ class History {
       char* end = nullptr;
       unsigned long id = strtoul(n.c_str(), &end, 10);
       if (!id || !end) continue;
-      bool synced = !strcmp(end, ".s.json");
-      if (!synced && strcmp(end, ".json")) continue;
-      ids_.push_back(Entry{(uint32_t)id, synced});
+      bool synced = !strcmp(end, ".s.json") || !strcmp(end, ".sc.json");
+      bool cloud = !strcmp(end, ".c.json") || !strcmp(end, ".sc.json");
+      if (!synced && !cloud && strcmp(end, ".json")) continue;
+      ids_.push_back(Entry{(uint32_t)id, synced, cloud});
       if (id > maxId) maxId = (uint32_t)id;
     }
     std::sort(ids_.begin(), ids_.end(), [](const Entry& a, const Entry& b) { return a.id < b.id; });
     nextId_ = maxId + 1;
   }
 
-  // Rotation: drop the oldest imported records first, then the oldest overall.
+  // Rotation: drop the oldest records that are safe elsewhere (PC or cloud) first, then the oldest overall.
   void makeRoom() {
     while (!ids_.empty() && (ids_.size() >= maxRecords || st_.freeBytes() < minFreeBytes)) {
       size_t victim = 0;
-      for (size_t i = 0; i < ids_.size(); i++) if (ids_[i].synced) { victim = i; break; }
-      st_.remove(path(ids_[victim].id, ids_[victim].synced));
+      for (size_t i = 0; i < ids_.size(); i++) if (ids_[i].synced || ids_[i].cloud) { victim = i; break; }
+      st_.remove(path(ids_[victim]));
       ids_.erase(ids_.begin() + victim);
     }
   }

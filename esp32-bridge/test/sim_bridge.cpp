@@ -345,11 +345,11 @@ int selftest() {
     run(p, "SCAN");
     run(p, "SCAN");
     std::string l = run(p, "HLIST 0 2 new");
-    expect(l, "OK {\"items\":[{\"synced\":false,\"id\":1,\"ts\":1762000000,\"ts_src\":\"pc\",\"boot\":4242,", true);
+    expect(l, "OK {\"items\":[{\"synced\":false,\"cloud\":false,\"id\":1,\"ts\":1762000000,\"ts_src\":\"pc\",\"boot\":4242,", true);
     expect(l.find("\"next\":2,\"count\":3,\"unsynced\":3") != std::string::npos ? "paging" : l.substr(l.size() - 120), "paging");
     expect(l.find("\"loc\":\"Kunde Meier\"") != std::string::npos ? "loc" : "no loc", "loc");
     std::string g = run(p, "HGET 2");
-    expect(g, "OK {\"meta\":{\"synced\":false,\"id\":2", true);
+    expect(g, "OK {\"meta\":{\"synced\":false,\"cloud\":false,\"id\":2", true);
     expect(g.find("\"scan\":{\"ok\":true") != std::string::npos && g.back() == '}' ? "get scan" : "bad get", "get scan");
     expect(run(p, "HACK 1"), "OK");
     expect(run(p, "HACK 99"), "ERR NOTFOUND");
@@ -376,6 +376,31 @@ int selftest() {
     expect(run(p, "HSTAT"), "OK {\"count\":3", true);
     bat.present = true;
     expect(run(p, "HGET abc"), "ERR ARGS");
+    // cloud upload by the bridge: independent of the PC flag, survives a restart, safe for rotation
+    {
+      uint32_t first = hist.nextForCloud();
+      expect(first == 2 ? "cloud: oldest first" : "next " + std::to_string(first), "cloud: oldest first");
+      expect(hist.cloudAck(2) && hist.cloudAck(2) ? "cloud: ack (twice ok)" : "ack failed", "cloud: ack (twice ok)");
+      expect(hist.nextForCloud() == 5 && hist.nextForCloud(5) == 6 ? "cloud: next" : "bad next", "cloud: next");
+      run(p, "HACK 5");
+      hist.cloudAck(5);
+      std::string g5 = run(p, "HGET 5");
+      expect(g5.find("\"synced\":true,\"cloud\":true,") != std::string::npos ? "cloud: both flags" : g5.substr(0, 80), "cloud: both flags");
+      expect(run(p, "HSTAT").find("\"cloud_pending\":1,") != std::string::npos ? "cloud: pending count" : run(p, "HSTAT"), "cloud: pending count");
+      m18::History h2(st);
+      h2.begin();
+      expect(h2.cloudPending() == 1 && h2.nextForCloud() == 6 && h2.unsynced() == 2 ? "cloud: persisted" : "lost cloud flags", "cloud: persisted");
+      std::vector<std::string> files;
+      st.list("/m18h", files);
+      std::sort(files.begin(), files.end());
+      std::string fl;
+      for (auto& f : files) fl += f + " ";
+      expect(fl == "00000002.c.json 00000005.sc.json 00000006.json " ? "cloud: file names" : fl, "cloud: file names");
+      run(p, "SCAN");                                                   // id 7 -> drops 2 (in the cloud), not 6
+      std::string all2 = run(p, "HLIST 0 50 all");
+      expect(all2.find("\"id\":2,") == std::string::npos && all2.find("\"id\":6,") != std::string::npos
+             ? "cloud: rotation drops uploaded first" : all2.substr(0, 200), "cloud: rotation drops uploaded first");
+    }
     p.setHistory(nullptr);
     expect(run(p, "HSTAT"), "ERR NOSTORAGE", true);
     fs::remove_all(dir);
