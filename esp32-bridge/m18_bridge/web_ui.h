@@ -414,7 +414,7 @@ const SB={url:"https://seccxaldsjhukavoilnm.supabase.co",key:"sb_publishable_KSi
   app:"https://akkuscan.app/app/"};
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},
   set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
-let SESS=ls.get("m18.sb.sess"),ORG=ls.get("m18.sb.org"),CMSG="";
+let SESS=ls.get("m18.sb.sess"),ORG=ls.get("m18.sb.org"),CMSG="",RECOVERY=false;   /* RECOVERY: opened from a password mail */
 async function sbRaw(path,opt={}){const h={apikey:SB.key,"Content-Type":"application/json"};if(opt.token)h.Authorization="Bearer "+opt.token;
   let r;try{r=await fetch(SB.url+path,{method:opt.method||"GET",headers:h,body:opt.body?JSON.stringify(opt.body):undefined});}
   catch(e){throw new Error("Keine Internetverbindung");}
@@ -445,15 +445,23 @@ function cloudInit(){
   const h=new URLSearchParams(location.hash.replace(/^#/,""));          /* link from a confirmation / password mail */
   if(h.get("access_token")){setSess({access_token:h.get("access_token"),refresh_token:h.get("refresh_token"),expires_in:h.get("expires_in")});
     history.replaceState(null,"",location.pathname+location.search);
-    sb("/auth/v1/user").then(u=>{SESS.email=u.email;ls.set("m18.sb.sess",SESS);cloudHead();}).catch(()=>{});
-    if(h.get("type")=="recovery")setTimeout(()=>{tab("cloud");cloudPwForm();},300);else setTimeout(()=>tab("cloud"),300);}
-  else if(h.get("error_description"))CMSG=h.get("error_description");
+    RECOVERY=h.get("type")=="recovery";
+    if(!RECOVERY)CMSG=h.get("type")=="signup"?"E-Mail-Adresse bestätigt – willkommen! Du bist jetzt angemeldet.":"";
+    sb("/auth/v1/user").then(u=>{SESS.email=u.email;ls.set("m18.sb.sess",SESS);
+      if(RECOVERY){const e=$("#cnpmail");if(e)e.textContent=u.email;}else cloudHead();}).catch(()=>{});
+    setTimeout(()=>tab("cloud"),300);}
+  else if(h.get("error")||h.get("error_description")){const d=(h.get("error_code")||"")+" "+(h.get("error_description")||"");
+    history.replaceState(null,"",location.pathname+location.search);
+    const expired=/expired|invalid|otp/i.test(d);
+    CMSG=expired?"Dieser Link ist abgelaufen oder wurde schon benutzt. Bitte hier einfach einen neuen anfordern."
+                :"Das hat leider nicht geklappt ("+(h.get("error_description")||h.get("error"))+"). Bitte nochmal versuchen.";
+    setTimeout(()=>{tab("cloud");if(!SESS)cloudLogin(expired?"reset":"login");},200);}
   else if(location.hash=="#konto"||location.hash=="#registrieren"){const reg=location.hash=="#registrieren";   /* links from akkuscan.app */
     history.replaceState(null,"",location.pathname+location.search);
     setTimeout(()=>{tab("cloud");if(!SESS&&reg)cloudLogin("signup");},200);}
   cloudBadge();setTimeout(cloudFlush,1500);setInterval(cloudFlush,120000);addEventListener("online",cloudFlush);}
 function cbox(html){$("#cloudbox").innerHTML=html;}
-function cloudHead(){if(!SESS){cloudLogin();return;}const n=cq().length;
+function cloudHead(){if(!SESS){cloudLogin();return;}if(RECOVERY){if(!$("#cnp"))cloudPwForm();return;}const n=cq().length;
   cbox(`<div class="card"><h2>Konto</h2><div class="row"><span>Angemeldet</span><span>${esc(SESS.email||"…")}</span></div>
     <div class="row"><span>Firma</span><span>${esc(ORG?ORG.name:"…")}</span></div>
     <div class="row"><span>Warten auf Upload</span><span>${n?n+" Messung"+(n>1?"en":""):"nichts – alles in der Cloud"}</span></div>
@@ -498,14 +506,26 @@ function cloudLogin(mode){mode=mode||"login";
       await sbRaw("/auth/v1/recover?redirect_to="+encodeURIComponent(SB.app),{method:"POST",body:{email:mail}});
       msg("Wenn es ein Konto für diese Adresse gibt, kommt gleich eine E-Mail mit einem Link zum Zurücksetzen.",true);}
     catch(e){msg(e.message);}finally{b.disabled=false;}};}
-function cloudPwForm(){cbox(`<div class="card"><h2>Neues Passwort</h2><label>Neues Passwort</label><input id="cnp" type="password" autocomplete="new-password">
-    <button class="btn primary" id="cnpgo" style="margin-top:10px">Speichern</button><div id="cnpmsg"></div></div>`);
-  $("#cnpgo").onclick=async()=>{if($("#cnp").value.length<8){$("#cnpmsg").innerHTML='<div class="box err">Mindestens 8 Zeichen</div>';return;}
-    try{await sb("/auth/v1/user",{method:"PUT",body:{password:$("#cnp").value}});CMSG="Passwort geändert.";cloudView();}
-    catch(e){$("#cnpmsg").innerHTML=`<div class="box err">${esc(e.message)}</div>`;}};}
+/* "Set a new password" – shown when the page was opened from a password-reset mail, before anything else. */
+function cloudPwForm(){cbox(`<div class="card"><h2>Neues Passwort festlegen</h2>
+    <p class="hint" style="margin-top:0">Für <b id="cnpmail">${esc((SESS&&SESS.email)||"dein Konto")}</b>. Danach bist du gleich angemeldet.</p>
+    <label>Neues Passwort</label><input id="cnp" type="password" autocomplete="new-password">
+    <label>Neues Passwort wiederholen</label><input id="cnp2" type="password" autocomplete="new-password">
+    <p class="hint">Mindestens 8 Zeichen.</p>
+    <button class="btn primary big" id="cnpgo" style="margin-top:10px">Passwort speichern</button><div id="cnpmsg"></div></div>`);
+  setTimeout(()=>{const i=$("#cnp");if(i)i.focus();},50);
+  const err=t=>$("#cnpmsg").innerHTML=`<div class="box err">${esc(t)}</div>`;
+  $("#cnpgo").onclick=async()=>{const p=$("#cnp").value;
+    if(p.length<8){err("Das Passwort braucht mindestens 8 Zeichen.");return;}
+    if(p!=$("#cnp2").value){err("Die beiden Passwörter stimmen nicht überein.");return;}
+    const b=$("#cnpgo");b.disabled=true;
+    try{await sb("/auth/v1/user",{method:"PUT",body:{password:p}});RECOVERY=false;CMSG="Dein Passwort wurde geändert. Du bist jetzt angemeldet.";cloudView();}
+    catch(e){err(/different from the old|same/i.test(e.message)?"Das neue Passwort muss sich vom alten unterscheiden.":
+      /expired|invalid|jwt/i.test(e.message)?"Der Link ist abgelaufen. Bitte unter „Passwort vergessen?“ einen neuen anfordern.":e.message);}
+    finally{b.disabled=false;}};}
 const fdt2=s=>s?new Date(s).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"}):"–";
 const SRCN={"app-ble":"App (Bluetooth)","app-wlan":"App (WLAN)",bridge:"Brücke",pc:"PC"};
-async function cloudView(){cloudHead();const v=$("#cloudview");if(!SESS){v.innerHTML="";return;}
+async function cloudView(){cloudHead();const v=$("#cloudview");if(!SESS||RECOVERY){v.innerHTML="";return;}
   v.innerHTML='<div class="card"><h2>Meine Akkus</h2><p class="hint" style="margin-top:0">Lade …</p></div>';
   try{const bs=await sb("/rest/v1/battery_overview?select=*&order=last_measured_at.desc.nullslast");
     v.innerHTML=`<div class="card"><h2>Meine Akkus · ${bs.length}</h2>${bs.length?`<div class="nets">${bs.map(b=>`<div class="net" data-b="${b.id}">

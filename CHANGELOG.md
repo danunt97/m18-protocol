@@ -13,6 +13,10 @@
   Der Workflow veröffentlicht mit `wrangler pages deploy` (Secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`); die Domain zeigt per CNAME auf `akkuscan.pages.dev`.
 - App: Kann der Browser kein Bluetooth, erklärt eine deutliche Meldung Schritt für Schritt, was zu tun ist – am iPhone mit Knopf direkt zu „Bluefy“ im App Store
   und „Adresse kopieren“, auf Android mit „In Chrome öffnen“, am PC/Mac mit dem Hinweis auf Chrome oder Edge. Ist Bluetooth ausgeschaltet, sagt die App das.
+- **Passwort zurücksetzen** repariert: Der Link aus der Mail öffnet jetzt das Fenster „Neues Passwort festlegen“ (zweimal eingeben, mindestens 8 Zeichen)
+  statt gleich angemeldet die Kontoseite zu zeigen. Abgelaufene oder schon benutzte Links führen mit einer klaren Meldung zu „Passwort vergessen“.
+  Nach dem Bestätigen der Registrierung erscheint „E-Mail-Adresse bestätigt – willkommen!“.
+- Der Kasten „Mit der Brücke verbinden“ erscheint im Tab Cloud nicht mehr (Konto und „Meine Akkus“ gehen ohne Modul), außer man tippt dort auf „Verbinden“.
 
 ## 1.12 – Eine App, Cloud als Rückgrat
 - **Eine App für WLAN und Bluetooth:** Die Akku-App auf GitHub Pages ist jetzt die Weboberfläche der Brücke selbst, mit einem Bluetooth-Adapter (`webble/ble-shim.js`).

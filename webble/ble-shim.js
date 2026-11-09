@@ -73,7 +73,15 @@
   };
 
   // --------------------------------------------------------------- connection
+  // The connect card belongs to the tabs that talk to the bridge; the Cloud tab (account, "Meine Akkus",
+  // password reset) works without it – there it only appears after tapping "Verbinden".
+  let cardOnCloud = false;
+  function syncCard() {
+    const c = document.getElementById("blecard"), cloud = document.getElementById("tab-cloud");
+    if (c) c.hidden = ble.connected || (!!cloud && !cloud.hidden && !cardOnCloud);
+  }
   async function connect() {
+    cardOnCloud = true; syncCard();
     if (!navigator.bluetooth) { showNoBt(); return; }
     try { if (navigator.bluetooth.getAvailability && !(await navigator.bluetooth.getAvailability())) {
       setMsg("Bluetooth ist am Handy ausgeschaltet. Bitte in den Einstellungen Bluetooth einschalten und nochmal auf „Verbinden“ tippen.", true); return; } } catch (e) {}
@@ -103,7 +111,7 @@
   function ready() {
     ble.connected = true;
     setBar(null);
-    document.getElementById("blecard").hidden = true;
+    syncCard();
     if (window.M18_START) window.M18_START();
   }
   function disconnect() { if (dev && dev.gatt.connected) dev.gatt.disconnect(); else onDisconnected(); }
@@ -112,8 +120,8 @@
     ble.connected = false;
     if (pend) { clearTimeout(pend.timer); pend.rej(new TypeError("Verbindung getrennt")); pend = null; }
     setBar(null);
-    const c = document.getElementById("blecard");
-    if (c) { c.hidden = false; setMsg(dev ? "Verbindung zu " + (dev.name || "der Brücke") + " getrennt." : "", false); }
+    syncCard();
+    setMsg(dev ? "Verbindung zu " + (dev.name || "der Brücke") + " getrennt." : "", false);
   }
   function askPassword() {
     return new Promise(res => {
@@ -233,5 +241,8 @@
         setTimeout(() => { URL.revokeObjectURL(u.href); u.remove(); }, 500); };
     });
     if (!navigator.bluetooth) showNoBt();
+    const cloud = document.getElementById("tab-cloud");
+    if (cloud) new MutationObserver(() => { cardOnCloud = false; syncCard(); }).observe(cloud, { attributes: true, attributeFilter: ["hidden"] });
+    syncCard();
   });
 })();
