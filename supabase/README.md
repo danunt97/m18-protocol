@@ -22,3 +22,16 @@ Funktionen:
 
 Zugriff nur über Row Level Security: Mitglieder sehen die Daten ihrer Firma, sonst niemand.
 Der öffentliche Schlüssel (publishable/anon) darf in der App stehen; der service_role-Schlüssel nie.
+
+## Einstellungen (gesetzt über die Supabase-Verwaltung)
+
+- Anmeldung per E-Mail und Passwort (mindestens 8 Zeichen), Bestätigungs-Mail an.
+- Site URL `https://danunt97.github.io/m18-protocol/app/`, erlaubte Weiterleitung `https://danunt97.github.io/m18-protocol/**`.
+- E-Mail-Texte: Im Gratis-Tarif mit dem eingebauten Mailversand sind nur die englischen Standardtexte möglich und nur
+  wenige Mails pro Stunde. Für deutsche Texte und mehr Mails einen eigenen SMTP-Versand eintragen (Authentication → Emails → SMTP).
+
+## Geprüft
+
+Mit zwei Testnutzern direkt in der Datenbank: eigene Firma bei der Registrierung, App-Upload, doppelte Messung (App und Brücke)
+wird nur einmal gespeichert, Brücke verknüpfen und mit Geräteschlüssel hochladen, falscher Schlüssel abgelehnt,
+Schlüssel-Hash nicht lesbar, fremde Nutzer sehen und ändern nichts. Danach wieder entfernt.
