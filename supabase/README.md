@@ -35,3 +35,18 @@ Der öffentliche Schlüssel (publishable/anon) darf in der App stehen; der servi
 Mit zwei Testnutzern direkt in der Datenbank: eigene Firma bei der Registrierung, App-Upload, doppelte Messung (App und Brücke)
 wird nur einmal gespeichert, Brücke verknüpfen und mit Geräteschlüssel hochladen, falscher Schlüssel abgelehnt,
 Schlüssel-Hash nicht lesbar, fremde Nutzer sehen und ändern nichts. Danach wieder entfernt.
+
+## Admin-Seite (akkuscan.app/admin/)
+
+Übersicht (Kennzahlen, Verlauf pro Tag), alle Konten, Messungen (mit Rohdaten), Akkus, Module und Seitenbesuche,
+dazu „Konto löschen“ und „Modul sperren“. Die Daten kommen nur über die Funktionen `admin_*`
+(Migration `20261111090000_admin_and_page_views.sql`); jede prüft zuerst `is_admin()`.
+
+Admin eintragen (Supabase → SQL Editor):
+
+```sql
+insert into public.admins (user_id) select id from auth.users where email = 'deine@adresse';
+```
+
+Seitenbesuche zählt `webland/track.js` über `track_view()`: pro Aufruf Pfad, Herkunfts-Domain, Gerätetyp, Browser,
+Sprache und `utm_source` – ohne Cookies, IP-Adresse oder Besucher-ID. Gezählt wird nur auf akkuscan.app.

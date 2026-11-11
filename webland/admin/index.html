@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Akkuscan Admin</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<style>
+:root{--bg:#16181b;--bg2:#1c1f23;--panel:#22262b;--raise:#2a2f35;--line:#30353c;--text:#eef0f2;--muted:#a3a9b1;--faint:#727982;
+  --red:#e4002b;--red2:#ff2d55;--bar:#ff4d6d;--good:#3fcf7f;--watch:#e7b43a;--weak:#f0703c;--crit:#ff4d5e;--info:#5aa2ff;color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:14.5px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:20;background:rgba(22,24,27,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.hwrap{max-width:1320px;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:14px;height:58px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;text-decoration:none}
+.brand svg{width:28px;height:28px}.brand span{color:var(--red2);font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin-left:2px}
+.who{margin-left:auto;color:var(--muted);font-size:13px;display:flex;align-items:center;gap:10px}
+nav{max-width:1320px;margin:0 auto;padding:0 16px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:10px 12px;cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--text);border-bottom-color:var(--red)}
+main{max-width:1320px;margin:0 auto;padding:18px 16px 60px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:9px;padding:7px 12px;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{border-color:var(--faint)}.btn.red{background:var(--red);border-color:var(--red);color:#fff}.btn.danger{color:var(--crit);border-color:rgba(255,77,94,.45)}
+.btn:disabled{opacity:.45;cursor:default}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h2{font-size:12px;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h2 .r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:500}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tile b{display:block;font-size:26px;font-weight:750;letter-spacing:-.5px;line-height:1.15}
+.tile span{color:var(--muted);font-size:12.5px}.tile small{color:var(--faint);font-size:12px;display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;margin-bottom:12px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.toolbar input,.toolbar select{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:7px 10px;min-width:0}
+.toolbar input{flex:1;max-width:360px}
+.toolbar .count{color:var(--muted);font-size:13px;margin-left:auto}
+/* bar chart (one series per chart) */
+.chart{position:relative;padding-top:16px}
+.grid.charts{grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr))}
+.bars{display:flex;align-items:flex-end;gap:2px;height:150px;border-bottom:1px solid var(--line);position:relative}
+.bars .grid1{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,255,255,.07);pointer-events:none}
+.bars .b{flex:1;min-width:2px;position:relative;height:100%;display:flex;align-items:flex-end;cursor:default}
+.bars .b i{display:block;width:100%;background:var(--bar);border-radius:4px 4px 0 0;min-height:0}
+.bars .b.zero i{background:transparent}
+.bars .b:hover i{filter:brightness(1.25)}
+.axis{display:flex;justify-content:space-between;color:var(--faint);font-size:11.5px;margin-top:4px}
+.ymax{position:absolute;left:0;top:-2px;color:var(--faint);font-size:11px;transform:translateY(-100%)}
+.tip{position:fixed;z-index:50;pointer-events:none;background:#0d0f11;border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12.5px;white-space:nowrap;display:none;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.tip b{font-size:14px}
+/* ranked lists */
+.rows{display:flex;flex-direction:column;gap:6px}
+.rowbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center}
+.rowbar .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rowbar .val{color:var(--muted);font-variant-numeric:tabular-nums}
+.rowbar .trk{grid-column:1/-1;height:6px;border-radius:3px;background:var(--raise);overflow:hidden}
+.rowbar .trk i{display:block;height:100%;border-radius:3px;background:var(--bar)}
+.empty{color:var(--faint);font-size:13px}
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{position:sticky;top:0;background:var(--raise);text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:9px 10px;white-space:nowrap;cursor:pointer;user-select:none}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}
+tr.click{cursor:pointer}tr.click:hover td{background:rgba(255,255,255,.03)}
+td .sub{display:block;color:var(--faint);font-size:12px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px 1px 7px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--raise);color:var(--muted)}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.badge.good{color:var(--good)}.badge.watch{color:var(--watch)}.badge.weak{color:var(--weak)}.badge.crit{color:var(--crit)}
+.yes{color:var(--good)}.no{color:var(--faint)}
+.more{display:flex;justify-content:center;margin-top:12px}
+/* login + messages */
+.login{max-width:380px;margin:60px auto}
+.login label{display:block;color:var(--muted);font-size:13px;margin:12px 0 4px}
+.login input{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.login .btn{width:100%;justify-content:center;margin-top:16px;padding:11px}
+.msg{border-radius:10px;padding:10px 12px;margin-top:12px;font-size:13.5px}
+.msg.err{background:rgba(255,77,94,.1);border:1px solid rgba(255,77,94,.4);color:#ff8f9a}
+.msg.info{background:rgba(90,162,255,.1);border:1px solid rgba(90,162,255,.35);color:#9cc5ff}
+/* detail drawer */
+.shade{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:30;display:none}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--bg2);border-left:1px solid var(--line);z-index:31;
+  transform:translateX(100%);transition:transform .2s;overflow-y:auto;padding:18px}
+.open .shade{display:block}.open .drawer{transform:none}
+.drawer h3{font-size:19px;margin:0 0 4px;padding-right:40px}.drawer .x{position:absolute;right:14px;top:14px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:14px 0;font-size:13.5px}
+.kv dt{color:var(--muted)}.kv dd{margin:0;overflow-wrap:anywhere}
+.cells{display:flex;gap:6px;flex-wrap:wrap}.cells span{background:var(--raise);border-radius:7px;padding:3px 8px;font-variant-numeric:tabular-nums}
+pre{background:#0f1113;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:11.5px;max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+@media(max-width:640px){.hwrap{gap:8px}.who span{display:none}.tile b{font-size:22px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <a class="brand" href="/admin/"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="110" fill="#e4002b"/><rect x="150" y="150" width="212" height="250" rx="22" fill="none" stroke="#fff" stroke-width="28"/><rect x="210" y="104" width="92" height="46" rx="10" fill="#fff"/><path d="M266 196 214 286h46l-14 74 54-92h-46z" fill="#fff"/></svg>
+      akkuscan<span>Admin</span></a>
+    <div class="who" id="who"></div>
+  </div>
+  <nav id="nav" hidden>
+    <button data-v="overview" class="on">Übersicht</button><button data-v="users">Konten</button><button data-v="readings">Messungen</button>
+    <button data-v="batteries">Akkus</button><button data-v="bridges">Module</button><button data-v="views">Besuche</button>
+  </nav>
+</header>
+<main id="main"></main>
+<div class="tip" id="tip"></div>
+<div id="det"><div class="shade" id="shade"></div><aside class="drawer" id="drawer"></aside></div>
+
+<script>
+"use strict";
+const SB = { url: "https://seccxaldsjhukavoilnm.supabase.co", key: "sb_publishable_KSiLpnnPHzgOvS3cTPnl_A_OVknKkj1" };
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nf = n => (n == null ? "–" : Number(n).toLocaleString("de-DE"));
+const dt = s => s ? new Date(s).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "–";
+const ago = s => { if (!s) return "–"; const m = (Date.now() - new Date(s)) / 60000;
+  return m < 2 ? "gerade eben" : m < 60 ? `vor ${Math.round(m)} Min.` : m < 1440 ? `vor ${Math.round(m / 60)} Std.` : m < 60 * 24 * 60 ? `vor ${Math.round(m / 1440)} Tagen` : dt(s); };
+const STATUS = { good: "Gut", watch: "Beobachten", weak: "Schwach", crit: "Kritisch", unknown: "Unbekannt" };
+const SRC = { "app-ble": "App (Bluetooth)", "app-wlan": "App (WLAN)", bridge: "Modul (Upload)", pc: "PC" };
+const badge = (st, h) => `<span class="badge ${esc(st || "")}">${h != null ? esc(h) + " · " : ""}${esc(STATUS[st] || st || "–")}</span>`;
+
+// ------------------------------------------------------------------ session (shared with the app)
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+let SESS = store.get("m18.sb.sess");
+function setSess(d) { SESS = d ? { at: d.access_token, rt: d.refresh_token, exp: Date.now() / 1000 + (+d.expires_in || 3600) - 60, email: (d.user && d.user.email) || (SESS && SESS.email) || "" } : null; store.set("m18.sb.sess", SESS); }
+async function raw(path, opt = {}) {
+  const h = { apikey: SB.key, "Content-Type": "application/json" }; if (opt.token) h.Authorization = "Bearer " + opt.token;
+  let r; try { r = await fetch(SB.url + path, { method: opt.method || "GET", headers: h, body: opt.body ? JSON.stringify(opt.body) : undefined }); }
+  catch (e) { throw new Error("Keine Internetverbindung"); }
+  const t = await r.text(); let d = null; try { d = t ? JSON.parse(t) : null; } catch (e) { d = t; }
+  if (!r.ok) throw new Error((d && (d.message || d.msg || d.error_description || d.error)) || "HTTP " + r.status);
+  return d;
+}
+async function token() {
+  if (!SESS) return null; if (Date.now() / 1000 < SESS.exp) return SESS.at;
+  try { setSess(await raw("/auth/v1/token?grant_type=refresh_token", { method: "POST", body: { refresh_token: SESS.rt } })); return SESS.at; }
+  catch (e) { if (e.message != "Keine Internetverbindung") setSess(null); throw e; }
+}
+async function rpc(fn, args) { const t = await token(); if (!t) throw new Error("Nicht angemeldet"); return raw("/rest/v1/rpc/" + fn, { method: "POST", body: args || {}, token: t }); }
+
+// ------------------------------------------------------------------ start / login
+async function boot() {
+  if (!SESS) return loginView();
+  try {
+    const ok = await rpc("is_admin");
+    if (!ok) return loginView("Das Konto " + (SESS.email || "") + " hat keinen Admin-Zugang.", true);
+  } catch (e) { return loginView(e.message === "Nicht angemeldet" ? "" : e.message); }
+  $("#who").innerHTML = `<span>${esc(SESS.email || "")}</span><a class="btn" href="/app/">App</a><button class="btn" id="out">Abmelden</button>`;
+  $("#out").onclick = async () => { try { await raw("/auth/v1/logout", { method: "POST", token: SESS.at }); } catch (e) {} setSess(null); location.reload(); };
+  $("#nav").hidden = false;
+  $$("#nav button").forEach(b => b.onclick = () => show(b.dataset.v));
+  show((location.hash || "#overview").slice(1));
+}
+function loginView(msg, isInfo) {
+  $("#nav").hidden = true; $("#who").innerHTML = "";
+  $("#main").innerHTML = `<div class="card login"><h2>Admin-Anmeldung</h2>
+    <label>E-Mail</label><input id="lm" type="email" autocomplete="email" value="${esc((SESS && SESS.email) || "")}">
+    <label>Passwort</label><input id="lp" type="password" autocomplete="current-password">
+    <button class="btn red" id="lgo">Anmelden</button>${msg ? `<div class="msg ${isInfo ? "info" : "err"}">${esc(msg)}</div>` : ""}
+    <p class="empty" style="margin-top:14px">Dasselbe Konto wie in der App. Zugang haben nur Konten, die als Admin eingetragen sind.</p></div>`;
+  const go = async () => { $("#lgo").disabled = true;
+    try { setSess(await raw("/auth/v1/token?grant_type=password", { method: "POST", body: { email: $("#lm").value.trim(), password: $("#lp").value } })); boot(); }
+    catch (e) { loginView(/Invalid login/.test(e.message) ? "E-Mail oder Passwort falsch" : e.message); } };
+  $("#lgo").onclick = go; $("#lp").onkeydown = e => { if (e.key === "Enter") go(); };
+}
+
+// ------------------------------------------------------------------ views
+let CUR = "", DAYS = 30;
+const views = { overview, users, readings, batteries, bridges, views: visits };
+function show(v, arg) {
+  if (!views[v]) v = "overview"; CUR = v;
+  $$("#nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  history.replaceState(null, "", "#" + v);
+  $("#main").innerHTML = '<p class="empty">Lade …</p>';
+  views[v](arg).catch(e => { $("#main").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; });
+}
+function csv(name, rows, cols) {
+  const q = v => { v = v == null ? "" : String(v); return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const text = "﻿" + cols.map(c => q(c[0])).join(";") + "\n" + rows.map(r => cols.map(c => q(typeof c[1] === "function" ? c[1](r) : r[c[1]])).join(";")).join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+  a.download = `akkuscan-${name}-${new Date().toISOString().slice(0, 10)}.csv`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+// Sortable, filterable table. cols: [title, key or fn(row)->html, {num, sort: fn(row)->value}]
+function table(el, rows, cols, opt = {}) {
+  let sortI = -1, dir = 1, q = "";
+  const idx = new Map(rows.map((r, i) => [r, i]));
+  const val = (c, r) => c[2] && c[2].sort ? c[2].sort(r) : (typeof c[1] === "string" ? r[c[1]] : "");
+  const draw = () => {
+    let list = rows.filter(r => !q || (opt.search ? opt.search(r) : JSON.stringify(r)).toLowerCase().includes(q));
+    if (sortI >= 0) list = list.slice().sort((a, b) => { const x = val(cols[sortI], a), y = val(cols[sortI], b);
+      return (x == null) - (y == null) || (x > y ? 1 : x < y ? -1 : 0) * dir; });
+    el.querySelector(".count").textContent = `${nf(list.length)} von ${nf(rows.length)}`;
+    el.querySelector(".tbl").innerHTML = list.length ? `<table><thead><tr>${cols.map((c, i) => `<th data-i="${i}" class="${c[2] && c[2].num ? "num" : ""}">${esc(c[0])}${i === sortI ? (dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead>
+      <tbody>${list.map((r, ri) => `<tr class="${opt.onRow ? "click" : ""}" data-r="${idx.get(r)}">${cols.map(c => `<td class="${c[2] && c[2].num ? "num" : ""}">${typeof c[1] === "function" ? c[1](r) : esc(r[c[1]])}</td>`).join("")}</tr>`).join("")}</tbody></table>`
+      : `<p class="empty" style="padding:16px">${rows.length ? "Keine Treffer." : esc(opt.empty || "Noch keine Einträge.")}</p>`;
+    el.querySelectorAll("th").forEach(th => th.onclick = () => { const i = +th.dataset.i; dir = i === sortI ? -dir : 1; sortI = i; draw(); });
+    if (opt.onRow) el.querySelectorAll("tbody tr").forEach(tr => tr.onclick = () => opt.onRow(rows[+tr.dataset.r]));
+  };
+  el.querySelector("input.q").oninput = e => { q = e.target.value.trim().toLowerCase(); draw(); };
+  draw();
+}
+const tableShell = (ph, extra) => `<div class="toolbar"><input class="q" type="search" placeholder="${esc(ph)}">${extra || ""}<span class="count"></span></div><div class="tbl"></div>`;
+
+// ---- Übersicht
+async function overview() {
+  const o = await rpc("admin_overview", { p_days: DAYS }), t = o.totals;
+  const tiles = [
+    [t.users, "Konten", `${nf(t.users_confirmed)} bestätigt · ${nf(t.users_new_7d)} neu (7 T.)`],
+    [t.users_active_7d, "Aktive Konten (7 T.)", "angemeldet in den letzten 7 Tagen"],
+    [t.readings, "Messungen", `${nf(t.readings_7d)} in den letzten 7 Tagen`],
+    [t.batteries, "Akkus", `in ${nf(t.orgs)} Firmen`],
+    [t.bridges, "Module verknüpft", `${nf(t.bridges_seen_7d)} aktiv (7 T.)`],
+    [t.visits_7d, "Besuche (7 T.)", `${nf(t.views_7d)} Seitenaufrufe · heute ${nf(t.views_today)}`]];
+  const cnt = obj => Object.entries(obj || {}).map(([k, n]) => ({ k, n })).sort((a, b) => b.n - a.n);
+  $("#main").innerHTML = `
+    <div class="toolbar"><span style="color:var(--muted)">Zeitraum</span>
+      <select id="days">${[7, 30, 90, 365].map(d => `<option value="${d}" ${d === DAYS ? "selected" : ""}>${d} Tage</option>`).join("")}</select>
+      <button class="btn" id="reload">Aktualisieren</button><span class="count">Stand ${dt(new Date())}</span></div>
+    <div class="tiles">${tiles.map(x => `<div class="tile"><span>${esc(x[1])}</span><b>${nf(x[0])}</b><small>${esc(x[2])}</small></div>`).join("")}</div>
+    <div class="grid charts">
+      ${chartCard("Besuche pro Tag", o.daily, "visits", "Besuche")}
+      ${chartCard("Messungen pro Tag", o.daily, "readings", "Messungen")}
+      ${chartCard("Neue Konten pro Tag", o.daily, "signups", "neue Konten")}
+      ${chartCard("Seitenaufrufe pro Tag", o.daily, "views", "Aufrufe")}
+    </div>
+    <div class="grid">
+      ${listCard("Zustand der Akkus", ["good", "watch", "weak", "crit", "unknown"].filter(k => o.status[k]).map(k => ({ k: badge(k), n: o.status[k], html: true })))}
+      ${listCard("Woher kommen die Messungen", cnt(o.sources).map(x => ({ k: SRC[x.k] || x.k, n: x.n })))}
+      ${listCard("Akku-Modelle", (o.models || []).map(x => ({ k: x.model, n: x.n })))}
+      ${listCard("Firmware der Module", (o.firmware || []).map(x => ({ k: "Version " + x.firmware, n: x.n })))}
+      ${listCard(`Meistbesuchte Seiten (${o.days} T.)`, (o.top_paths || []).map(x => ({ k: x.path, n: x.n })))}
+      ${listCard(`Herkunft der Besuche (${o.days} T.)`, (o.top_referrers || []).map(x => ({ k: x.referrer, n: x.n })), "Noch keine Besuche von anderen Seiten.")}
+      ${listCard(`Geräte (${o.days} T.)`, cnt(o.devices).map(x => ({ k: { mobile: "Handy", tablet: "Tablet", desktop: "PC / Laptop" }[x.k] || x.k, n: x.n })))}
+      ${listCard(`Browser (${o.days} T.)`, (o.browsers || []).map(x => ({ k: x.browser, n: x.n })))}
+    </div>`;
+  $("#days").onchange = e => { DAYS = +e.target.value; show("overview"); };
+  $("#reload").onclick = () => show("overview");
+  bindTips();
+}
+function chartCard(title, daily, key, unit) {
+  const vals = (daily || []).map(d => d[key] || 0), max = Math.max(1, ...vals), sum = vals.reduce((a, b) => a + b, 0);
+  const fmt = d => new Date(d + "T12:00:00").toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  return `<div class="card"><h2>${esc(title)}<span class="r">${nf(sum)} gesamt</span></h2><div class="chart">
+    <div class="bars"><span class="ymax">${nf(max)}</span><span class="grid1" style="top:0"></span><span class="grid1" style="top:50%"></span>
+    ${(daily || []).map(d => `<span class="b ${d[key] ? "" : "zero"}" data-tip="<b>${nf(d[key] || 0)}</b> ${esc(unit)}<br>${new Date(d.day + "T12:00:00").toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}">
+      <i style="height:${(d[key] || 0) / max * 100}%"></i></span>`).join("")}</div>
+    <div class="axis"><span>${daily && daily.length ? fmt(daily[0].day) : ""}</span><span>${daily && daily.length ? fmt(daily[daily.length - 1].day) : ""}</span></div></div></div>`;
+}
+function listCard(title, items, empty) {
+  const max = Math.max(1, ...items.map(x => x.n));
+  return `<div class="card"><h2>${esc(title)}</h2>${items.length ? `<div class="rows">${items.map(x => `<div class="rowbar">
+    <span class="lbl">${x.html ? x.k : esc(x.k)}</span><span class="val">${nf(x.n)}</span><span class="trk"><i style="width:${x.n / max * 100}%"></i></span></div>`).join("")}</div>`
+    : `<p class="empty">${esc(empty || "Noch keine Daten.")}</p>`}</div>`;
+}
+function bindTips() {
+  const tip = $("#tip");
+  $$("[data-tip]").forEach(el => {
+    el.onmouseenter = () => { tip.innerHTML = el.dataset.tip; tip.style.display = "block"; };
+    el.onmousemove = e => { const w = tip.offsetWidth; tip.style.left = Math.min(innerWidth - w - 8, e.clientX + 12) + "px"; tip.style.top = (e.clientY - tip.offsetHeight - 10) + "px"; };
+    el.onmouseleave = () => { tip.style.display = "none"; };
+  });
+}
+
+// ---- Konten
+let USERS = [];
+async function users() {
+  USERS = await rpc("admin_users");
+  $("#main").innerHTML = tableShell("Suchen: E-Mail, Firma …", '<button class="btn" id="csv">CSV</button>');
+  table($("#main"), USERS, [
+    ["E-Mail", r => `${esc(r.email)}${r.admin ? ' <span class="badge" style="color:var(--info)">Admin</span>' : ""}`, { sort: r => r.email }],
+    ["Firma", r => esc(r.orgs.map(o => o.name).join(", ")), { sort: r => (r.orgs[0] || {}).name }],
+    ["Registriert", r => `${dt(r.created_at)}`, { sort: r => r.created_at }],
+    ["Bestätigt", r => r.confirmed_at ? '<span class="yes">✓ ja</span>' : '<span class="no">✗ nein</span>', { sort: r => !!r.confirmed_at }],
+    ["Letzte Anmeldung", r => ago(r.last_sign_in_at), { sort: r => r.last_sign_in_at }],
+    ["Akkus", "batteries", { num: 1, sort: r => r.batteries }],
+    ["Messungen", "readings", { num: 1, sort: r => r.readings }],
+    ["Letzte Messung", r => ago(r.last_reading_at), { sort: r => r.last_reading_at }],
+    ["Module", "bridges", { num: 1, sort: r => r.bridges }]],
+    { onRow: userDetail, search: r => r.email + " " + r.orgs.map(o => o.name).join(" "), empty: "Noch keine Konten." });
+  $("#csv").onclick = () => csv("konten", USERS, [["E-Mail", "email"], ["Firma", r => r.orgs.map(o => o.name).join(", ")], ["Registriert", "created_at"],
+    ["Bestätigt", "confirmed_at"], ["Letzte Anmeldung", "last_sign_in_at"], ["Akkus", "batteries"], ["Messungen", "readings"], ["Letzte Messung", "last_reading_at"], ["Module", "bridges"]]);
+}
+function userDetail(u) {
+  const self = SESS && u.email === SESS.email;
+  drawer(`<h3>${esc(u.email)}</h3><p class="empty">Konto ${esc(u.id)}</p>
+    <dl class="kv"><dt>Registriert</dt><dd>${dt(u.created_at)}</dd><dt>E-Mail bestätigt</dt><dd>${u.confirmed_at ? dt(u.confirmed_at) : "nein"}</dd>
+      <dt>Letzte Anmeldung</dt><dd>${dt(u.last_sign_in_at)}</dd><dt>Akkus</dt><dd>${nf(u.batteries)}</dd><dt>Messungen</dt><dd>${nf(u.readings)} (zuletzt ${ago(u.last_reading_at)})</dd>
+      <dt>Module</dt><dd>${nf(u.bridges)}</dd>
+      ${u.orgs.map(o => `<dt>Firma</dt><dd>${esc(o.name)} <span class="empty">· ${o.role === "owner" ? "Inhaber" : "Mitglied"} · ${nf(o.members)} Mitglied${o.members == 1 ? "" : "er"}</span></dd>`).join("")}</dl>
+    <div class="actions">${u.orgs.map(o => `<button class="btn" data-org="${esc(o.id)}">Messungen von „${esc(o.name)}“</button>`).join("")}
+      <button class="btn danger" id="delu" ${self ? "disabled title='Eigenes Konto'" : ""}>Konto löschen</button></div><div id="dmsg"></div>`);
+  $$("[data-org]").forEach(b => b.onclick = () => { closeDrawer(); show("readings", { org: b.dataset.org, label: b.textContent }); });
+  if (!self) $("#delu").onclick = async () => {
+    if (!confirm(`Konto ${u.email} löschen?\n\nFirmen, in denen es das einzige Mitglied ist, werden mit allen Akkus, Messungen und Modulen gelöscht.`)) return;
+    if (prompt("Zur Bestätigung die E-Mail-Adresse eintippen:") !== u.email) { $("#dmsg").innerHTML = '<div class="msg err">Abgebrochen – E-Mail stimmte nicht.</div>'; return; }
+    try { const r = await rpc("admin_delete_user", { p_user: u.id }); if (!r.ok) throw new Error(r.error);
+      closeDrawer(); show("users"); } catch (e) { $("#dmsg").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+  };
+}
+
+// ---- Messungen
+async function readings(f) {
+  f = f || {}; let rows = [], offset = 0; const PAGE = 300;
+  const load = async () => { const more = await rpc("admin_readings", { p_limit: PAGE, p_offset: offset, p_org: f.org || null, p_battery: f.battery || null });
+    rows = rows.concat(more); offset += more.length; return more.length; };
+  const n = await load();
+  const filt = f.label ? `<span class="badge" style="color:var(--info)">${esc(f.label)}</span><button class="btn" id="clr">Filter aufheben</button>` : "";
+  $("#main").innerHTML = tableShell("Suchen: Firma, Seriennummer, Standort, Kommentar …", filt + '<button class="btn" id="csv">CSV</button>') + '<div class="more" id="more"></div>';
+  const cols = [
+    ["Hochgeladen", r => `${dt(r.created_at)}<span class="sub">gemessen ${dt(r.measured_at)}</span>`, { sort: r => r.created_at }],
+    ["Firma", "org", { sort: r => r.org }],
+    ["Akku", r => `${esc(r.battery_name || r.eserial)} <span class="sub">${esc(r.model || "")}${r.battery_name ? " · " + esc(r.eserial) : ""}</span>`, { sort: r => r.eserial }],
+    ["Zustand", r => badge(r.status, r.health), { sort: r => r.health }],
+    ["Zyklen", r => r.cycles == null ? "–" : nf(Math.round(r.cycles)), { num: 1, sort: r => r.cycles }],
+    ["Quelle", r => `${esc(SRC[r.source] || r.source)}${r.bridge ? `<span class="sub">${esc(r.bridge)}</span>` : ""}`, { sort: r => r.source }],
+    ["Standort / Kommentar", r => `${esc(r.location || "")}${r.comment ? `<span class="sub">${esc(r.comment)}</span>` : ""}`, { sort: r => r.location }],
+    ["Von", r => esc(r.uploaded_by || (r.bridge ? "Modul" : "–")), { sort: r => r.uploaded_by }]];
+  const draw = () => table($("#main"), rows, cols, { onRow: readingDetail, empty: "Noch keine Messungen." });
+  draw();
+  const moreBtn = () => { $("#more").innerHTML = rows.length && rows.length % PAGE === 0 ? '<button class="btn">Ältere laden</button>' : "";
+    const b = $("#more button"); if (b) b.onclick = async () => { b.disabled = true; await load(); draw(); moreBtn(); }; };
+  moreBtn();
+  if ($("#clr")) $("#clr").onclick = () => show("readings");
+  $("#csv").onclick = () => csv("messungen", rows, [["Hochgeladen", "created_at"], ["Gemessen", "measured_at"], ["Firma", "org"], ["Seriennummer", "eserial"], ["Modell", "model"],
+    ["Name", "battery_name"], ["Zustand", "health"], ["Status", "status"], ["Pack V", "pack_v"], ["Imbalance mV", "imbalance_mv"], ["Zyklen", "cycles"], ["Quelle", "source"],
+    ["Modul", "bridge"], ["Standort", "location"], ["Kommentar", "comment"], ["Hochgeladen von", "uploaded_by"]]);
+}
+async function readingDetail(r) {
+  drawer('<p class="empty">Lade …</p>');
+  try {
+    const d = await rpc("admin_reading", { p_id: r.id }), s = d.scan || {}, c = s.counters || {};
+    drawer(`<h3>${esc(s.model || r.model || "Akku")} · ${esc(s.eserial || r.eserial)}</h3><p class="empty">${esc(d.org)} · ${dt(d.created_at)}</p>
+      <div style="margin:12px 0">${badge(s.status || r.status, s.health != null ? s.health : r.health)}</div>
+      <dl class="kv"><dt>Gemessen</dt><dd>${dt(d.measured_at)}</dd><dt>Quelle</dt><dd>${esc(SRC[d.source] || d.source)}</dd>
+        ${d.location ? `<dt>Standort</dt><dd>${esc(d.location)}</dd>` : ""}${d.comment ? `<dt>Kommentar</dt><dd>${esc(d.comment)}</dd>` : ""}
+        <dt>Pack</dt><dd>${s.pack_v != null ? esc(s.pack_v) + " V" : "–"} · Imbalance ${s.imbalance_mv != null ? esc(s.imbalance_mv) + " mV" : "–"} · ${s.temp_c != null ? esc(s.temp_c) + " °C" : "–"}</dd>
+        <dt>Zellen</dt><dd><span class="cells">${(s.cells_mv || []).map(v => `<span>${(v / 1000).toFixed(3)} V</span>`).join("") || "–"}</span></dd>
+        <dt>Vollzyklen</dt><dd>${s.cycles != null ? nf(s.cycles) : "–"} · Ladungen ${nf(c.total_charges)} · entladen ${s.discharge_ah != null ? nf(s.discharge_ah) + " Ah" : "–"}</dd>
+        <dt>Ereignisse</dt><dd>Überhitzung ${nf(c.overheat)} · Überstrom ${nf(c.overcurrent)} · Unterspannung ${nf(c.lowvolt)}</dd>
+        <dt>Hergestellt</dt><dd>${esc(s.manufactured || "–")}</dd>
+        ${(s.health_parts || []).map(p => `<dt>− ${esc(p.label)}</dt><dd>${esc(p.penalty)} Punkte <span class="empty">(${esc(p.detail)})</span></dd>`).join("")}</dl>
+      <div class="actions"><button class="btn" id="bat">Alle Messungen dieses Akkus</button><button class="btn" id="json">JSON herunterladen</button></div>
+      <h2 style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;margin:16px 0 8px">Rohdaten</h2><pre>${esc(JSON.stringify(s, null, 1))}</pre>`);
+    $("#bat").onclick = () => { closeDrawer(); show("readings", { battery: r.battery_id, label: "Akku " + (r.battery_name || r.eserial) }); };
+    $("#json").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], { type: "application/json" }));
+      a.download = `messung-${s.eserial || r.eserial}-${(d.created_at || "").slice(0, 10)}.json`; document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 500); };
+  } catch (e) { drawer(`<div class="msg err">${esc(e.message)}</div>`); }
+}
+
+// ---- Akkus
+async function batteries() {
+  const rows = await rpc("admin_batteries");
+  $("#main").innerHTML = tableShell("Suchen: Seriennummer, Modell, Name, Firma, Standort …", '<button class="btn" id="csv">CSV</button>');
+  table($("#main"), rows, [
+    ["Akku", r => `${esc(r.name || r.eserial)}<span class="sub">${r.name ? esc(r.eserial) : ""}</span>`, { sort: r => r.name || r.eserial }],
+    ["Modell", "model", { sort: r => r.model }],
+    ["Firma", "org", { sort: r => r.org }],
+    ["Standort", "location", { sort: r => r.location }],
+    ["Zustand", r => badge(r.last_status, r.last_health), { sort: r => r.last_health }],
+    ["Zyklen", r => r.last_cycles == null ? "–" : nf(Math.round(r.last_cycles)), { num: 1, sort: r => r.last_cycles }],
+    ["Messungen", "readings", { num: 1, sort: r => r.readings }],
+    ["Zuletzt gemessen", r => ago(r.last_measured_at), { sort: r => r.last_measured_at }]],
+    { onRow: r => show("readings", { battery: r.id, label: "Akku " + (r.name || r.eserial) }), empty: "Noch keine Akkus." });
+  $("#csv").onclick = () => csv("akkus", rows, [["Seriennummer", "eserial"], ["Name", "name"], ["Modell", "model"], ["Firma", "org"], ["Standort", "location"],
+    ["Zustand", "last_health"], ["Status", "last_status"], ["Zyklen", "last_cycles"], ["Messungen", "readings"], ["Zuletzt gemessen", "last_measured_at"], ["Ausgemustert", "retired"]]);
+}
+
+// ---- Module
+async function bridges() {
+  const rows = await rpc("admin_bridges");
+  $("#main").innerHTML = tableShell("Suchen: Name, MAC, Firma, Firmware …", '<button class="btn" id="csv">CSV</button>');
+  table($("#main"), rows, [
+    ["Modul", r => `${esc(r.name)}<span class="sub mono">${esc(r.mac || "")}</span>`, { sort: r => r.name }],
+    ["Firma", r => `${esc(r.org)}<span class="sub">${esc(r.created_by || "")}</span>`, { sort: r => r.org }],
+    ["Firmware", "firmware", { sort: r => r.firmware }],
+    ["Zuletzt gesehen", r => ago(r.last_seen), { sort: r => r.last_seen }],
+    ["Verknüpft", r => dt(r.created_at), { sort: r => r.created_at }],
+    ["Uploads", "readings", { num: 1, sort: r => r.readings }],
+    ["Status", r => r.revoked ? '<span class="badge crit">gesperrt</span>' : '<span class="badge good">aktiv</span>', { sort: r => r.revoked }]],
+    { onRow: bridgeDetail, empty: "Noch keine Module mit einem Konto verknüpft." });
+  $("#csv").onclick = () => csv("module", rows, [["Name", "name"], ["MAC", "mac"], ["Firmware", "firmware"], ["Firma", "org"], ["Verknüpft von", "created_by"],
+    ["Verknüpft", "created_at"], ["Zuletzt gesehen", "last_seen"], ["Uploads", "readings"], ["Gesperrt", "revoked"]]);
+}
+function bridgeDetail(b) {
+  drawer(`<h3>${esc(b.name)}</h3><p class="empty mono">${esc(b.mac || "")}</p>
+    <dl class="kv"><dt>Firma</dt><dd>${esc(b.org)}</dd><dt>Verknüpft von</dt><dd>${esc(b.created_by || "–")}</dd><dt>Verknüpft am</dt><dd>${dt(b.created_at)}</dd>
+      <dt>Firmware</dt><dd>${esc(b.firmware || "–")}</dd><dt>Zuletzt gesehen</dt><dd>${dt(b.last_seen)}</dd><dt>Uploads</dt><dd>${nf(b.readings)}</dd>
+      <dt>Status</dt><dd>${b.revoked ? "gesperrt – kann nichts mehr hochladen" : "aktiv"}</dd></dl>
+    <div class="actions"><button class="btn" id="borg">Messungen der Firma</button>
+      <button class="btn ${b.revoked ? "" : "danger"}" id="brev">${b.revoked ? "Entsperren" : "Sperren"}</button></div><div id="dmsg"></div>`);
+  $("#borg").onclick = () => { closeDrawer(); show("readings", { org: b.org_id, label: "Firma " + b.org }); };
+  $("#brev").onclick = async () => {
+    if (!b.revoked && !confirm(`Modul ${b.name} sperren? Es kann danach keine Messungen mehr hochladen, bis es neu verknüpft oder entsperrt wird.`)) return;
+    try { await rpc("admin_set_bridge_revoked", { p_bridge: b.id, p_revoked: !b.revoked }); closeDrawer(); show("bridges"); }
+    catch (e) { $("#dmsg").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+  };
+}
+
+// ---- Besuche
+async function visits() {
+  const rows = await rpc("admin_page_views", { p_limit: 2000 });
+  $("#main").innerHTML = `<p class="empty" style="margin-bottom:10px">Die letzten ${nf(rows.length)} Seitenaufrufe. Gespeichert wird ohne Cookies, IP-Adresse oder Besucher-ID – „Neuer Besuch“ heißt: kam von außerhalb von akkuscan.app.</p>`
+    + tableShell("Suchen: Seite, Herkunft, Browser …", '<button class="btn" id="csv">CSV</button>');
+  table($("#main"), rows, [
+    ["Zeit", r => dt(r.at), { sort: r => r.at }],
+    ["Seite", r => `<span class="mono">${esc(r.path)}</span>`, { sort: r => r.path }],
+    ["Herkunft", r => esc(r.referrer || (r.entry ? "direkt" : "–")), { sort: r => r.referrer }],
+    ["Neuer Besuch", r => r.entry ? '<span class="yes">✓</span>' : '<span class="no">–</span>', { sort: r => r.entry }],
+    ["Gerät", r => esc({ mobile: "Handy", tablet: "Tablet", desktop: "PC" }[r.device] || r.device || "–"), { sort: r => r.device }],
+    ["Browser", "browser", { sort: r => r.browser }],
+    ["Sprache", "lang", { sort: r => r.lang }],
+    ["Kampagne", "utm", { sort: r => r.utm }]],
+    { empty: "Noch keine Besuche gezählt." });
+  $("#csv").onclick = () => csv("besuche", rows, [["Zeit", "at"], ["Seite", "path"], ["Herkunft", "referrer"], ["Neuer Besuch", "entry"], ["Gerät", "device"],
+    ["Browser", "browser"], ["Sprache", "lang"], ["Kampagne", "utm"]]);
+}
+
+// ------------------------------------------------------------------ drawer
+function drawer(html) { $("#drawer").innerHTML = '<button class="btn x" id="dx">Schließen</button>' + html; $("#det").classList.add("open"); $("#dx").onclick = closeDrawer; }
+function closeDrawer() { $("#det").classList.remove("open"); }
+$("#shade").onclick = closeDrawer;
+addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+
+boot();
+</script>
+</body>
+</html>

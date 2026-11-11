@@ -17,6 +17,10 @@
   statt gleich angemeldet die Kontoseite zu zeigen. Abgelaufene oder schon benutzte Links führen mit einer klaren Meldung zu „Passwort vergessen“.
   Nach dem Bestätigen der Registrierung erscheint „E-Mail-Adresse bestätigt – willkommen!“.
 - Der Kasten „Mit der Brücke verbinden“ erscheint im Tab Cloud nicht mehr (Konto und „Meine Akkus“ gehen ohne Modul), außer man tippt dort auf „Verbinden“.
+- **Admin-Seite** unter akkuscan.app/admin/: Kennzahlen und Tagesverläufe (Besuche, Messungen, neue Konten, Seitenaufrufe), Akku-Zustand, Modelle, Firmware,
+  meistbesuchte Seiten, Herkunft, Geräte und Browser; Tabellen für Konten, Messungen (mit allen Werten und Rohdaten), Akkus, Module und Besuche,
+  jeweils durchsuchbar, sortierbar und als CSV; Konto löschen und Modul sperren. Zugang nur für Konten in `public.admins`.
+- **Anonyme Besuchsstatistik** (`webland/track.js`) ohne Cookies, IP-Adresse oder Besucher-ID; Datenschutzerklärung ergänzt (und Cloudflare statt GitHub als Hosting).
 
 ## 1.12 – Eine App, Cloud als Rückgrat
 - **Eine App für WLAN und Bluetooth:** Die Akku-App auf GitHub Pages ist jetzt die Weboberfläche der Brücke selbst, mit einem Bluetooth-Adapter (`webble/ble-shim.js`).

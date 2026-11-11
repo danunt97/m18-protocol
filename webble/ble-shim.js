@@ -241,6 +241,7 @@
         setTimeout(() => { URL.revokeObjectURL(u.href); u.remove(); }, 500); };
     });
     if (!navigator.bluetooth) showNoBt();
+    const tr = document.createElement("script"); tr.src = "/track.js"; tr.defer = true; document.head.appendChild(tr);   // anonyme Seitenstatistik
     const cloud = document.getElementById("tab-cloud");
     if (cloud) new MutationObserver(() => { cardOnCloud = false; syncCard(); }).observe(cloud, { attributes: true, attributeFilter: ["hidden"] });
     syncCard();
