@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Akkuscan-Modul kaufen – M18-Akkus prüfen für 50 €</title>
 <meta name="description" content="Das Akkuscan-Modul: aufstecken, mit dem Handy verbinden, Akku-Zustand ablesen. Fertig eingerichtet, kostenlose App, kein Abo – 50 € bei eBay.">
-<meta name="theme-color" content="#16181b">
+<meta name="theme-color" content="#000000">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon.svg">
 <meta property="og:title" content="Akkuscan-Modul – M18-Akkus prüfen für 50 €">
@@ -14,15 +14,15 @@
 <meta property="og:url" content="https://akkuscan.app/modul/">
 <script src="/shop.js"></script>
 <style>
-:root{--bg:#16181b;--bg2:#1c1f23;--panel:#22262b;--line:#30353c;--text:#eef0f2;--muted:#a3a9b1;--faint:#727982;
-  --red:#e4002b;--red2:#ff2d55;--good:#3fcf7f;--radius:16px;color-scheme:dark}
+:root{--bg:#0c0d0f;--bg2:#121316;--panel:#17181b;--line:#2a2c31;--text:#f5f5f5;--muted:#a6aab1;--faint:#71767d;
+  --red:#e1251b;--red2:#ff3a2e;--orange:#ff7a00;--good:#3ccf7a;--watch:#ffb000;--radius:16px;color-scheme:dark}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 a{color:inherit}
 img{max-width:100%;height:auto;display:block}
 .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
-header{position:sticky;top:0;z-index:10;background:rgba(22,24,27,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:10;background:rgba(0,0,0,.9);backdrop-filter:blur(10px);border-bottom:3px solid var(--red)}
 header .wrap{display:flex;align-items:center;gap:18px;height:64px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-.2px;text-decoration:none}
 .brand svg{width:32px;height:32px}
@@ -41,10 +41,10 @@ nav.links a{color:var(--muted);text-decoration:none;font-size:15px}nav.links a:h
 /* hero */
 .hero{position:relative;overflow:hidden;padding:64px 0 56px}
 .hero::before{content:"";position:absolute;right:-180px;top:-160px;width:760px;height:760px;
-  background:radial-gradient(circle at center,rgba(228,0,43,.26),rgba(228,0,43,0) 62%);pointer-events:none}
+  background:radial-gradient(circle at center,rgba(225,37,27,.26),rgba(225,37,27,0) 62%);pointer-events:none}
 .hero .wrap{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;position:relative}
 @media(max-width:900px){.hero .wrap{grid-template-columns:1fr}.hero{padding-top:44px}}
-.eyebrow{display:inline-block;color:var(--red2);font-weight:700;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:14px}
+.eyebrow{display:inline-block;color:var(--orange);font-weight:700;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:14px}
 h1{font-size:clamp(34px,4.8vw,54px);line-height:1.06;letter-spacing:-1.2px;font-weight:800}
 .lead{color:var(--muted);font-size:clamp(17px,1.6vw,19px);margin:18px 0 26px;max-width:540px}
 .pricebox{display:inline-flex;flex-direction:column;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 22px;max-width:100%}
@@ -52,10 +52,10 @@ h1{font-size:clamp(34px,4.8vw,54px);line-height:1.06;letter-spacing:-1.2px;font-
 .price{font-size:46px;font-weight:800;letter-spacing:-1px;line-height:1}
 .pricenote{color:var(--muted);font-size:15px}
 .pricebox .fine{color:var(--faint);font-size:13px}
-.soon{color:#f1c75b;font-size:14px}
+.soon{color:var(--orange);font-size:14px}
 .trust{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:20px;color:var(--muted);font-size:14.5px}
 .trust span{display:inline-flex;align-items:center;gap:7px}
-.trust svg{width:17px;height:17px;color:var(--good)}
+.trust svg{width:17px;height:17px;color:var(--red2)}
 
 /* product visual */
 .visual{position:relative;max-width:540px;margin:0 auto;width:100%}
@@ -73,7 +73,7 @@ h2{font-size:clamp(28px,3.4vw,38px);line-height:1.15;letter-spacing:-.7px;font-w
 @media(max-width:900px){.box{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.box{grid-template-columns:1fr}}
 .item{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;display:flex;gap:16px;align-items:flex-start}
 .item h3{font-size:17px;margin-bottom:4px}.item p{color:var(--muted);font-size:15px}
-.ico{flex:0 0 46px;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:rgba(228,0,43,.14);color:var(--red2)}
+.ico{flex:0 0 46px;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:rgba(225,37,27,.14);color:var(--red2)}
 .ico svg{width:24px;height:24px}
 .need{margin-top:22px;color:var(--muted);font-size:15px}
 .need b{color:var(--text)}
@@ -82,7 +82,7 @@ h2{font-size:clamp(28px,3.4vw,38px);line-height:1.15;letter-spacing:-.7px;font-w
 ul.checks{list-style:none}
 ul.checks li{position:relative;padding:8px 0 8px 34px}
 ul.checks li::before{content:"";position:absolute;left:0;top:11px;width:22px;height:22px;border-radius:50%;
-  background:rgba(63,207,127,.16) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233fcf7f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/14px no-repeat}
+  background:rgba(225,37,27,.16) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff3a2e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/14px no-repeat}
 ul.checks li span{color:var(--muted)}
 .steps{counter-reset:s}
 .steps li{list-style:none;position:relative;padding:4px 0 18px 50px}
@@ -92,7 +92,7 @@ ul.checks li span{color:var(--muted)}
 
 /* buy band */
 .buy{display:grid;grid-template-columns:1.25fr .75fr;gap:32px;align-items:center;
-  background:linear-gradient(135deg,rgba(228,0,43,.18),rgba(228,0,43,.04));border:1px solid rgba(228,0,43,.38);border-radius:22px;padding:40px}
+  background:linear-gradient(135deg,rgba(225,37,27,.18),rgba(225,37,27,.04));border:1px solid rgba(225,37,27,.38);border-radius:22px;padding:40px}
 .buy .side{display:flex;flex-direction:column;align-items:flex-end;gap:10px;text-align:right}
 @media(max-width:800px){.buy{grid-template-columns:1fr;padding:26px}.buy .side{align-items:flex-start;text-align:left}}
 .support{margin-top:18px;color:var(--muted);max-width:620px}
@@ -117,7 +117,7 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
 <body>
 <header><div class="wrap">
   <a class="brand" href="/?info" aria-label="Akkuscan Startseite">
-    <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="110" fill="#e4002b"/><rect x="150" y="150" width="212" height="250" rx="22" fill="none" stroke="#fff" stroke-width="28"/><rect x="210" y="104" width="92" height="46" rx="10" fill="#fff"/><path d="M266 196 214 286h46l-14 74 54-92h-46z" fill="#fff"/></svg>
+    <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="110" fill="#e1251b"/><rect x="150" y="150" width="212" height="250" rx="22" fill="none" stroke="#fff" stroke-width="28"/><rect x="210" y="104" width="92" height="46" rx="10" fill="#fff"/><path d="M266 196 214 286h46l-14 74 54-92h-46z" fill="#fff"/></svg>
     akkuscan</a>
   <nav class="links"><a href="/?info#funktionen">Funktionen</a><a href="/?info#so-gehts">So geht's</a><a href="/?info#faq">FAQ</a><a class="on" href="/modul/">Modul kaufen</a></nav>
   <div class="hbtns"><a class="btn" href="/app/">App öffnen</a><a class="btn red" data-ebay href="#">Kaufen</a></div>
@@ -162,9 +162,9 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
       <g filter="url(#sh)">
         <path d="M78 178 Q78 160 96 160 H282 Q300 160 300 178 V252 H78 Z" fill="url(#front)" stroke="#4a515a" stroke-width="2"/>
         <rect x="78" y="146" width="222" height="44" rx="16" fill="url(#top)" stroke="#4a515a" stroke-width="2"/>
-        <rect x="90" y="236" width="198" height="5" rx="2.5" fill="#e4002b"/>
+        <rect x="90" y="236" width="198" height="5" rx="2.5" fill="#e1251b"/>
         <!-- logo -->
-        <rect x="104" y="196" width="26" height="26" rx="7" fill="#e4002b"/>
+        <rect x="104" y="196" width="26" height="26" rx="7" fill="#e1251b"/>
         <path d="M118.5 200.5 112.5 210.5h5l-1.5 8 6-10h-5z" fill="#fff"/>
         <text x="140" y="216" fill="#eef0f2" font-size="20" font-weight="800" font-family="system-ui,sans-serif" letter-spacing="-.3">akkuscan</text>
         <!-- LED -->
@@ -174,7 +174,7 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
         <rect x="290" y="204" width="16" height="22" rx="5" fill="#0d0f11" stroke="#4a515a" stroke-width="1.5"/>
       </g>
       <!-- bluetooth waves -->
-      <g fill="none" stroke="#ff2d55" stroke-width="5" stroke-linecap="round">
+      <g fill="none" stroke="#ff7a00" stroke-width="5" stroke-linecap="round">
         <path d="M318 150a34 34 0 0 1 0 44" opacity=".9"/><path d="M336 134a58 58 0 0 1 0 76" opacity=".6"/><path d="M354 118a82 82 0 0 1 0 108" opacity=".32"/>
       </g>
     </svg>
@@ -194,7 +194,7 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
     <div class="item"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></div>
       <div><h3>App fürs Handy und den PC</h3><p>Einfach akkuscan.app öffnen – kostenlos, ohne App Store.</p></div></div>
     <div class="item"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></div>
-      <div><h3>Kostenloses Konto</h3><p>„Meine Akkus“ mit Verlauf: Jede Messung bleibt gespeichert, auf jedem Gerät abrufbar.</p></div></div>
+      <div><h3>Kostenloses Konto</h3><p>Deine Flotte mit Gruppen und Verlauf: Jede Messung bleibt gespeichert, auf jedem Gerät abrufbar.</p></div></div>
     <div class="item"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></div>
       <div><h3>Kostenlose Updates</h3><p>Neue Funktionen und Verbesserungen bekommst du ohne Aufpreis.</p></div></div>
     <div class="item"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></div>

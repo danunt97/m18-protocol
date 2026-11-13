@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Akkuscan – Zustand von M18-Akkus in Sekunden prüfen</title>
 <meta name="description" content="Akkuscan liest Milwaukee® M18™-Akkus aus: Zustand, Ladezyklen, Zellspannungen, Überhitzung und 185 Messwerte – per Bluetooth am Handy. Mit Cloud-Verlauf für ganze Akku-Flotten.">
-<meta name="theme-color" content="#16181b">
+<meta name="theme-color" content="#000000">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icon.svg">
 <script src="/shop.js"></script>
@@ -22,8 +22,8 @@
   })();
 </script>
 <style>
-:root{--bg:#16181b;--bg2:#1c1f23;--panel:#22262b;--line:#30353c;--text:#eef0f2;--muted:#a3a9b1;--faint:#727982;
-  --red:#e4002b;--red2:#ff2d55;--good:#3fcf7f;--watch:#e7b43a;--radius:16px;color-scheme:dark}
+:root{--bg:#0c0d0f;--bg2:#121316;--panel:#17181b;--line:#2a2c31;--text:#f5f5f5;--muted:#a6aab1;--faint:#71767d;
+  --red:#e1251b;--red2:#ff3a2e;--orange:#ff7a00;--good:#3ccf7a;--watch:#ffb000;--radius:16px;color-scheme:dark}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
@@ -31,14 +31,14 @@ a{color:inherit}
 img{max-width:100%;height:auto;display:block}
 .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
 /* header */
-header{position:sticky;top:0;z-index:10;background:rgba(22,24,27,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:10;background:rgba(0,0,0,.9);backdrop-filter:blur(10px);border-bottom:3px solid var(--red)}
 header .wrap{display:flex;align-items:center;gap:18px;height:64px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-.2px;text-decoration:none}
 .brand svg{width:32px;height:32px}
 nav.links{display:flex;gap:22px;margin-left:12px}
 nav.links a{color:var(--muted);text-decoration:none;font-size:15px}nav.links a:hover{color:var(--text)}
 .hbtns{margin-left:auto;display:flex;gap:10px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:11px;padding:11px 18px;font:600 15px/1 system-ui,sans-serif;
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:11px;padding:11px 18px;font:700 15px/1 system-ui,sans-serif;
   text-decoration:none;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--faint)}
 .btn.red{background:var(--red);border-color:var(--red);color:#fff}.btn.red:hover{background:var(--red2);border-color:var(--red2)}
@@ -48,29 +48,29 @@ nav.links a{color:var(--muted);text-decoration:none;font-size:15px}nav.links a:h
 /* hero */
 .hero{position:relative;overflow:hidden;padding:72px 0 40px}
 .hero::before{content:"";position:absolute;inset:-30% -10% auto auto;width:720px;height:720px;
-  background:radial-gradient(circle at center,rgba(228,0,43,.28),rgba(228,0,43,0) 62%);pointer-events:none}
+  background:radial-gradient(circle at 40% 40%,rgba(225,37,27,.30),rgba(255,122,0,.08) 45%,rgba(225,37,27,0) 66%);pointer-events:none}
 .hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;position:relative}
-.eyebrow{display:inline-block;color:var(--red2);font-weight:700;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:14px}
+.eyebrow{display:inline-block;color:var(--orange);font-weight:700;font-size:13px;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:14px}
 h1{font-size:clamp(34px,5.2vw,58px);line-height:1.06;letter-spacing:-1.2px;font-weight:800}
-h1 em{font-style:normal;color:var(--red2)}
+h1 em{font-style:normal;color:var(--red)}
 .lead{color:var(--muted);font-size:clamp(17px,1.6vw,20px);margin:20px 0 28px;max-width:560px}
 .ctas{display:flex;gap:12px;flex-wrap:wrap}
 .small{color:var(--faint);font-size:13.5px;margin-top:14px}
 .phones{display:flex;justify-content:center;align-items:flex-start;gap:22px}
-.phone{flex:0 0 auto;width:236px;border-radius:36px;border:8px solid #0b0c0e;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 1px #2c3036;overflow:hidden;background:#16181b}
+.phone{flex:0 0 auto;width:236px;border-radius:36px;border:8px solid #0b0c0e;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 1px #2c3036;overflow:hidden;background:#0c0d0f}
 .phone img{width:100%}
 .phone.b{margin-top:52px}
 @media(max-width:1060px){.phone{width:210px}}
 @media(max-width:900px){.hero .wrap{grid-template-columns:1fr}.phone{width:220px}}
 @media(max-width:560px){.hero{padding-top:48px}.phones{gap:12px}.phone{width:calc(50% - 6px);max-width:200px;border-width:6px;border-radius:26px}.phone.b{margin-top:34px}}
 /* browser window around the desktop screenshot */
-.browser{border-radius:14px;border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.45);overflow:hidden;background:#1b1d20}
-.browser .bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:#24282d;border-bottom:1px solid var(--line)}
+.browser{border-radius:14px;border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.45);overflow:hidden;background:#101113}
+.browser .bar{display:flex;align-items:center;gap:7px;padding:10px 14px;background:#1b1c1f;border-bottom:1px solid var(--line)}
 .browser .bar i{width:11px;height:11px;border-radius:50%;background:#3a4048}
-.browser .bar span{margin-left:10px;flex:1;background:#16181b;border-radius:7px;padding:4px 12px;font-size:12.5px;color:var(--muted)}
+.browser .bar span{margin-left:10px;flex:1;background:#0c0d0f;border-radius:7px;padding:4px 12px;font-size:12.5px;color:var(--muted)}
 /* product teaser */
 .teaser{display:flex;align-items:center;gap:18px;margin:28px 0 0;padding:18px 22px;border-radius:18px;text-decoration:none;
-  background:linear-gradient(135deg,rgba(228,0,43,.18),rgba(228,0,43,.04));border:1px solid rgba(228,0,43,.38)}
+  background:linear-gradient(135deg,rgba(225,37,27,.18),rgba(225,37,27,.04));border:1px solid rgba(225,37,27,.38)}
 .teaser:hover{border-color:var(--red2)}
 .tico{flex:0 0 48px;height:48px;border-radius:13px;display:grid;place-items:center;background:var(--red);color:#fff}.tico svg{width:26px;height:26px}
 .ttxt{display:flex;flex-direction:column;flex:1;min-width:0}.ttxt b{font-size:18px}.ttxt span{color:var(--muted);font-size:14.5px}
@@ -90,7 +90,7 @@ h2{font-size:clamp(28px,3.6vw,40px);line-height:1.15;letter-spacing:-.7px;font-w
 @media(max-width:900px){.grid3{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.grid3{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
 .card h3{font-size:18px;margin:12px 0 6px}.card p{color:var(--muted);font-size:15px}
-.ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:rgba(228,0,43,.14);color:var(--red2)}
+.ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:rgba(225,37,27,.14);color:var(--red2)}
 .ico svg{width:24px;height:24px}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px;counter-reset:s}
 @media(max-width:800px){.steps{grid-template-columns:1fr}}
@@ -102,11 +102,11 @@ h2{font-size:clamp(28px,3.6vw,40px);line-height:1.15;letter-spacing:-.7px;font-w
 .split.rev .media{order:-1}
 @media(max-width:900px){.split{grid-template-columns:1fr}.split.rev .media{order:0}}
 .illu{width:100%;max-width:520px;margin:0 auto;display:block}
-.shot{border-radius:14px;border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.45);overflow:hidden;background:#1b1d20}
+.shot{border-radius:14px;border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.45);overflow:hidden;background:#101113}
 ul.checks{list-style:none;margin-top:18px}
 ul.checks li{position:relative;padding:7px 0 7px 34px;color:var(--text)}
 ul.checks li::before{content:"";position:absolute;left:0;top:10px;width:22px;height:22px;border-radius:50%;
-  background:rgba(63,207,127,.16) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233fcf7f' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/14px no-repeat}
+  background:rgba(225,37,27,.16) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff3a2e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/14px no-repeat}
 ul.checks li span{color:var(--muted)}
 .tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:40px}
 .tag{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:10px 16px;color:var(--muted);font-size:15px}
@@ -133,7 +133,7 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
 <body>
 <header><div class="wrap">
   <a class="brand" href="/?info" aria-label="Akkuscan Startseite">
-    <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="110" fill="#e4002b"/><rect x="150" y="150" width="212" height="250" rx="22" fill="none" stroke="#fff" stroke-width="28"/><rect x="210" y="104" width="92" height="46" rx="10" fill="#fff"/><path d="M266 196 214 286h46l-14 74 54-92h-46z" fill="#fff"/></svg>
+    <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="110" fill="#e1251b"/><rect x="150" y="150" width="212" height="250" rx="22" fill="none" stroke="#fff" stroke-width="28"/><rect x="210" y="104" width="92" height="46" rx="10" fill="#fff"/><path d="M266 196 214 286h46l-14 74 54-92h-46z" fill="#fff"/></svg>
     akkuscan</a>
   <nav class="links"><a href="#funktionen">Funktionen</a><a href="#so-gehts">So geht's</a><a href="#betriebe">Für Betriebe</a><a href="#faq">FAQ</a><a href="/modul/">Modul kaufen</a></nav>
   <div class="hbtns"><a class="btn" href="/app/#konto">Anmelden</a><a class="btn red" href="/app/">App öffnen</a></div>
@@ -207,14 +207,14 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
       </ul></div>
     <div class="media"><svg class="illu" viewBox="0 0 520 380" role="img" aria-label="Modul auf dem Akku, per Bluetooth mit dem Handy verbunden">
       <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b3036"/><stop offset="1" stop-color="#1d2024"/></linearGradient>
-        <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e4002b"/><stop offset="1" stop-color="#a80020"/></linearGradient></defs>
+        <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4d53"/><stop offset="1" stop-color="#2c2e33"/></linearGradient></defs>
       <rect x="40" y="200" width="250" height="140" rx="18" fill="url(#g1)" stroke="#3a4048" stroke-width="2"/>
       <rect x="40" y="200" width="250" height="34" rx="18" fill="url(#g2)"/><rect x="40" y="220" width="250" height="14" fill="url(#g2)"/>
       <text x="165" y="300" text-anchor="middle" fill="#8b929b" font-size="22" font-weight="700" font-family="system-ui,sans-serif">M18 Akku</text>
       <rect x="85" y="120" width="160" height="80" rx="14" fill="#2f343b" stroke="#4a515a" stroke-width="2"/>
       <text x="165" y="168" text-anchor="middle" fill="#eef0f2" font-size="18" font-weight="800" font-family="system-ui,sans-serif">akkuscan</text>
       <circle cx="222" cy="140" r="6" fill="#3fcf7f"><animate attributeName="opacity" values="1;.35;1" dur="2.4s" repeatCount="indefinite"/></circle>
-      <g fill="none" stroke="#ff2d55" stroke-width="5" stroke-linecap="round">
+      <g fill="none" stroke="#ff7a00" stroke-width="5" stroke-linecap="round">
         <path d="M282 150a40 40 0 0 1 0 50" opacity=".9"/><path d="M302 132a66 66 0 0 1 0 86" opacity=".6"/><path d="M322 114a92 92 0 0 1 0 122" opacity=".35"/></g>
       <rect x="370" y="70" width="120" height="240" rx="22" fill="#0b0c0e" stroke="#3a4048" stroke-width="2"/>
       <rect x="380" y="90" width="100" height="200" rx="10" fill="#22262b"/>
@@ -230,10 +230,10 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
 
 <section id="betriebe"><div class="wrap">
   <h2>Für Betriebe: die ganze Akku-Flotte im Blick.</h2>
-  <p class="sub">Mit einem kostenlosen Konto landet jede Messung automatisch in „Meine Akkus“ – egal von welchem Handy oder Modul. So erkennst du alternde Akkus, bevor sie auf der Baustelle ausfallen.</p>
+  <p class="sub">Mit einem kostenlosen Konto landet jede Messung automatisch in deiner <b>Flotte</b> – egal von welchem Handy oder Modul. So erkennst du alternde Akkus, bevor sie auf der Baustelle ausfallen.</p>
   <div class="split">
     <div><ul class="checks">
-        <li>Meine Akkus <span>– alle Akkus mit aktuellem Zustand und Standort</span></li>
+        <li>Flotte mit Gruppen <span>– z. B. Firmenbus, Werkstatt, Büro – jeder Akku mit Name und Zustand</span></li>
         <li>Verlauf je Akku <span>– jede Messung bleibt gespeichert, so sieht man die Alterung</span></li>
         <li>Standort und Notiz <span>– z. B. „Transporter 1“ oder „Kunde Huber“</span></li>
         <li>Mehrere Handys und Module <span>– alles landet im selben Konto</span></li>
@@ -242,7 +242,7 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
       </ul>
       <div class="ctas" style="margin-top:26px"><a class="btn red" href="/app/#registrieren">Konto anlegen</a></div></div>
     <div class="media"><div class="browser"><div class="bar"><i></i><i></i><i></i><span>akkuscan.app/app/</span></div>
-      <img src="/img/app-browser.webp" alt="Die Akkuscan-App am PC: Meine Akkus mit Zustand und der Messverlauf eines Akkus" width="1720" height="1440" loading="lazy"></div></div>
+      <img src="/img/app-browser.webp" alt="Die Akkuscan-App am PC: die Flotte in Gruppen mit Zustand jedes Akkus" width="1720" height="1440" loading="lazy"></div></div>
   </div>
   <div class="tags">
     <span class="tag"><b>Werkstatt &amp; Handwerk</b> – Akkus regelmäßig prüfen</span>
@@ -263,7 +263,7 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
         Alternativ hat das Modul ein eigenes WLAN: Handy damit verbinden, dann öffnet sich dieselbe Seite – das geht mit jedem Handy und jedem Browser.</p></details>
     <details><summary>Geht das auch am Computer?</summary>
       <p>Ja. Es ist dieselbe Seite – am Laptop oder PC einfach akkuscan.app in Chrome oder Edge öffnen und per Bluetooth verbinden, oder über das WLAN des Moduls.
-        Du musst nichts installieren. Wenn du angemeldet bist, siehst du „Meine Akkus“ auf jedem Gerät.</p></details>
+        Du musst nichts installieren. Wenn du angemeldet bist, siehst du deine Flotte auf jedem Gerät.</p></details>
     <details><summary>Brauche ich ein Konto?</summary>
       <p>Zum Auslesen nicht. Mit einem kostenlosen Konto werden deine Messungen aber gespeichert – dann siehst du alle Akkus und wie sie sich über die Zeit verändern,
         auch auf anderen Geräten.</p></details>

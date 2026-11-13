@@ -5,28 +5,35 @@
 static const char WEB_UI[] PROGMEM = R"HTML(<!doctype html>
 <html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>M18 Akku-Brücke</title>
+<title>Akkuscan</title>
 <style>
-:root{--bg:#1b1d20;--panel:#23262a;--panel2:#1a1c1f;--raise:#2c3035;--line:#34383e;--text:#eceef0;--muted:#959ba3;--faint:#6b7178;
---accent:#e4002b;--good:#3fcf7f;--watch:#e7b43a;--weak:#f0703c;--crit:#ff4d5e;--info:#5aa2ff;color-scheme:dark}
-@media (prefers-color-scheme:light){:root{--bg:#f3f4f6;--panel:#fff;--panel2:#f7f8fa;--raise:#eef0f3;--line:#dde0e5;--text:#17191c;--muted:#5e646c;--faint:#8a9098;
---good:#12935a;--watch:#b07d00;--weak:#c4501c;--crit:#d0142c;--info:#1f6fd6;color-scheme:light}}
+:root{--bg:#0c0d0f;--panel:#16171a;--panel2:#101113;--raise:#222429;--line:#2c2e33;--text:#f5f5f5;--muted:#a2a6ad;--faint:#6d7279;
+--accent:#e1251b;--accent-hi:#ff3a2e;--orange:#ff7a00;--good:#3ccf7a;--watch:#ffb000;--weak:#ff7a00;--crit:#ff3b3b;--info:#d9dbde;
+--infobg:rgba(255,255,255,.06);--infoline:rgba(255,255,255,.2);color-scheme:dark}
+@media (prefers-color-scheme:light){:root{--bg:#f2f2f3;--panel:#fff;--panel2:#f7f7f8;--raise:#ebebed;--line:#dadbde;--text:#111214;--muted:#585c63;--faint:#8b9097;
+--accent:#d71a14;--accent-hi:#f02a1f;--orange:#e06800;--good:#0f8a4a;--watch:#a86f00;--weak:#c2510c;--crit:#c8102e;--info:#33363b;
+--infobg:rgba(0,0,0,.04);--infoline:rgba(0,0,0,.16);color-scheme:light}}
 *{box-sizing:border-box;margin:0;padding:0}[hidden]{display:none!important}
 body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,"Segoe UI",sans-serif}
-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
-.logo{background:var(--accent);color:#fff;font-weight:800;font-size:12px;border-radius:7px;padding:6px 7px}
-header h1{font-size:16px;font-weight:650}header small{display:block;color:var(--muted);font-size:11.5px;font-weight:400}
+header{display:flex;align-items:center;gap:10px;padding:11px 16px;background:#000;color:#fff;border-bottom:3px solid var(--accent);flex-wrap:wrap}
+.logo{width:32px;height:32px;flex:none}
+header h1{font-size:17px;font-weight:800;letter-spacing:-.2px}header small{display:block;color:#9da1a8;font-size:11.5px;font-weight:400;letter-spacing:0}
+header .btn{background:#1b1c1f;border-color:#34363b;color:#fff}header .btn.primary{background:var(--accent);border-color:var(--accent)}
 .pill{margin-left:auto;font-size:12px;border-radius:20px;padding:3px 10px;background:var(--raise);color:var(--muted)}
-.pill.ok{background:rgba(63,207,127,.14);color:var(--good)}.pill.ap{background:rgba(90,162,255,.15);color:var(--info)}
+.pill.ok{background:rgba(60,207,122,.14);color:var(--good)}.pill.ap{background:rgba(255,122,0,.15);color:var(--orange)}
+header .pill{background:#1b1c1f;color:#c9ccd0}
 nav{display:flex;gap:4px;padding:10px 16px 0;max-width:820px;margin:0 auto}
-nav button{flex:1;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:9px;font:inherit;cursor:pointer}
-nav button.on{color:var(--text);border-bottom-color:var(--accent)}
+nav button{flex:1;background:transparent;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:10px 6px 9px;font:inherit;font-weight:700;
+  font-size:12.5px;text-transform:uppercase;letter-spacing:.7px;cursor:pointer}
+nav button.on{color:var(--text);border-bottom-color:var(--accent)}nav button:hover{color:var(--text)}
 main{max-width:820px;margin:0 auto;padding:14px 16px 40px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
-.card h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.card h2{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--text);font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card h2::before{content:"";flex:none;width:4px;height:14px;border-radius:1px;background:var(--accent)}
 .btn{display:inline-flex;align-items:center;gap:8px;justify-content:center;background:var(--raise);border:1px solid var(--line);color:var(--text);
 border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer;text-decoration:none}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}.btn.big{padding:13px 22px;font-size:15px;width:100%}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;letter-spacing:.2px}.btn.primary:hover{background:var(--accent-hi);border-color:var(--accent-hi)}
+.btn:hover{border-color:var(--faint)}.btn.big{padding:13px 22px;font-size:15px;width:100%}
 .btn:disabled{opacity:.5}
 input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:9px 10px;font:inherit}
 label{display:block;color:var(--muted);font-size:12.5px;margin:10px 0 4px}
@@ -37,7 +44,7 @@ label{display:block;color:var(--muted);font-size:12.5px;margin:10px 0 4px}
 .title b{font-size:18px;display:block}.title span{color:var(--muted)}
 .badge{display:inline-block;border-radius:20px;padding:2px 9px;font-size:12px;font-weight:600;margin-top:4px}
 .good{color:var(--good)}.watch{color:var(--watch)}.weak{color:var(--weak)}.crit{color:var(--crit)}.unknown{color:var(--muted)}
-.badge.good{background:rgba(63,207,127,.13)}.badge.watch{background:rgba(231,180,58,.14)}.badge.weak{background:rgba(240,112,60,.15)}.badge.unknown{background:var(--raise)}
+.badge.good{background:rgba(60,207,122,.13)}.badge.watch{background:rgba(255,176,0,.14)}.badge.weak{background:rgba(255,122,0,.15)}.badge.unknown{background:var(--raise)}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:14px}
 .stat{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
 .stat .k{color:var(--muted);font-size:12px}.stat .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}.stat .v small{font-size:12px;color:var(--muted);font-weight:400}
@@ -50,8 +57,8 @@ label{display:block;color:var(--muted);font-size:12.5px;margin:10px 0 4px}
 .net{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;cursor:pointer}
 .net:hover{border-color:var(--faint)}.bars{color:var(--muted);font-size:12px}
 .box{border-radius:8px;padding:12px 14px;border:1px solid;margin-top:12px}
-.box.ok{background:rgba(63,207,127,.12);border-color:rgba(63,207,127,.4)}.box.err{background:rgba(255,77,94,.12);border-color:rgba(255,77,94,.4)}
-.box.info{background:rgba(90,162,255,.12);border-color:rgba(90,162,255,.4)}
+.box.ok{background:rgba(60,207,122,.12);border-color:rgba(60,207,122,.4)}.box.err{background:rgba(255,59,59,.12);border-color:rgba(255,59,59,.45)}
+.box.info{background:var(--infobg);border-color:var(--infoline)}
 .big-url{font-size:17px;font-weight:650;word-break:break-all}
 pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-all;font-size:12px;max-height:260px;overflow:auto}
 .prog{height:6px;background:var(--raise);border-radius:3px;overflow:hidden;margin-top:10px}.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
@@ -60,9 +67,9 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .grp{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--gc);border-radius:12px;margin-bottom:12px;transition:box-shadow .15s}
 .grp.drop{box-shadow:0 0 0 3px var(--gc)}
 .ghd{display:flex;align-items:center;gap:10px;padding:12px 12px 12px 10px;cursor:pointer;user-select:none}
-.gtile{flex:none;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2)}
+.gtile{flex:none;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2),0 0 0 1px rgba(255,255,255,.08)}
 .ghd .gchip{display:inline-block;margin-left:6px;border-radius:20px;padding:0 7px;font-size:11.5px;font-weight:600;vertical-align:1px}
-.gchip.crit{color:var(--crit);background:rgba(255,77,94,.14)}.gchip.weak{color:var(--weak);background:rgba(240,112,60,.15)}.gchip.watch{color:var(--watch);background:rgba(231,180,58,.14)}
+.gchip.crit{color:var(--crit);background:rgba(255,59,59,.14)}.gchip.weak{color:var(--weak);background:rgba(255,122,0,.15)}.gchip.watch{color:var(--watch);background:rgba(255,176,0,.14)}
 .gicons{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px}
 .gic{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--panel2);border:2px solid transparent;border-radius:10px;padding:7px 2px;color:var(--muted);font:inherit;font-size:11px;cursor:pointer;line-height:1.2;text-align:center}
 .gic .gtile{width:34px;height:34px;border-radius:9px}.gic.on{border-color:var(--text);color:var(--text)}.ghd b{font-size:16px}.ghd .n{color:var(--muted);font-size:12.5px;margin-left:4px}
@@ -81,10 +88,10 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .sheet>div{background:var(--bg);width:100%;max-width:820px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px 28px;border:1px solid var(--line)}
 .sheet .shd{display:flex;align-items:center;gap:12px;margin-bottom:12px}.sheet .shd b{font-size:19px;display:block}.sheet .shd .btn{margin-left:auto}
 #acct{position:relative;display:flex}
-.abtn{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:3px 11px 3px 3px;background:var(--raise);border:1px solid var(--line);color:var(--text);font:inherit;cursor:pointer;position:relative}
+.abtn{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:3px 11px 3px 3px;background:#1b1c1f;border:1px solid #34363b;color:#fff;font:inherit;cursor:pointer;position:relative}
 .abtn:hover{border-color:var(--faint)}.abtn .av{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
 .abtn .nm{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-.abtn .adot{position:absolute;top:-4px;left:20px;background:var(--info);color:#fff;border-radius:10px;font-size:10.5px;font-weight:700;padding:0 5px;line-height:16px}
+.abtn .adot{position:absolute;top:-4px;left:20px;background:var(--orange);color:#000;border-radius:10px;font-size:10.5px;font-weight:700;padding:0 5px;line-height:16px}
 @media(max-width:560px){.abtn .nm{display:none}.abtn{padding:3px}}
 .amenu{position:absolute;right:0;top:calc(100% + 8px);width:290px;max-width:calc(100vw - 20px);background:var(--panel);border:1px solid var(--line);border-radius:14px;
   box-shadow:0 18px 44px rgba(0,0,0,.5);padding:14px;z-index:70}
@@ -97,8 +104,8 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .ghd .gname b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ghd .gname[data-ge]{cursor:pointer}
 .ghd .gname[data-ge]:hover{background:rgba(255,255,255,.06)}.ghd .gname .pen{color:var(--faint);font-size:13px}
 .ghd .gsub{display:flex;flex-wrap:wrap;align-items:center;gap:4px 0}.ghd .gsub .n{margin-left:0}
-.qname{border-color:rgba(90,162,255,.45)}.qname .two{gap:10px}
-.sheet .shd .bi{flex:none;width:54px;height:69px}.badge.crit{background:rgba(255,77,94,.14)}
+.qname{border-color:rgba(255,122,0,.5)}.qname .two{gap:10px}
+.sheet .shd .bi{flex:none;width:54px;height:69px}.badge.crit{background:rgba(255,59,59,.14)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:640px){.two{grid-template-columns:1fr}}
 details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;padding:10px 0;font-weight:600}
 .reg{display:grid;grid-template-columns:1fr auto;gap:10px;padding:5px 0;border-top:1px solid var(--line);align-items:center}
@@ -106,7 +113,7 @@ details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;pa
 .reg .lab small{display:block;color:var(--faint);font-size:10.5px;font-family:ui-monospace,Consolas,monospace}
 .reg .rv{text-align:right;font-variant-numeric:tabular-nums;word-break:break-word}.faint{color:var(--faint)}
 </style></head><body>
-<header><span class="logo">M18</span><h1>Akku-Brücke<small id="hostline">…</small></h1><span class="pill" id="pill">…</span><span id="acct"></span></header>
+<header><svg class="logo" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="110" fill="#e1251b"/><rect x="150" y="150" width="212" height="250" rx="22" fill="none" stroke="#fff" stroke-width="28"/><rect x="210" y="104" width="92" height="46" rx="10" fill="#fff"/><path d="M266 196 214 286h46l-14 74 54-92h-46z" fill="#fff"/></svg><h1>Akkuscan<small id="hostline">…</small></h1><span class="pill" id="pill">…</span><span id="acct"></span></header>
 <nav><button data-tab="akku" class="on">Akku</button><button data-tab="verlauf">Verlauf <span id="newcount" class="pill ok" style="padding:0 7px;margin:0" hidden></span></button><button data-tab="cloud">Flotte <span id="qcount" class="pill" style="padding:0 7px;margin:0" hidden></span></button><button data-tab="wlan">WLAN</button><button data-tab="geraet">Gerät</button></nav>
 <main>
 <section id="tab-akku">
@@ -619,7 +626,8 @@ function cloudPwForm(){cbox(`<div class="card"><h2>Neues Passwort festlegen</h2>
 const fdt2=s=>s?new Date(s).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"}):"–";
 const SRCN={"app-ble":"App (Bluetooth)","app-wlan":"App (WLAN)",bridge:"Brücke",pc:"PC"};
 /* ---- Flotte: batteries in coloured groups ("Firmenbus 1", "Büro" …), moved by drag & drop or in the battery sheet */
-const GCOL=["#4c8dff","#2bb5a6","#9b6bff","#e45bb0","#f08a3c","#d6b13a","#5cb85c","#8a929b"];
+const GCOL=["#e1251b","#9e1118","#ff7a00","#ffb000","#f2f2f2","#a9adb3","#4a4d53","#111214"];
+const ink=c=>{const m=/^#?([0-9a-f]{6})$/i.exec(c||"");if(!m)return"#fff";const v=parseInt(m[1],16),l=(.299*(v>>16)+.587*(v>>8&255)+.114*(v&255))/255;return l>.62?"#111214":"#fff";};
 let FLEET={groups:[],bats:[]},FQ="";const OPEN=ls.get("m18.fleet.open")||{};
 /* Symbols: groups (van, car, office …) as coloured tiles; batteries as a pack by build (compact/XC/HO/FORGE) with capacity. */
 const GICON = {
@@ -649,16 +657,17 @@ function batKind(b) {
   return { cap: cap != null ? (Math.round(cap * 10) / 10).toString().replace(".", ",") : "?", type };
 }
 function batIcon(b) {
-  const k = batKind(b), T = { CP: ["#8d98a6", 30], XC: ["#4c8dff", 38], HO: ["#a77bff", 46], FORGE: ["#f39c32", 44], "": ["#8d98a6", 38] }[k.type];
-  const [ac, h] = T, y = 54 - h, uid = "g" + Math.random().toString(36).slice(2, 8), small = k.cap.length > 2;
+  const k = batKind(b), T = { CP: ["#a9adb3", "#111214", 30], XC: ["#e1251b", "#fff", 38], HO: ["#ff7a00", "#111214", 46], FORGE: ["#0b0b0c", "#ff7a00", 44], "": ["#a9adb3", "#111214", 38] }[k.type];
+  const [ac, tc, h] = T, y = 54 - h, uid = "g" + Math.random().toString(36).slice(2, 8), small = k.cap.length > 2, f = k.type == "FORGE";
   return `<svg class="bi" viewBox="0 0 44 56" aria-hidden="true"><defs><linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#454b53"/><stop offset="1" stop-color="#23272c"/></linearGradient></defs>
-    <rect x="11" y="${y - 5}" width="22" height="7" rx="2" fill="#30353c" stroke="#59616b" stroke-width="1"/>
-    <rect x="15" y="${y - 3.2}" width="14" height="2" rx="1" fill="${ac}" opacity=".9"/>
-    <rect x="3.5" y="${y}" width="37" height="${h}" rx="6.5" fill="url(#${uid})" stroke="#59616b" stroke-width="1"/>
-    <rect x="3.5" y="${y + h - 7}" width="37" height="7" rx="3" fill="${ac}" opacity=".95"/><rect x="3.5" y="${y + h - 9}" width="37" height="3" fill="${ac}" opacity=".95"/>
+      <stop offset="0" stop-color="${f ? "#2a2b2e" : "#3d4046"}"/><stop offset="1" stop-color="${f ? "#0f0f10" : "#1c1e21"}"/></linearGradient></defs>
+    <rect x="11" y="${y - 5}" width="22" height="7" rx="2" fill="#26282c" stroke="#55595f" stroke-width="1"/>
+    <rect x="15" y="${y - 3.2}" width="14" height="2" rx="1" fill="${f ? "#ff7a00" : "#e1251b"}"/>
+    <rect x="3.5" y="${y}" width="37" height="${h}" rx="6.5" fill="url(#${uid})" stroke="${f ? "#ff7a00" : "#55595f"}" stroke-width="${f ? 1.4 : 1}"/>
+    <rect x="3.5" y="${y + h - 7}" width="37" height="7" rx="3" fill="${ac}"/><rect x="3.5" y="${y + h - 9}" width="37" height="3" fill="${ac}"/>
+    ${f ? `<rect x="3.5" y="${y + h - 9.6}" width="37" height="1.2" fill="#ff7a00"/>` : ""}
     <text x="22" y="${y + h - 13 - (h > 34 ? 4 : 0)}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="${small ? 12 : 15}" fill="#fff">${k.cap}<tspan font-size="${small ? 7 : 8.5}" font-weight="700" dx="0.5">Ah</tspan></text>
-    ${k.type ? `<text x="22" y="${y + h - 2.1}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="${k.type == "FORGE" ? 5.6 : 6.2}" letter-spacing=".6" fill="#111">${k.type}</text>` : ""}</svg>`;
+    ${k.type ? `<text x="22" y="${y + h - 2.1}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="${f ? 5.6 : 6.2}" letter-spacing=".6" fill="${tc}">${k.type}</text>` : ""}</svg>`;
 }
 const GKEYS=["folder","van","car","truck","trailer","office","workshop","warehouse","site","home","toolbox","charge","person","repair"];
 function guessIcon(n){n=String(n||"").toLowerCase();
@@ -666,7 +675,7 @@ function guessIcon(n){n=String(n||"").toLowerCase();
     :/büro|buero|office/.test(n)?"office":/werkstatt|halle/.test(n)?"workshop":/lager|regal|depot/.test(n)?"warehouse":/baustelle|projekt|kunde/.test(n)?"site"
     :/zuhause|privat|home|haus/.test(n)?"home":/koffer|kiste|box/.test(n)?"toolbox":/lade|laden|station/.test(n)?"charge":/defekt|prüf|pruef|reparatur|kaputt|aussortiert/.test(n)?"repair"
     :/mitarbeiter|monteur|kollege|team/.test(n)?"person":null;}
-const gTile=(icon,col,sz)=>`<span class="gtile" style="background:${esc(col)}">${gIcon(icon,sz||22)}</span>`;
+const gTile=(icon,col,sz)=>`<span class="gtile" style="background:${esc(col)};color:${ink(col)}">${gIcon(icon,sz||22)}</span>`;
 function gSum(list){const n={crit:0,weak:0,watch:0};list.forEach(b=>{if(n[b.last_status]!=null)n[b.last_status]++;});
   return [["crit","kritisch"],["weak","schwach"],["watch","beobachten"]].filter(x=>n[x[0]]).map(x=>`<span class="gchip ${x[0]}">${n[x[0]]} ${x[1]}</span>`).join("");}
 const batName=b=>b.name?`<b>${esc(b.name)}</b>`:`<b class="noname">Ohne Namen · ${esc(b.model||b.eserial)}</b>`;
@@ -681,7 +690,7 @@ async function cloudView(){cloudHead();const v=$("#cloudview");if(!SESS||RECOVER
   catch(e){v.innerHTML=`<div class="card"><div class="box err">${esc(e.message)}</div></div>`;}}
 function fleetRender(){const v=$("#cloudview"),{groups,bats}=FLEET,q=FQ.trim().toLowerCase();
   const hit=b=>!q||[b.name,b.eserial,b.model,b.location,b.comment].join(" ").toLowerCase().includes(q);
-  const sec=g=>{const id=g?g.id:"none",list=bats.filter(b=>(b.group_id||"none")==id&&hit(b)),open=OPEN[id]!==false,col=g?g.color:"#8a929b";
+  const sec=g=>{const id=g?g.id:"none",list=bats.filter(b=>(b.group_id||"none")==id&&hit(b)),open=OPEN[id]!==false,col=g?g.color:"#4a4d53";
     if(q&&!list.length)return"";
     const ed=g?` data-ge="${g.id}" title="Name, Symbol und Farbe ändern"`:"";
     return `<div class="grp${open?"":" closed"}" data-g="${id}" style="--gc:${esc(col)}"><div class="ghd" data-tog="${id}">
@@ -711,7 +720,7 @@ function groupForm(g){let col=g?g.color:GCOL[FLEET.groups.length%GCOL.length],ic
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn primary" id="gsave">${g?"Speichern":"Gruppe anlegen"}</button>
       <button class="btn" id="gcancel">Abbrechen</button>${g?'<button class="btn" id="gdel" style="margin-left:auto;color:var(--crit)">Gruppe löschen</button>':""}</div>
     <div id="gmsg"></div></div>`);
-  const paint=()=>{$$("#sheet .gtile").forEach(t=>t.style.background=col);$$("#sheet .gic").forEach(x=>x.classList.toggle("on",x.dataset.i==icon));$("#gprev").innerHTML=gTile(icon,col,24);};
+  const paint=()=>{$$("#sheet .gtile").forEach(t=>{t.style.background=col;t.style.color=ink(col);});$$("#sheet .gic").forEach(x=>x.classList.toggle("on",x.dataset.i==icon));$("#gprev").innerHTML=gTile(icon,col,24);};
   $$("#sheet .sw").forEach(sw=>sw.onclick=()=>{col=sw.dataset.c;$$("#sheet .sw").forEach(x=>x.classList.toggle("on",x==sw));paint();});
   $$("#sheet .gic").forEach(b=>b.onclick=()=>{icon=b.dataset.i;picked=true;paint();});
   const gi=$("#gname");gi.oninput=()=>{if(picked)return;const k=guessIcon(gi.value);if(k&&k!=icon){icon=k;paint();}};if(!g)gi.focus();

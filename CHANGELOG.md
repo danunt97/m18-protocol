@@ -21,6 +21,12 @@
   Die Konto-Karte unten in der Flotte entfällt; noch nicht hochgeladene Messungen zeigt ein kleines ↑-Zeichen am Knopf.
 - **Gruppen bearbeiten** durch Antippen von Symbol oder Name: Name, Symbol und Farbe ändern oder die Gruppe löschen (öffnet als Fenster).
   Der Rest des Gruppenkopfs klappt die Gruppe auf und zu.
+- **Neues Farbschema Schwarz / Rot / Weiß mit etwas Orange** für App, Startseite, Kaufseite, Flasher und Admin:
+  schwarze Kopfleiste mit roter Linie, Tabs in Großbuchstaben, rote Markierung an den Kartentiteln, rote Hauptknöpfe, Orange für Hinweise.
+  Akku-Symbole: CP grau, XC rot, HO orange, FORGE schwarz mit Orange. Gruppenfarben: Rot, Dunkelrot, Orange, Gelb, Weiß, Hellgrau,
+  Graphit, Schwarz (Symbol automatisch schwarz oder weiß, je nach Hintergrund). Hell-Modus passend dazu.
+- Kopfzeile der App mit dem Akkuscan-Logo und „Akkuscan“ statt des roten „M18“-Kästchens – damit die App nicht wie eine offizielle Herstellerseite wirkt.
+- Neue Bilder der App auf Start- und Kaufseite; Texte sprechen von der „Flotte“ statt „Meine Akkus“.
 
 ## Eigene Domain: akkuscan.app
 - **https://akkuscan.app/** ist die Produktseite (Funktionen, So geht's, Für Betriebe, FAQ). Angemeldete Nutzer kommen von dort direkt ins Portal.

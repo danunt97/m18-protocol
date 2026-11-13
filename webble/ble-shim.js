@@ -202,13 +202,13 @@
 @media(max-width:560px){#pill{display:none}}
 .ble-only-wlan{opacity:.55}
 #blecard.rc > ol,#blecard.rc > .hint,#blecard.rc #blebig{display:none}
-#nobt{margin-top:14px;border:2px solid var(--watch,#e7b43a);border-radius:16px;padding:18px;background:rgba(231,180,58,.08)}
+#nobt{margin-top:14px;border:2px solid var(--orange,#ff7a00);border-radius:16px;padding:18px;background:rgba(255,122,0,.08)}
 #nobt h3{font-size:20px;line-height:1.25;margin:0 0 8px}
 #nobt p{margin:0 0 12px;line-height:1.5}
 #nobt ol{list-style:none;margin:14px 0 0;padding:0;counter-reset:n}
 #nobt li{position:relative;padding:0 0 18px 44px;line-height:1.45}
 #nobt li::before{counter-increment:n;content:counter(n);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;
-  background:var(--accent,#e4002b);color:#fff;font-weight:800;display:grid;place-items:center}
+  background:var(--accent,#e1251b);color:#fff;font-weight:800;display:grid;place-items:center}
 #nobt li b{display:block;font-size:16.5px;margin-bottom:6px}
 .nb-app{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;border:1px solid var(--line,#30353c);
   background:var(--panel,#22262b);border-radius:14px;padding:10px 12px;max-width:380px}
