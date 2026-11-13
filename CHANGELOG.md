@@ -16,6 +16,11 @@
   Werkzeugkoffer, Ladestation, Mitarbeiter, Defekt/Prüfen, Ordner. Das Symbol wird beim Tippen des Namens vorgeschlagen
   („Bus 2“ → Transporter, „Büro“ → Büro). Jede Gruppe zeigt, wie viele Akkus kritisch, schwach oder zu beobachten sind.
   (Migration `20261114090000_group_icons.sql`)
+- **Konto rechts oben** wie auf anderen Webseiten: abgemeldet ein Knopf „Anmelden“, angemeldet ein runder Knopf mit Anfangsbuchstabe und Firmenname
+  (am Handy nur der Buchstabe), dahinter ein Menü mit E-Mail, Firma, Upload-Stand, „Jetzt hochladen“, „Abmelden“ und „Konto löschen“.
+  Die Konto-Karte unten in der Flotte entfällt; noch nicht hochgeladene Messungen zeigt ein kleines ↑-Zeichen am Knopf.
+- **Gruppen bearbeiten** durch Antippen von Symbol oder Name: Name, Symbol und Farbe ändern oder die Gruppe löschen (öffnet als Fenster).
+  Der Rest des Gruppenkopfs klappt die Gruppe auf und zu.
 
 ## Eigene Domain: akkuscan.app
 - **https://akkuscan.app/** ist die Produktseite (Funktionen, So geht's, Für Betriebe, FAQ). Angemeldete Nutzer kommen von dort direkt ins Portal.

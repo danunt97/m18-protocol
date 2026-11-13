@@ -272,7 +272,8 @@
   document.addEventListener("DOMContentLoaded", () => {
     const st = document.createElement("style"); st.textContent = CSS; document.head.appendChild(st);
     const header = document.querySelector("header");
-    header.insertAdjacentHTML("beforeend", '<span id="blebar"><span id="blestate"></span><button class="btn primary" id="blebtn">Verbinden</button></span>');
+    const acct = document.getElementById("acct"), bar = '<span id="blebar"><span id="blestate"></span><button class="btn primary" id="blebtn">Verbinden</button></span>';
+    if (acct) acct.insertAdjacentHTML("beforebegin", bar); else header.insertAdjacentHTML("beforeend", bar);
     document.getElementById("blebtn").onclick = () => ble.connected ? disconnect() : connect();
     const host = document.getElementById("hostline"); if (host) host.textContent = "Bluetooth-App";
     const pill = document.getElementById("pill"); if (pill) pill.hidden = true;
