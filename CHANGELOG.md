@@ -11,6 +11,11 @@
   Gleicher Akku wie eben? Dann kommt ein Hinweis. Direkt nach dem Auslesen lassen sich Name und Gruppe vergeben.
 - Hochladen in die Cloud läuft immer nur einmal gleichzeitig (zwei parallele Läufe konnten eine Messung aus der Warteschlange verlieren).
 - Supabase: Tabelle `battery_groups`, Spalte `batteries.group_id` (Migration `20261113090000_fleet_groups.sql`).
+- **Symbole:** Akkus als Akku-Pack je nach Bauform – kompakt (CP), XC, HO (höher) und FORGE (orange) – mit Kapazität (2Ah … 12Ah).
+  Gruppen als farbige Kacheln mit Symbol: Bus/Transporter, Auto, LKW, Anhänger, Büro, Werkstatt, Lager, Baustelle, Zuhause,
+  Werkzeugkoffer, Ladestation, Mitarbeiter, Defekt/Prüfen, Ordner. Das Symbol wird beim Tippen des Namens vorgeschlagen
+  („Bus 2“ → Transporter, „Büro“ → Büro). Jede Gruppe zeigt, wie viele Akkus kritisch, schwach oder zu beobachten sind.
+  (Migration `20261114090000_group_icons.sql`)
 
 ## Eigene Domain: akkuscan.app
 - **https://akkuscan.app/** ist die Produktseite (Funktionen, So geht's, Für Betriebe, FAQ). Angemeldete Nutzer kommen von dort direkt ins Portal.
