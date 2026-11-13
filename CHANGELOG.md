@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.13 – Flotte mit Gruppen, mehrere Akkus hintereinander
+- **Tab „Flotte“** (vorher „Cloud“): alle Akkus in farbigen Ordnern, z. B. „Firmenbus 1“, „Büro“, „Lager“.
+  Gruppen mit Name und Farbe anlegen, umbenennen, löschen (die Akkus darin bleiben erhalten); Akkus am Griff ⠿ per Drag & Drop
+  verschieben – mit Maus und Finger. Ordner lassen sich auf- und zuklappen, Suche über Name, Seriennummer und Standort.
+- In der Liste steht der **Name** des Akkus mit einem Symbol für Kapazität und Typ (5Ah XC, 8Ah HO, 12Ah HO, 6Ah FORGE …) statt der Seriennummer.
+- **Nachträglich ändern:** Name, Gruppe, Standort und Notiz jedes Akkus; Standort und Kommentar jeder einzelnen Messung.
+- **Mehrere Akkus hintereinander:** Nach dem Auslesen heißt der Knopf „Nächsten Akku scannen“. Das Modul startet beim Umstecken neu –
+  die App verbindet sich per Bluetooth von selbst wieder (ohne Geräteauswahl) und liest sofort aus, sobald es wieder da ist.
+  Gleicher Akku wie eben? Dann kommt ein Hinweis. Direkt nach dem Auslesen lassen sich Name und Gruppe vergeben.
+- Hochladen in die Cloud läuft immer nur einmal gleichzeitig (zwei parallele Läufe konnten eine Messung aus der Warteschlange verlieren).
+- Supabase: Tabelle `battery_groups`, Spalte `batteries.group_id` (Migration `20261113090000_fleet_groups.sql`).
+
 ## Eigene Domain: akkuscan.app
 - **https://akkuscan.app/** ist die Produktseite (Funktionen, So geht's, Für Betriebe, FAQ). Angemeldete Nutzer kommen von dort direkt ins Portal.
 - Das Portal (App mit Bluetooth, Konto, Meine Akkus) liegt unter **/app/**, der Firmware-Flasher unter **/flasher/**, dazu **/impressum/** und **/datenschutz/** (Angaben werden noch ergänzt).

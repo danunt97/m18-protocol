@@ -73,12 +73,40 @@
   };
 
   // --------------------------------------------------------------- connection
-  // The connect card belongs to the tabs that talk to the bridge; the Cloud tab (account, "Meine Akkus",
+  // The connect card belongs to the tabs that talk to the bridge; the Flotte tab (account, fleet,
   // password reset) works without it – there it only appears after tapping "Verbinden".
   let cardOnCloud = false;
   function syncCard() {
     const c = document.getElementById("blecard"), cloud = document.getElementById("tab-cloud");
     if (c) c.hidden = ble.connected || (!!cloud && !cloud.hidden && !cardOnCloud);
+    if (c) c.classList.toggle("rc", !!ble.reconnecting);   // while reconnecting only the status line, not the instructions
+  }
+  // The module restarts whenever it is moved to the next battery (it is powered by the battery). The phone keeps the
+  // paired device: on an unexpected disconnect we reconnect on our own until it is back (no device chooser again).
+  let userClosed = false, reconnecting = false, lastPw = "";
+  const hooked = new WeakSet();
+  const emit = () => { try { window.dispatchEvent(new Event("m18-ble")); } catch (e) {} };
+  const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("Zeitüberschreitung")), ms))]);
+  async function openGatt() {
+    const g = await withTimeout(dev.gatt.connect(), 12000), svc = await g.getPrimaryService(NUS);
+    rxc = await svc.getCharacteristic(NUS_RX);
+    const txc = await svc.getCharacteristic(NUS_TX);
+    dec = new TextDecoder(); inbuf = "";
+    if (!hooked.has(txc)) { hooked.add(txc); txc.addEventListener("characteristicvaluechanged", e => onChunk(e.target.value)); }
+    await txc.startNotifications();
+    let r = await cmd("API GET /api/info");
+    if (/^ERR AUTH/.test(r) && lastPw && /^OK/.test(await cmd("AUTH " + lastPw).catch(() => "ERR"))) r = await cmd("API GET /api/info");
+    return r;
+  }
+  function useDevice(d) {
+    dev = d;
+    if (!hooked.has(dev)) { hooked.add(dev); dev.addEventListener("gattserverdisconnected", onDisconnected); }
+    try { localStorage.setItem("m18.ble.dev", JSON.stringify({ id: dev.id, name: dev.name || "" })); } catch (e) {}
+  }
+  async function afterOpen(r) {
+    if (/^ERR AUTH/.test(r)) { await askPassword(); return; }
+    if (/^ERR UNKNOWN API/.test(r)) { setMsg("Die Firmware der Brücke ist zu alt für diese App – bitte über den Web-Flasher auf den neuesten Stand bringen.", true); disconnect(); return; }
+    ready();
   }
   async function connect() {
     cardOnCloud = true; syncCard();
@@ -92,36 +120,63 @@
       setMsg(/adapter|not available|unavailable|disabled/i.test(e.message)
         ? "Bluetooth ist am Handy ausgeschaltet. Bitte in den Einstellungen Bluetooth einschalten und nochmal auf „Verbinden“ tippen."
         : "Bluetooth: " + e.message, true); return; }
-    dev = d;
-    dev.addEventListener("gattserverdisconnected", onDisconnected);
+    stopReconnect(); userClosed = false; useDevice(d);
     setBar("verbinde mit " + (dev.name || "Brücke") + " …");
-    try {
-      const g = await dev.gatt.connect(), svc = await g.getPrimaryService(NUS);
-      rxc = await svc.getCharacteristic(NUS_RX);
-      const txc = await svc.getCharacteristic(NUS_TX);
-      dec = new TextDecoder(); inbuf = "";
-      txc.addEventListener("characteristicvaluechanged", e => onChunk(e.target.value));
-      await txc.startNotifications();
-      const r = await cmd("API GET /api/info");
-      if (/^ERR AUTH/.test(r)) { await askPassword(); return; }
-      if (/^ERR UNKNOWN API/.test(r)) { setMsg("Die Firmware der Brücke ist zu alt für diese App – bitte über den Web-Flasher auf den neuesten Stand bringen.", true); disconnect(); return; }
-      ready();
-    } catch (e) { setMsg("Verbindung fehlgeschlagen: " + e.message, true); disconnect(); }
+    try { await afterOpen(await openGatt()); }
+    catch (e) { setMsg("Verbindung fehlgeschlagen: " + e.message, true); disconnect(); }
   }
   function ready() {
+    stopReconnect();
     ble.connected = true;
-    setBar(null);
-    syncCard();
+    setBar(null); setMsg("", false);
+    syncCard(); emit();
     if (window.M18_START) window.M18_START();
   }
-  function disconnect() { if (dev && dev.gatt.connected) dev.gatt.disconnect(); else onDisconnected(); }
+  function disconnect() {   // user taps "Trennen": no automatic reconnect
+    userClosed = true; stopReconnect();
+    if (dev && dev.gatt.connected) dev.gatt.disconnect(); else onDisconnected();
+  }
   function onDisconnected() {
+    const was = ble.connected;
     rxc = null;
     ble.connected = false;
     if (pend) { clearTimeout(pend.timer); pend.rej(new TypeError("Verbindung getrennt")); pend = null; }
-    setBar(null);
-    syncCard();
-    setMsg(dev ? "Verbindung zu " + (dev.name || "der Brücke") + " getrennt." : "", false);
+    setBar(null); syncCard(); emit();
+    if (!userClosed && dev && was) startReconnect();
+    else if (!reconnecting) setMsg(dev && was ? "Verbindung zu " + (dev.name || "der Brücke") + " getrennt." : "", false);
+  }
+  let rcTimer = null, rcUntil = 0;
+  function stopReconnect() { reconnecting = false; ble.reconnecting = false; clearTimeout(rcTimer); syncCard(); emit(); }
+  function startReconnect(quiet) {
+    if (reconnecting || !dev) return;
+    reconnecting = true; ble.reconnecting = true; rcUntil = Date.now() + 10 * 60 * 1000; syncCard(); emit();
+    const name = dev.name || "das Modul";
+    setBar("verbinde neu …");
+    if (!quiet) setMsg("", false);
+    const m = document.getElementById("blemsg");
+    if (m) m.innerHTML = `<div class="box info" id="blerc"><span class="spin" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>
+      <b>${esc(name)} wird automatisch wieder verbunden …</b><br>Das passiert z. B., wenn das Modul auf den nächsten Akku gesteckt wird.
+      Sobald es wieder Strom hat, geht es von selbst weiter. <a href="#" id="blercstop" style="color:inherit">Abbrechen</a></div>`;
+    const st = document.getElementById("blercstop"); if (st) st.onclick = e => { e.preventDefault(); userClosed = true; stopReconnect(); setMsg("", false); setBar(null); };
+    const tryOnce = async () => {
+      if (!reconnecting) return;
+      if (Date.now() > rcUntil) { stopReconnect(); setBar(null); setMsg(name + " wurde nicht wiedergefunden. Bitte auf „Verbinden“ tippen.", true); return; }
+      try { const r = await openGatt(); if (!reconnecting) return; await afterOpen(r); return; }
+      catch (e) { try { if (dev.gatt.connected) dev.gatt.disconnect(); } catch (x) {} }
+      rcTimer = setTimeout(tryOnce, 2000);
+    };
+    rcTimer = setTimeout(tryOnce, 1500);
+  }
+  ble.connect = connect;
+  ble.disconnect = disconnect;
+  ble.reconnecting = false;
+  // After reloading the page: Chrome can hand back the module that was allowed before – then reconnect without asking.
+  async function resume() {
+    if (!navigator.bluetooth || !navigator.bluetooth.getDevices) return;
+    let saved = null; try { saved = JSON.parse(localStorage.getItem("m18.ble.dev")); } catch (e) {}
+    if (!saved) return;
+    try { const list = await navigator.bluetooth.getDevices(); const d = list.find(x => x.id === saved.id) || list.find(x => saved.name && x.name === saved.name);
+      if (d && !ble.connected) { useDevice(d); userClosed = false; startReconnect(true); } } catch (e) {}
   }
   function askPassword() {
     return new Promise(res => {
@@ -129,20 +184,24 @@
       box.hidden = false;
       document.getElementById("blepw").focus();
       document.getElementById("blepwgo").onclick = async () => {
-        const r = await cmd("AUTH " + document.getElementById("blepw").value).catch(e => "ERR " + e.message);
+        const pw = document.getElementById("blepw").value;
+        const r = await cmd("AUTH " + pw).catch(e => "ERR " + e.message);
         if (!/^OK/.test(r)) { document.getElementById("blepwerr").textContent = r.replace(/^ERR\s*/, ""); return; }
+        lastPw = pw;
         box.hidden = true;
         ready();
         res();
       };
     });
   }
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   // ----------------------------------------------------------------------- UI
   const CSS = `#blebar{display:flex;align-items:center;gap:8px;margin-left:auto}
 #blebtn{padding:7px 12px}#blestate{color:var(--muted);font-size:12px}
 @media(max-width:560px){#pill{display:none}}
 .ble-only-wlan{opacity:.55}
+#blecard.rc > ol,#blecard.rc > .hint,#blecard.rc #blebig{display:none}
 #nobt{margin-top:14px;border:2px solid var(--watch,#e7b43a);border-radius:16px;padding:18px;background:rgba(231,180,58,.08)}
 #nobt h3{font-size:20px;line-height:1.25;margin:0 0 8px}
 #nobt p{margin:0 0 12px;line-height:1.5}
@@ -189,7 +248,7 @@
           <a class="nb-app" href="${BLUEFY}" target="_blank" rel="noopener">${BLUEFY_ICON}<span><strong class="nb-name">Bluefy</strong><small>kostenlos</small></span><span class="nb-get">Laden</span></a></li>
         <li><b>Bluefy öffnen und diese Adresse eingeben</b>
           <span class="nb-url"><code>akkuscan.app/app</code><button class="btn" id="nbcopy" type="button">Adresse kopieren</button></span></li>
-        <li><b>Auf „Verbinden“ tippen – fertig.</b>Dein Konto und „Meine Akkus“ sind dort genauso da.</li>
+        <li><b>Auf „Verbinden“ tippen – fertig.</b>Dein Konto und deine Flotte sind dort genauso da.</li>
       </ol>
       <p class="nb-alt">Ohne Bluefy geht es auch über WLAN: In den iPhone-Einstellungen das WLAN des Moduls („M18-Bridge-…“) wählen – dann öffnet sich die Seite des Moduls in Safari.</p>`;
     else if (android) html = `<h3>Bitte öffne diese Seite in Google Chrome.</h3>
@@ -223,7 +282,7 @@
     <li><b>Verbinden</b> tippen und <b>M18-Bridge-…</b> wählen.</li><li><b>Akku auslesen</b> – alles Weitere wie auf der Brücke selbst.</li></ol>
   <button class="btn primary big" id="blebig" style="margin-top:12px">Verbinden</button><div id="blemsg"></div>
   <p class="hint">iPhone: diese Seite in der kostenlosen App <b>Bluefy</b> öffnen (Safari kann kein Bluetooth). Android: <b>Chrome</b>.
-    Das WLAN der Brücke wird nicht gebraucht – das Handy behält sein Internet. Konto und „Meine Akkus“ (Tab Cloud) gehen auch ohne Brücke.</p></div>
+    Das WLAN der Brücke wird nicht gebraucht – das Handy behält sein Internet. Konto und Flotte (Tab Flotte) gehen auch ohne Brücke.</p></div>
 <div class="card" id="bleauth" hidden><h2>Passwort der Brücke</h2><label>Passwort</label><input id="blepw" type="password" autocomplete="current-password">
   <button class="btn primary" id="blepwgo" style="margin-top:10px">Anmelden</button><div id="blepwerr" class="hint" style="color:var(--crit)"></div></div>`);
     document.getElementById("blebig").onclick = connect;
@@ -241,6 +300,7 @@
         setTimeout(() => { URL.revokeObjectURL(u.href); u.remove(); }, 500); };
     });
     if (!navigator.bluetooth) showNoBt();
+    else resume();
     const tr = document.createElement("script"); tr.src = "/track.js"; tr.defer = true; document.head.appendChild(tr);   // anonyme Seitenstatistik
     const cloud = document.getElementById("tab-cloud");
     if (cloud) new MutationObserver(() => { cardOnCloud = false; syncCard(); }).observe(cloud, { attributes: true, attributeFilter: ["hidden"] });

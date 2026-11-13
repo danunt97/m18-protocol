@@ -56,6 +56,27 @@ label{display:block;color:var(--muted);font-size:12.5px;margin:10px 0 4px}
 pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-all;font-size:12px;max-height:260px;overflow:auto}
 .prog{height:6px;background:var(--raise);border-radius:3px;overflow:hidden;margin-top:10px}.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
 .warn{color:var(--watch)}input[type=range]{padding:0}
+.fleetbar{display:flex;gap:8px;align-items:center;margin-bottom:8px}.fleetbar input{flex:1}.fleetbar .btn{white-space:nowrap}
+.grp{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--gc);border-radius:12px;margin-bottom:12px;transition:box-shadow .15s}
+.grp.drop{box-shadow:0 0 0 3px var(--gc)}
+.ghd{display:flex;align-items:center;gap:10px;padding:12px 12px 12px 10px;cursor:pointer;user-select:none}
+.ghd .fold{flex:none;width:38px;height:32px}.ghd b{font-size:16px}.ghd .n{color:var(--muted);font-size:12.5px;margin-left:4px}
+.ghd .chev{color:var(--muted);width:18px;text-align:center}.ghd .btn{padding:5px 10px}
+.gbody{padding:0 10px 10px;display:flex;flex-direction:column;gap:6px}.grp.closed .gbody{display:none}
+.bat{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 10px 7px 4px;cursor:pointer}
+.bat:hover{border-color:var(--faint)}
+.bat .h{touch-action:none;cursor:grab;color:var(--faint);padding:10px 4px 10px 6px;font-size:20px;line-height:1;user-select:none}
+.bat .bi{flex:none;width:36px;height:46px}
+.bat .t{flex:1;min-width:0}.bat .t b{display:block;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bat .t b.noname{color:var(--muted);font-weight:500;font-style:italic}.bat .t span{color:var(--muted);font-size:12px}
+.bat.dragging{opacity:.35}.bat.ghost{position:fixed;z-index:100;pointer-events:none;box-shadow:0 14px 34px rgba(0,0,0,.55);border-color:var(--faint);margin:0}
+.swatches{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}.sw{width:36px;height:36px;border-radius:50%;border:3px solid var(--panel);box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.sw.on{box-shadow:0 0 0 3px var(--text)}
+.sheet{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet>div{background:var(--bg);width:100%;max-width:820px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px 28px;border:1px solid var(--line)}
+.sheet .shd{display:flex;align-items:center;gap:12px;margin-bottom:12px}.sheet .shd b{font-size:19px;display:block}.sheet .shd .btn{margin-left:auto}
+.qname{border-color:rgba(90,162,255,.45)}.qname .two{gap:10px}
+.sheet .shd .bi{flex:none;width:46px;height:60px}.badge.crit{background:rgba(255,77,94,.14)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:640px){.two{grid-template-columns:1fr}}
 details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;padding:10px 0;font-weight:600}
 .reg{display:grid;grid-template-columns:1fr auto;gap:10px;padding:5px 0;border-top:1px solid var(--line);align-items:center}
@@ -64,7 +85,7 @@ details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;pa
 .reg .rv{text-align:right;font-variant-numeric:tabular-nums;word-break:break-word}.faint{color:var(--faint)}
 </style></head><body>
 <header><span class="logo">M18</span><h1>Akku-Brücke<small id="hostline">…</small></h1><span class="pill" id="pill">…</span></header>
-<nav><button data-tab="akku" class="on">Akku</button><button data-tab="verlauf">Verlauf <span id="newcount" class="pill ok" style="padding:0 7px;margin:0" hidden></span></button><button data-tab="cloud">Cloud <span id="qcount" class="pill" style="padding:0 7px;margin:0" hidden></span></button><button data-tab="wlan">WLAN</button><button data-tab="geraet">Gerät</button></nav>
+<nav><button data-tab="akku" class="on">Akku</button><button data-tab="verlauf">Verlauf <span id="newcount" class="pill ok" style="padding:0 7px;margin:0" hidden></span></button><button data-tab="cloud">Flotte <span id="qcount" class="pill" style="padding:0 7px;margin:0" hidden></span></button><button data-tab="wlan">WLAN</button><button data-tab="geraet">Gerät</button></nav>
 <main>
 <section id="tab-akku">
   <div class="card">
@@ -85,8 +106,9 @@ details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;pa
   <div id="hview"></div>
 </section>
 <section id="tab-cloud" hidden>
-  <div id="cloudbox"></div><div id="cloudview"></div>
+  <div id="cloudview"></div><div id="cloudbox"></div>
 </section>
+<div class="sheet" id="sheet" hidden><div id="sheetin"></div></div>
 <section id="tab-wlan" hidden>
   <div class="card"><h2>Verbindung</h2><div id="wifistate">…</div></div>
   <div class="card"><h2>Mit WLAN verbinden</h2><div id="lockbox"></div>
@@ -278,8 +300,17 @@ function hostPreview(){$("#hostpreview").textContent="http://"+($("#host").value
 $("#host").oninput=hostPreview;
 
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-$("#readbtn").onclick=async()=>{const b=$("#readbtn"),pg=$("#prog");b.disabled=true;b.innerHTML='<span class="spin"></span> Lese Akku …';
-  pg.hidden=false;pg.firstChild.style.width="0%";
+/* Reading several batteries in a row: after a read the button becomes "Nächsten Akku scannen". The module restarts when it
+   is moved to the next battery – we wait until it answers again (Bluetooth reconnects by itself) and then read right away. */
+let NEXT=false,WAITING=false,LASTSER=null;
+async function moduleUp(){try{const r=await fetch("/api/info",window.AbortSignal&&AbortSignal.timeout?{signal:AbortSignal.timeout(4000)}:{});return r.ok;}catch(e){return false;}}
+async function waitModule(){const b=$("#readbtn");WAITING=true;
+  b.innerHTML='<span class="spin"></span> Warte auf das Modul … (tippen zum Abbrechen)';
+  $("#readhint").textContent="Modul auf den nächsten Akku stecken – sobald es wieder verbunden ist, wird automatisch ausgelesen.";
+  while(WAITING){if(await moduleUp())break;await sleep(1500);}
+  const ok=WAITING;WAITING=false;return ok;}
+async function doRead(){const b=$("#readbtn"),pg=$("#prog");b.disabled=true;b.innerHTML='<span class="spin"></span> Lese Akku …';
+  pg.hidden=false;pg.firstChild.style.width="0%";let ok=false;
   try{try{localStorage.setItem("m18.loc",$("#loc").value);localStorage.setItem("m18.comment",$("#comment").value);}catch(e){}
     const body=new URLSearchParams({t:Math.floor(Date.now()/1000),loc:$("#loc").value,comment:$("#comment").value});
     const r=await fetch("/api/read",{method:"POST",body});
@@ -288,10 +319,34 @@ $("#readbtn").onclick=async()=>{const b=$("#readbtn"),pg=$("#prog");b.disabled=t
       pg.firstChild.style.width=st.progress+"%";if(!st.reading)break;}
     const d=await j("/api/last");render(d,new Date().toLocaleTimeString("de-DE"));
     cloudAfterRead(d,{ts:Math.floor(Date.now()/1000),ts_src:window.M18_BLE?"app":"browser",loc:$("#loc").value,comment:$("#comment").value});
-    if(d.history_id)$("#readhint").textContent="Gespeichert als Messung #"+d.history_id+" – wird bei der nächsten Übernahme in die PC-Datenbank übertragen.";
+    ok=!!(d&&d.ok);
+    $("#readhint").textContent=ok?"Fertig. Für den nächsten Akku: Modul umstecken und auf „Nächsten Akku scannen“ tippen – die Verbindung baut sich von selbst wieder auf."
+      :"Auslesen hat nicht geklappt – Modul richtig aufgesteckt? Dann nochmal tippen.";
+    if(ok&&LASTSER&&d.eserial==LASTSER)$("#result").insertAdjacentHTML("afterbegin",'<div class="box info" style="margin:0 0 14px">Das ist derselbe Akku wie eben ('+esc(d.eserial)+'). Schon auf den nächsten Akku umgesteckt?</div>');
+    if(ok){LASTSER=d.eserial;quickName(d);}
     $("#comment").value="";info();}
   catch(e){$("#result").innerHTML=`<div class="card"><div class="box err">Keine Antwort vom Gerät.</div></div>`;}
-  finally{b.disabled=false;b.textContent="Akku erneut auslesen";pg.hidden=true;}};
+  finally{b.disabled=false;NEXT=ok||NEXT;b.textContent=NEXT?"Nächsten Akku scannen":"Akku auslesen";pg.hidden=true;}}
+$("#readbtn").onclick=async()=>{
+  if(WAITING){WAITING=false;return;}                           /* second tap while waiting = cancel */
+  if(NEXT&&!(await moduleUp())){if(!(await waitModule())){$("#readbtn").textContent="Nächsten Akku scannen";$("#readhint").textContent="Abgebrochen.";return;}}
+  await doRead();};
+/* After a read (logged in): give the battery a name and put it into a group right away. */
+async function quickName(d){if(!SESS||RECOVERY||!d||!d.eserial)return;
+  const box=document.createElement("div");box.className="card qname";box.innerHTML='<p class="hint" style="margin:0">Name und Gruppe werden geladen …</p>';
+  $("#result").prepend(box);
+  try{await cloudFlush();const org=await sbOrg();
+    const [bs,gs]=await Promise.all([sb(`/rest/v1/batteries?org_id=eq.${org.id}&eserial=eq.${encodeURIComponent(d.eserial)}&select=id,name,group_id,comment`),
+      sb(`/rest/v1/battery_groups?org_id=eq.${org.id}&select=id,name,color&order=sort,created_at`)]);
+    const b=bs[0];if(!b){box.innerHTML='<p class="hint" style="margin:0">Noch nicht hochgeladen – Name und Gruppe kannst du später in der <b>Flotte</b> vergeben.</p>';return;}
+    box.innerHTML=`<h2>Name &amp; Gruppe in der Flotte</h2><div class="two"><div><label style="margin-top:0">Name</label>
+      <input id="qn" maxlength="60" placeholder="z. B. Bus 1 – Akku 3" value="${esc(b.name||d.note||"")}"></div>
+      <div><label style="margin-top:0">Gruppe</label><select id="qg"><option value="">Ohne Gruppe</option>${gs.map(g=>`<option value="${g.id}" ${g.id==b.group_id?"selected":""}>${esc(g.name)}</option>`).join("")}</select></div></div>
+      <button class="btn primary" id="qsave" style="margin-top:10px">Speichern</button> <span class="hint" id="qmsg"></span>`;
+    $("#qsave").onclick=async()=>{$("#qsave").disabled=true;
+      try{await sb(`/rest/v1/batteries?id=eq.${b.id}`,{method:"PATCH",body:{name:$("#qn").value.trim()||null,group_id:$("#qg").value||null}});$("#qmsg").textContent="✓ Gespeichert";}
+      catch(e){$("#qmsg").textContent="Fehler: "+e.message;}finally{$("#qsave").disabled=false;}};}
+  catch(e){box.innerHTML='<p class="hint" style="margin:0">Name und Gruppe kannst du später in der <b>Flotte</b> vergeben ('+esc(e.message)+').</p>';}}
 
 /* ---------- WLAN ---------- */
 async function wifiState(){const s=await j("/api/wifi");let h="";
@@ -409,7 +464,7 @@ $("#logclr").onclick=async()=>{if(!confirm("Protokoll der Brücke löschen?"))re
 
 try{$("#loc").value=localStorage.getItem("m18.loc")||"";}catch(e){}
 
-/* ---------- Cloud (Supabase): Konto, Meine Akkus, Hochladen, Brücke verknüpfen ---------- */
+/* ---------- Cloud (Supabase): Konto, Flotte mit Gruppen, Hochladen, Brücke verknüpfen ---------- */
 const SB={url:"https://seccxaldsjhukavoilnm.supabase.co",key:"sb_publishable_KSiLpnnPHzgOvS3cTPnl_A_OVknKkj1",
   app:"https://akkuscan.app/app/"};
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},
@@ -435,7 +490,9 @@ function cq(){return ls.get("m18.sb.queue")||[];}
 function cloudBadge(){const n=cq().length,e=$("#qcount");if(e){e.hidden=!n;e.textContent=n?"↑"+n:"";}}
 async function cloudAfterRead(d,meta){if(!d||!d.ok||!d.mem)return;const q=cq();q.push({scan:d,meta,src:window.M18_BLE?"app-ble":"app-wlan"});
   ls.set("m18.sb.queue",q.slice(-200));cloudBadge();if(SESS)cloudFlush();}
-async function cloudFlush(){let q=cq(),sent=0;if(!SESS||!q.length){cloudBadge();return sent;}
+let FLUSHING=null;                     /* one upload run at a time – two parallel runs could drop a queued read-out */
+function cloudFlush(){return FLUSHING||(FLUSHING=cloudFlushRun().finally(()=>{FLUSHING=null;}));}
+async function cloudFlushRun(){let q=cq(),sent=0;if(!SESS||!q.length){cloudBadge();return sent;}
   try{const org=await sbOrg();if(!org)throw new Error("keine Firma gefunden");
     while(q.length){const it=q[0];const r=await sb("/rest/v1/rpc/app_ingest",{method:"POST",body:{p_org:org.id,p_payload:{scan:it.scan,meta:it.meta},p_source:it.src}});
       if(!r||(!r.ok&&!/gültige/.test(r.error||"")))throw new Error((r&&r.error)||"Fehler");q.shift();ls.set("m18.sb.queue",q);sent++;}
@@ -525,27 +582,121 @@ function cloudPwForm(){cbox(`<div class="card"><h2>Neues Passwort festlegen</h2>
     finally{b.disabled=false;}};}
 const fdt2=s=>s?new Date(s).toLocaleString("de-DE",{dateStyle:"short",timeStyle:"short"}):"–";
 const SRCN={"app-ble":"App (Bluetooth)","app-wlan":"App (WLAN)",bridge:"Brücke",pc:"PC"};
+/* ---- Flotte: batteries in coloured groups ("Firmenbus 1", "Büro" …), moved by drag & drop or in the battery sheet */
+const GCOL=["#4c8dff","#2bb5a6","#9b6bff","#e45bb0","#f08a3c","#d6b13a","#5cb85c","#8a929b"];
+let FLEET={groups:[],bats:[]},FQ="";const OPEN=ls.get("m18.fleet.open")||{};
+function batKind(b){const m=String(b.model||"");let cap=b.capacity_ah!=null?+b.capacity_ah:null;
+  if(cap==null){const x=m.match(/(\d+(?:[.,]\d+)?)\s*Ah/i);if(x)cap=+x[1].replace(",",".");}
+  return {cap:cap!=null?(Math.round(cap*10)/10).toString().replace(".",",")+"Ah":"?",
+    type:/forge/i.test(m)?"FORGE":/\bHO\b|high.?output/i.test(m)?"HO":/\bXC\b/i.test(m)?"XC":/\bCP\b/i.test(m)?"CP":""};}
+function batIcon(b){const k=batKind(b),f=k.type=="FORGE";
+  return `<svg class="bi" viewBox="0 0 36 46" aria-hidden="true"><rect x="12" y="1" width="12" height="5" rx="1.5" fill="${f?"#f0a030":"var(--faint)"}"/>
+    <rect x="2" y="5" width="32" height="40" rx="6" fill="${f?"#2e2414":"var(--raise)"}" stroke="${f?"#f0a030":"var(--faint)"}" stroke-width="1.5"/>
+    <text x="18" y="${k.type?23:29}" text-anchor="middle" font-size="${k.cap.length>4?9.5:11.5}" font-weight="800" fill="var(--text)" font-family="system-ui,sans-serif">${esc(k.cap)}</text>
+    ${k.type?`<text x="18" y="36" text-anchor="middle" font-size="${f?7:8.5}" font-weight="700" fill="${f?"#f0a030":"var(--muted)"}" font-family="system-ui,sans-serif">${k.type}</text>`:""}</svg>`;}
+const folderSvg=c=>`<svg class="fold" viewBox="0 0 38 32" aria-hidden="true"><path d="M2 6a3 3 0 0 1 3-3h9l4 4h15a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3z" fill="${c}"/><path d="M2 12h34v15a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3z" fill="#fff" fill-opacity=".14"/></svg>`;
+const batName=b=>b.name?`<b>${esc(b.name)}</b>`:`<b class="noname">Ohne Namen · ${esc(b.model||b.eserial)}</b>`;
+function batRow(b){return `<div class="bat" data-b="${b.id}"><span class="h" title="Ziehen">⠿</span>${batIcon(b)}
+  <span class="t">${batName(b)}<span>${b.location?esc(b.location)+" · ":""}${b.last_measured_at?fdt2(b.last_measured_at):"noch nie gemessen"} · ${b.readings} Messung${b.readings==1?"":"en"}</span></span>
+  <span class="badge ${b.last_status||"unknown"}">${b.last_health!=null?b.last_health:"–"}</span></div>`;}
 async function cloudView(){cloudHead();const v=$("#cloudview");if(!SESS||RECOVERY){v.innerHTML="";return;}
-  v.innerHTML='<div class="card"><h2>Meine Akkus</h2><p class="hint" style="margin-top:0">Lade …</p></div>';
-  try{const bs=await sb("/rest/v1/battery_overview?select=*&order=last_measured_at.desc.nullslast");
-    v.innerHTML=`<div class="card"><h2>Meine Akkus · ${bs.length}</h2>${bs.length?`<div class="nets">${bs.map(b=>`<div class="net" data-b="${b.id}">
-      <span><b>${esc(b.name||b.eserial)}</b> ${esc(b.model||"")}<br><span class="hint">${b.name?esc(b.eserial)+" · ":""}${fdt2(b.last_measured_at)}${b.location?" · "+esc(b.location):""} · ${b.readings} Messung${b.readings==1?"":"en"}</span></span>
-      <span class="badge ${b.last_status||"unknown"}">${b.last_health!=null?b.last_health:"–"}</span></div>`).join("")}</div>`
-      :'<p class="hint">Noch keine Akkus in der Cloud. Nach dem nächsten Auslesen erscheinen sie hier.</p>'}</div><div id="cbat"></div>`;
-    $$("#cloudview [data-b]").forEach(n=>n.onclick=()=>cloudBattery(n.dataset.b,bs.find(x=>x.id==n.dataset.b)));}
+  if(!v.innerHTML)v.innerHTML='<div class="card"><p class="hint" style="margin:0">Flotte wird geladen …</p></div>';
+  try{const [gs,bs]=await Promise.all([sb("/rest/v1/battery_groups?select=id,org_id,name,color,sort&order=sort,created_at"),
+      sb("/rest/v1/battery_overview?select=*&order=name.asc.nullslast,last_measured_at.desc.nullslast")]);
+    FLEET={groups:gs,bats:bs};fleetRender();}
   catch(e){v.innerHTML=`<div class="card"><div class="box err">${esc(e.message)}</div></div>`;}}
-async function cloudBattery(id,b){const el=$("#cbat");el.innerHTML='<p class="hint">Lade …</p>';
-  try{const rs=await sb(`/rest/v1/readings?battery_id=eq.${id}&select=id,measured_at,health,status,source,location,comment,pack_v&order=measured_at.desc&limit=100`);
-    el.innerHTML=`<div class="card"><h2>${esc(b.name||b.eserial)} · Messverlauf</h2><div class="nets">${rs.map(r=>`<div class="net" data-r="${r.id}">
+function fleetRender(){const v=$("#cloudview"),{groups,bats}=FLEET,q=FQ.trim().toLowerCase();
+  const hit=b=>!q||[b.name,b.eserial,b.model,b.location,b.comment].join(" ").toLowerCase().includes(q);
+  const sec=g=>{const id=g?g.id:"none",list=bats.filter(b=>(b.group_id||"none")==id&&hit(b)),open=OPEN[id]!==false,col=g?g.color:"#8a929b";
+    if(q&&!list.length)return"";
+    return `<div class="grp${open?"":" closed"}" data-g="${id}" style="--gc:${esc(col)}"><div class="ghd" data-tog="${id}">${folderSvg(esc(col))}
+      <span style="flex:1;min-width:0"><b>${esc(g?g.name:"Ohne Gruppe")}</b><span class="n">${list.length} Akku${list.length==1?"":"s"}</span></span>
+      ${g?`<button class="btn" data-ge="${g.id}" title="Gruppe bearbeiten">✎</button>`:""}<span class="chev">${open?"▾":"▸"}</span></div>
+      <div class="gbody">${list.map(batRow).join("")||`<p class="hint" style="margin:2px 4px 6px">${g?"Leer – Akkus am Griff ⠿ hierher ziehen.":"Alle Akkus sind einer Gruppe zugeordnet."}</p>`}</div></div>`;};
+  const loose=bats.some(b=>!b.group_id);
+  v.innerHTML=`<div class="card" style="padding:12px"><div class="fleetbar"><input id="fq" type="search" placeholder="Suchen: Name, Seriennummer, Standort …" value="${esc(FQ)}">
+      <button class="btn primary" id="gnew">+ Gruppe</button></div>
+      <p class="hint" style="margin:6px 2px 0">${bats.length} Akku${bats.length==1?"":"s"} in ${groups.length} Gruppe${groups.length==1?"":"n"}. Akku am Griff <b>⠿</b> festhalten und auf eine Gruppe ziehen – oder Akku antippen.</p></div>
+    <div id="gform"></div>
+    ${bats.length?"":'<div class="card"><p class="hint" style="margin:0">Noch keine Akkus. Nach dem nächsten Auslesen erscheinen sie hier.</p></div>'}
+    ${loose?sec(null):""}${groups.map(sec).join("")}${loose?"":sec(null)}`;
+  $("#fq").oninput=e=>{FQ=e.target.value;const pos=e.target.selectionStart;fleetRender();const i=$("#fq");i.focus();try{i.setSelectionRange(pos,pos);}catch(x){}};
+  $("#gnew").onclick=()=>groupForm(null);
+  $$("#cloudview [data-tog]").forEach(h=>h.onclick=e=>{if(e.target.closest("[data-ge]"))return;const id=h.dataset.tog;OPEN[id]=OPEN[id]===false;ls.set("m18.fleet.open",OPEN);fleetRender();});
+  $$("#cloudview [data-ge]").forEach(bt=>bt.onclick=()=>groupForm(groups.find(g=>g.id==bt.dataset.ge)));
+  $$("#cloudview .bat").forEach(n=>n.onclick=e=>{if(e.target.closest(".h"))return;batSheet(n.dataset.b);});
+  fleetDrag();}
+function groupForm(g){const el=$("#gform");let col=g?g.color:GCOL[FLEET.groups.length%GCOL.length];
+  el.innerHTML=`<div class="card"><h2>${g?"Gruppe bearbeiten":"Neue Gruppe"}</h2><label style="margin-top:0">Name</label>
+    <input id="gname" maxlength="60" placeholder="z. B. Firmenbus 1, Büro, Lager" value="${esc(g?g.name:"")}">
+    <label>Farbe</label><div class="swatches">${GCOL.map(c=>`<span class="sw${c==col?" on":""}" data-c="${c}" style="background:${c}"></span>`).join("")}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn primary" id="gsave">${g?"Speichern":"Gruppe anlegen"}</button>
+      <button class="btn" id="gcancel">Abbrechen</button>${g?'<button class="btn" id="gdel" style="margin-left:auto;color:var(--crit)">Gruppe löschen</button>':""}</div>
+    <div id="gmsg"></div></div>`;
+  $$("#gform .sw").forEach(sw=>sw.onclick=()=>{col=sw.dataset.c;$$("#gform .sw").forEach(x=>x.classList.toggle("on",x==sw));});
+  const gi=$("#gname");gi.focus();el.scrollIntoView({behavior:"smooth",block:"nearest"});
+  const err=t=>$("#gmsg").innerHTML=`<div class="box err">${esc(t)}</div>`;
+  $("#gcancel").onclick=()=>{el.innerHTML="";};
+  $("#gsave").onclick=async()=>{const name=gi.value.trim();if(!name){err("Bitte einen Namen eingeben.");return;}$("#gsave").disabled=true;
+    try{if(g)await sb(`/rest/v1/battery_groups?id=eq.${g.id}`,{method:"PATCH",body:{name,color:col}});
+      else{const org=await sbOrg();await sb("/rest/v1/battery_groups",{method:"POST",body:{org_id:org.id,name,color:col,sort:FLEET.groups.length}});}
+      el.innerHTML="";cloudView();}catch(e){err(e.message);$("#gsave").disabled=false;}};
+  gi.onkeydown=e=>{if(e.key=="Enter")$("#gsave").click();};
+  if(g)$("#gdel").onclick=async()=>{const n=FLEET.bats.filter(b=>b.group_id==g.id).length;
+    if(!confirm(`Gruppe „${g.name}“ löschen?`+(n?`\n\nDie ${n} Akku${n==1?"":"s"} darin bleiben erhalten und landen unter „Ohne Gruppe“.`:"")))return;
+    try{await sb(`/rest/v1/battery_groups?id=eq.${g.id}`,{method:"DELETE"});el.innerHTML="";cloudView();}catch(e){err(e.message);}};}
+/* Drag & drop with pointer events – works with mouse and finger (the grip ⠿ keeps normal scrolling everywhere else). */
+function fleetDrag(){$$("#cloudview .bat .h").forEach(h=>h.onpointerdown=e=>{if(e.button>0)return;e.preventDefault();
+  const row=h.closest(".bat"),id=row.dataset.b,r=row.getBoundingClientRect(),gh=row.cloneNode(true);
+  gh.classList.add("ghost");gh.style.width=r.width+"px";gh.style.left=r.left+"px";gh.style.top=r.top+"px";document.body.appendChild(gh);
+  row.classList.add("dragging");const dx=e.clientX-r.left,dy=e.clientY-r.top;let over=null,y=e.clientY,raf=0;
+  try{h.setPointerCapture(e.pointerId);}catch(x){}
+  const tick=()=>{if(y<70)scrollBy(0,-14);else if(y>innerHeight-70)scrollBy(0,14);raf=requestAnimationFrame(tick);};raf=requestAnimationFrame(tick);
+  h.onpointermove=ev=>{y=ev.clientY;gh.style.left=(ev.clientX-dx)+"px";gh.style.top=(ev.clientY-dy)+"px";
+    const el=document.elementFromPoint(ev.clientX,ev.clientY),g=el&&el.closest("#cloudview .grp");
+    if(g!==over){if(over)over.classList.remove("drop");over=g;if(over)over.classList.add("drop");}};
+  h.onpointerup=h.onpointercancel=async()=>{cancelAnimationFrame(raf);h.onpointermove=h.onpointerup=h.onpointercancel=null;gh.remove();row.classList.remove("dragging");
+    if(over){over.classList.remove("drop");await fleetMove(id,over.dataset.g=="none"?null:over.dataset.g);}};});}
+async function fleetMove(id,gid){const b=FLEET.bats.find(x=>x.id==id);if(!b||(b.group_id||null)==gid)return;
+  const old=b.group_id;b.group_id=gid;if(gid)OPEN[gid]=true;fleetRender();
+  try{await sb(`/rest/v1/batteries?id=eq.${id}`,{method:"PATCH",body:{group_id:gid}});}
+  catch(e){b.group_id=old;fleetRender();alert("Verschieben fehlgeschlagen: "+e.message);}}
+/* Battery sheet: name, group, location and note can be changed any time; every read-out with editable location/comment. */
+function sheet(html){$("#sheetin").innerHTML=html;$("#sheet").hidden=false;document.body.style.overflow="hidden";}
+function sheetClose(){$("#sheet").hidden=true;document.body.style.overflow="";}
+$("#sheet").onclick=e=>{if(e.target.id=="sheet")sheetClose();};
+async function batSheet(id){const b=FLEET.bats.find(x=>x.id==id);if(!b)return;
+  sheet(`<div class="shd">${batIcon(b)}<span style="min-width:0">${batName(b)}<span class="hint">${esc(b.model||"")} · Seriennr. ${esc(b.eserial)}</span></span>
+      <button class="btn" id="shx">Schließen</button></div>
+    <div class="card"><h2>Akku</h2><div class="two"><div><label style="margin-top:0">Name</label><input id="bn" maxlength="60" placeholder="z. B. Bus 1 – Akku 3" value="${esc(b.name||"")}"></div>
+      <div><label style="margin-top:0">Gruppe</label><select id="bg"><option value="">Ohne Gruppe</option>${FLEET.groups.map(g=>`<option value="${g.id}" ${g.id==b.group_id?"selected":""}>${esc(g.name)}</option>`).join("")}</select></div></div>
+      <label>Standort</label><input id="bl" maxlength="60" placeholder="z. B. Transporter 1, Halle 2" value="${esc(b.location||"")}">
+      <label>Notiz</label><textarea id="bc" rows="2" maxlength="500" placeholder="z. B. gekauft 2023, Gehäuse gerissen">${esc(b.comment||"")}</textarea>
+      <button class="btn primary" id="bsave" style="margin-top:12px">Speichern</button> <span class="hint" id="bmsg"></span></div>
+    <div class="card"><h2>Messverlauf</h2><div id="brs"><p class="hint" style="margin:0">Lade …</p></div></div><div id="cread"></div>`);
+  $("#shx").onclick=sheetClose;
+  $("#bsave").onclick=async()=>{$("#bsave").disabled=true;const body={name:$("#bn").value.trim()||null,group_id:$("#bg").value||null,location:$("#bl").value.trim()||null,comment:$("#bc").value.trim()||null};
+    try{await sb(`/rest/v1/batteries?id=eq.${id}`,{method:"PATCH",body});Object.assign(b,body);$("#bmsg").textContent="✓ Gespeichert";fleetRender();
+      const nb=$(".sheet .shd b");if(nb)nb.outerHTML=batName(b);}
+    catch(e){$("#bmsg").textContent="Fehler: "+e.message;}finally{$("#bsave").disabled=false;}};
+  try{const rs=await sb(`/rest/v1/readings?battery_id=eq.${id}&select=id,measured_at,health,status,source,location,comment&order=measured_at.desc&limit=200`);
+    $("#brs").innerHTML=rs.length?`<div class="nets" style="margin-top:0">${rs.map(r=>`<div class="net" data-r="${r.id}">
       <span>${fdt2(r.measured_at)} <span class="hint">· ${esc(SRCN[r.source]||r.source)}${r.location?" · "+esc(r.location):""}</span>${r.comment?`<br><span class="hint">${esc(r.comment)}</span>`:""}</span>
-      <span class="badge ${r.status||"unknown"}">${r.health!=null?r.health:"–"}</span></div>`).join("")}</div></div><div id="cread"></div>`;
-    $$("#cbat [data-r]").forEach(n=>n.onclick=()=>cloudReading(n.dataset.r));el.scrollIntoView({behavior:"smooth"});}
-  catch(e){el.innerHTML=`<div class="box err">${esc(e.message)}</div>`;}}
-async function cloudReading(id){const el=$("#cread");
+      <span class="badge ${r.status||"unknown"}">${r.health!=null?r.health:"–"}</span></div>`).join("")}</div>`:'<p class="hint" style="margin:0">Noch keine Messungen.</p>';
+    $$("#brs [data-r]").forEach(n=>n.onclick=()=>cloudReading(n.dataset.r));}
+  catch(e){$("#brs").innerHTML=`<div class="box err">${esc(e.message)}</div>`;}}
+async function cloudReading(id){const el=$("#cread");el.innerHTML='<p class="hint">Lade …</p>';
   try{const r=(await sb(`/rest/v1/readings?id=eq.${id}&select=scan,measured_at,location,comment,source`))[0];
     const prev=$("#result").innerHTML;render(r.scan,fdt2(r.measured_at));const html=$("#result").innerHTML;$("#result").innerHTML=prev;
-    el.innerHTML=`<div class="card"><h2>Messung ${fdt2(r.measured_at)}${r.location?" · "+esc(r.location):""}</h2>${r.comment?`<p>${esc(r.comment)}</p>`:""}
-      <p class="hint" style="margin-top:0">Quelle: ${esc(SRCN[r.source]||r.source)}</p></div>`+html;el.scrollIntoView({behavior:"smooth"});}
+    el.innerHTML=`<div class="card"><h2>Messung vom ${fdt2(r.measured_at)}</h2><p class="hint" style="margin-top:0">Quelle: ${esc(SRCN[r.source]||r.source)}</p>
+      <div class="two"><div><label>Standort</label><input id="rl" maxlength="60" value="${esc(r.location||"")}"></div>
+        <div><label>Kommentar</label><input id="rc" maxlength="200" value="${esc(r.comment||"")}"></div></div>
+      <button class="btn" id="rsave" style="margin-top:10px">Speichern</button> <span class="hint" id="rmsg"></span></div>`+html;
+    $("#rsave").onclick=async()=>{$("#rsave").disabled=true;const body={location:$("#rl").value.trim()||null,comment:$("#rc").value.trim()||null};
+      try{await sb(`/rest/v1/readings?id=eq.${id}`,{method:"PATCH",body});$("#rmsg").textContent="✓ Gespeichert";
+        const row=$(`#brs [data-r="${id}"] span`);if(row)row.innerHTML=`${fdt2(r.measured_at)} <span class="hint">· ${esc(SRCN[r.source]||r.source)}${body.location?" · "+esc(body.location):""}</span>${body.comment?`<br><span class="hint">${esc(body.comment)}</span>`:""}`;}
+      catch(e){$("#rmsg").textContent="Fehler: "+e.message;}finally{$("#rsave").disabled=false;}};
+    el.scrollIntoView({behavior:"smooth"});}
   catch(e){el.innerHTML=`<div class="box err">${esc(e.message)}</div>`;}}
 /* Link this bridge to the account: the bridge then uploads its stored read-outs itself when it has internet. */
 async function cloudLinkLoad(){const el=$("#cloudlink");if(!el)return;let st;
@@ -557,7 +708,7 @@ async function cloudLinkLoad(){const el=$("#cloudlink");if(!el)return;let st;
       ${st.error?`<div class="box err">${esc(st.error)}</div>`:""}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn" id="clsync">Jetzt hochladen</button><button class="btn" id="cloff">Verknüpfung lösen</button></div><div id="clmsg"></div>`
     :`<p class="hint" style="margin-top:0">Verknüpfte Brücken laden ihre Messungen selbst in die Cloud, sobald sie im WLAN Internet haben – auch ohne Handy.</p>
-      ${SESS?'<button class="btn primary" id="cllink">Mit meinem Konto verknüpfen</button>':'<p class="hint">Dazu zuerst im Tab <b>Cloud</b> anmelden.</p>'}<div id="clmsg"></div>`;
+      ${SESS?'<button class="btn primary" id="cllink">Mit meinem Konto verknüpfen</button>':'<p class="hint">Dazu zuerst im Tab <b>Flotte</b> anmelden.</p>'}<div id="clmsg"></div>`;
   const msg=(t,ok)=>$("#clmsg").innerHTML=`<div class="box ${ok?"ok":"err"}">${esc(t)}</div>`;
   const post=async(body)=>{const r=await fetch("/api/cloud",{method:"POST",body:new URLSearchParams(body)});const d=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(d.error||("Fehler "+r.status));return d;};
