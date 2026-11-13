@@ -27,6 +27,10 @@
   Graphit, Schwarz (Symbol automatisch schwarz oder weiß, je nach Hintergrund). Hell-Modus passend dazu.
 - Kopfzeile der App mit dem Akkuscan-Logo und „Akkuscan“ statt des roten „M18“-Kästchens – damit die App nicht wie eine offizielle Herstellerseite wirkt.
 - Neue Bilder der App auf Start- und Kaufseite; Texte sprechen von der „Flotte“ statt „Meine Akkus“.
+- **Unbekannte Akku-Typen:** Die Firmware meldet sie als „Unbekannt (Typ 498)“ statt nur „Unbekannt“. Im Akku-Fenster der Flotte lässt sich
+  der Typ dann von Hand festlegen (vom Etikett abgelesen); ein späterer Upload überschreibt einen bekannten Typ nicht mehr mit „Unbekannt“.
+  Bestehende Einträge in der Datenbank bereinigt (Migration `20261115090000_battery_type_cleanup.sql`).
+- Die Werks-Notiz „Undefined“ im Akku gilt nicht mehr als Notiz – sie wird weder angezeigt noch als Name vorgeschlagen.
 
 ## Eigene Domain: akkuscan.app
 - **https://akkuscan.app/** ist die Produktseite (Funktionen, So geht's, Für Betriebe, FAQ). Angemeldete Nutzer kommen von dort direkt ins Portal.

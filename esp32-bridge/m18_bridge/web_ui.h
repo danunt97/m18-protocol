@@ -267,7 +267,7 @@ function render(d,when){
   const retryNote=d.attempts>1?`<div class="card"><div class="box info" style="margin:0">Erst im 2. Versuch gelesen. 1. Versuch: ${esc(d.first_error||"?")}</div></div>`:"";
   $("#result").innerHTML=warns+retryNote+`
   <div class="card"><div class="hero">${gauge(d.health,d.status)}
-    <div class="title"><b>${esc(d.model)}</b><span class="mono">E-Seriennr. ${esc(d.eserial)}</span>${d.note?`<br><span>Notiz: „${esc(d.note)}“</span>`:""}
+    <div class="title"><b>${esc(d.model)}</b><span class="mono">E-Seriennr. ${esc(d.eserial)}</span>${d.note&&d.note!="Undefined"?`<br><span>Notiz: „${esc(d.note)}“</span>`:""}
     <br><span class="badge ${d.status}">${STL[d.status]||d.status}</span> <span class="hint">Zustand (Schätzung)</span></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Pack</div><div class="v">${nf(d.pack_v,2)}<small> V</small></div></div>
@@ -369,7 +369,7 @@ async function quickName(d){if(!SESS||RECOVERY||!d||!d.eserial)return;
       sb(`/rest/v1/battery_groups?org_id=eq.${org.id}&select=id,name,color&order=sort,created_at`)]);
     const b=bs[0];if(!b){box.innerHTML='<p class="hint" style="margin:0">Noch nicht hochgeladen – Name und Gruppe kannst du später in der <b>Flotte</b> vergeben.</p>';return;}
     box.innerHTML=`<h2>Name &amp; Gruppe in der Flotte</h2><div class="two"><div><label style="margin-top:0">Name</label>
-      <input id="qn" maxlength="60" placeholder="z. B. Bus 1 – Akku 3" value="${esc(b.name||d.note||"")}"></div>
+      <input id="qn" maxlength="60" placeholder="z. B. Bus 1 – Akku 3" value="${esc(b.name||(d.note&&d.note!="Undefined"?d.note:"")||"")}"></div>
       <div><label style="margin-top:0">Gruppe</label><select id="qg"><option value="">Ohne Gruppe</option>${gs.map(g=>`<option value="${g.id}" ${g.id==b.group_id?"selected":""}>${esc(g.name)}</option>`).join("")}</select></div></div>
       <button class="btn primary" id="qsave" style="margin-top:10px">Speichern</button> <span class="hint" id="qmsg"></span>`;
     $("#qsave").onclick=async()=>{$("#qsave").disabled=true;
@@ -669,6 +669,9 @@ function batIcon(b) {
     <text x="22" y="${y + h - 13 - (h > 34 ? 4 : 0)}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="${small ? 12 : 15}" fill="#fff">${k.cap}<tspan font-size="${small ? 7 : 8.5}" font-weight="700" dx="0.5">Ah</tspan></text>
     ${k.type ? `<text x="22" y="${y + h - 2.1}" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="${f ? 5.6 : 6.2}" letter-spacing=".6" fill="${tc}">${k.type}</text>` : ""}</svg>`;
 }
+/* battery types for setting an unknown one by hand (label on the battery) */
+const BTYPES=[["1.5Ah CP",1.5],["2Ah CP",2],["3Ah XC",3],["4Ah XC",4],["5Ah XC",5],["6Ah XC",6],["9Ah HD",9],["3Ah HO",3],["5.5Ah HO",5.5],["6Ah HO",6],
+  ["8Ah HO",8],["12Ah HO",12],["6Ah Forge",6],["8Ah Forge",8],["12Ah Forge",12]];
 const GKEYS=["folder","van","car","truck","trailer","office","workshop","warehouse","site","home","toolbox","charge","person","repair"];
 function guessIcon(n){n=String(n||"").toLowerCase();
   return /bus|transporter|sprinter|kasten|van/.test(n)?"van":/lkw|truck|laster/.test(n)?"truck":/anhänger|haenger|hänger/.test(n)?"trailer":/auto|pkw|wagen|kfz/.test(n)?"car"
@@ -760,12 +763,15 @@ async function batSheet(id){const b=FLEET.bats.find(x=>x.id==id);if(!b)return;
       <button class="btn" id="shx">Schließen</button></div>
     <div class="card"><h2>Akku</h2><div class="two"><div><label style="margin-top:0">Name</label><input id="bn" maxlength="60" placeholder="z. B. Bus 1 – Akku 3" value="${esc(b.name||"")}"></div>
       <div><label style="margin-top:0">Gruppe</label><select id="bg"><option value="">Ohne Gruppe</option>${FLEET.groups.map(g=>`<option value="${g.id}" ${g.id==b.group_id?"selected":""}>${esc(g.name)}</option>`).join("")}</select></div></div>
+      ${/^unbekannt/i.test(b.model||"")||b.capacity_ah==null?`<label>Akku-Typ <span class="warn">– unbekannt, bitte vom Etikett ablesen</span></label>
+        <select id="bt"><option value="">nicht festgelegt</option>${BTYPES.map(t=>`<option value="${esc(t[0])}|${t[1]}">${esc(t[0])}</option>`).join("")}</select>`:""}
       <label>Standort</label><input id="bl" maxlength="60" placeholder="z. B. Transporter 1, Halle 2" value="${esc(b.location||"")}">
       <label>Notiz</label><textarea id="bc" rows="2" maxlength="500" placeholder="z. B. gekauft 2023, Gehäuse gerissen">${esc(b.comment||"")}</textarea>
       <button class="btn primary" id="bsave" style="margin-top:12px">Speichern</button> <span class="hint" id="bmsg"></span></div>
     <div class="card"><h2>Messverlauf</h2><div id="brs"><p class="hint" style="margin:0">Lade …</p></div></div><div id="cread"></div>`);
   $("#shx").onclick=sheetClose;
   $("#bsave").onclick=async()=>{$("#bsave").disabled=true;const body={name:$("#bn").value.trim()||null,group_id:$("#bg").value||null,location:$("#bl").value.trim()||null,comment:$("#bc").value.trim()||null};
+    if($("#bt")&&$("#bt").value){const [m,ah]=$("#bt").value.split("|");body.model=m;body.capacity_ah=+ah;}
     try{await sb(`/rest/v1/batteries?id=eq.${id}`,{method:"PATCH",body});Object.assign(b,body);$("#bmsg").textContent="✓ Gespeichert";fleetRender();
       const nb=$(".sheet .shd b");if(nb)nb.outerHTML=batName(b);}
     catch(e){$("#bmsg").textContent="Fehler: "+e.message;}finally{$("#bsave").disabled=false;}};

@@ -237,7 +237,9 @@ class Reader {
     snprintf(es, sizeof(es), "%u-%lu", (unsigned)type, (unsigned long)serial);
     j.kvs("eserial", es);
     j.kvn("type_code", type);
-    j.kvs("model", bt ? bt->name : "Unbekannt");
+    char unk[24];
+    snprintf(unk, sizeof(unk), "Unbekannt (Typ %u)", (unsigned)type);
+    j.kvs("model", bt ? bt->name : unk);
     if (bt) j.kvf("capacity_ah", bt->ah, 1);
 
     uint32_t batNow = date(0x0037);
@@ -254,6 +256,7 @@ class Reader {
     if (mem_.has(0x0023, 20)) {
       for (int i = 0; i < 20; i++) { uint8_t c = mem_.at(0x0023 + i); note[i] = (c >= 32 && c < 127) ? (char)c : ' '; }
       for (int i = 19; i >= 0 && (note[i] == '-' || note[i] == ' '); i--) note[i] = 0;
+      if (!strcmp(note, "Undefined")) note[0] = 0;   // factory default, not a note anyone wrote
     }
     j.kvs("note", note);
 
