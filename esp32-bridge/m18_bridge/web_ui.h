@@ -498,7 +498,7 @@ const SB={url:"https://seccxaldsjhukavoilnm.supabase.co",key:"sb_publishable_KSi
   app:"https://akkuscan.app/app/"};
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}},
   set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
-let SESS=ls.get("m18.sb.sess"),ORG=ls.get("m18.sb.org"),CMSG="",RECOVERY=false;   /* RECOVERY: opened from a password mail */
+let SESS=ls.get("m18.sb.sess"),ORG=ls.get("m18.sb.org"),CMSG="",RECOVERY=false,ISADMIN=null;   /* RECOVERY: opened from a password mail */
 async function sbRaw(path,opt={}){const h={apikey:SB.key,"Content-Type":"application/json"};if(opt.token)h.Authorization="Bearer "+opt.token;
   let r;try{r=await fetch(SB.url+path,{method:opt.method||"GET",headers:h,body:opt.body?JSON.stringify(opt.body):undefined});}
   catch(e){throw new Error("Keine Internetverbindung");}
@@ -508,7 +508,7 @@ function sbErr(d){const m=d&&(d.msg||d.message||d.error_description||d.error);if
   const de={"Invalid login credentials":"E-Mail oder Passwort falsch","Email not confirmed":"E-Mail-Adresse noch nicht bestätigt – bitte den Link in der Mail öffnen",
     "User already registered":"Für diese E-Mail gibt es schon ein Konto","email rate limit exceeded":"Zu viele E-Mails – bitte später nochmal versuchen"};
   for(const k in de)if(String(m).indexOf(k)>=0)return de[k];return String(m);}
-function setSess(d){SESS=d?{at:d.access_token,rt:d.refresh_token,exp:Date.now()/1000+(+d.expires_in||3600)-60,
+function setSess(d){ISADMIN=null;SESS=d?{at:d.access_token,rt:d.refresh_token,exp:Date.now()/1000+(+d.expires_in||3600)-60,
     email:(d.user&&d.user.email)||(SESS&&SESS.email)||""}:null;ls.set("m18.sb.sess",SESS);if(!d){ORG=null;ls.set("m18.sb.org",null);}}
 async function sbToken(){if(!SESS)return null;if(Date.now()/1000<SESS.exp)return SESS.at;
   try{setSess(await sbRaw("/auth/v1/token?grant_type=refresh_token",{method:"POST",body:{refresh_token:SESS.rt}}));return SESS.at;}
@@ -564,9 +564,12 @@ function acctMenu(){if($("#amenu")){$("#amenu").remove();return;}const n=cq().le
       <span style="min-width:0"><b>${esc(e)}</b><span>${esc(ORG?ORG.name:"")}</span></span></div>
     <div class="row"><span>Warten auf Upload</span><span>${n?n+" Messung"+(n>1?"en":""):"nichts – alles hochgeladen"}</span></div>
     ${n?'<button class="btn primary" id="cqsend">Jetzt hochladen</button>':""}
-    <button class="btn" id="aflotte">Meine Flotte</button><button class="btn" id="clogout">Abmelden</button>
+    <button class="btn" id="aflotte">Meine Flotte</button><a class="btn" id="aadmin" href="https://akkuscan.app/admin/" target="_blank" rel="noopener" hidden>Admin-Bereich</a>
+    <button class="btn" id="clogout">Abmelden</button>
     <button class="btn" id="cdel" style="color:var(--crit)">Konto löschen</button></div>`);
   const close=()=>{const m=$("#amenu");if(m)m.remove();document.removeEventListener("click",outside);acctRender();};
+  const showAdmin=()=>{const l=$("#aadmin");if(l)l.hidden=!ISADMIN;};showAdmin();
+  if(ISADMIN==null)sb("/rest/v1/rpc/is_admin",{method:"POST",body:{}}).then(v=>{ISADMIN=v===true;showAdmin();}).catch(()=>{});
   const outside=ev=>{if(!ev.target.closest("#amenu"))close();};setTimeout(()=>document.addEventListener("click",outside),0);
   if($("#cqsend"))$("#cqsend").onclick=async()=>{$("#cqsend").disabled=true;await cloudFlush();close();cloudView();};
   $("#aflotte").onclick=()=>{close();tab("cloud");};

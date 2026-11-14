@@ -31,6 +31,12 @@
   der Typ dann von Hand festlegen (vom Etikett abgelesen); ein späterer Upload überschreibt einen bekannten Typ nicht mehr mit „Unbekannt“.
   Bestehende Einträge in der Datenbank bereinigt (Migration `20261115090000_battery_type_cleanup.sql`).
 - Die Werks-Notiz „Undefined“ im Akku gilt nicht mehr als Notiz – sie wird weder angezeigt noch als Name vorgeschlagen.
+- **Demo-Modus** unter **akkuscan.app/app/?demo** (`webble/demo.js`): ein simuliertes Modul „Akkuscan-Demo“ mit acht Beispiel-Akkus
+  (CP, XC, HO, Forge – von neu bis kritisch) und eine Beispiel-Flotte mit Gruppen. Verbinden, „Nächsten Akku scannen“, alle Werte, Verlauf,
+  Flotte, Gruppen und Drag & Drop funktionieren wie echt – ohne Modul, ohne Konto. Es wird nichts an die Cloud geschickt, und ein echtes
+  Login im selben Browser bleibt unberührt (eigener Speicherbereich „demo.*“). Oranger Balken „DEMO … Demo beenden“.
+  „Demo ansehen“ auf der Startseite, „Demo ausprobieren“ auf der Kaufseite und im Verbinden-Kasten der App.
+- Konto-Menü: „Admin-Bereich“ für Admins (Link auf akkuscan.app/admin/).
 
 ## Eigene Domain: akkuscan.app
 - **https://akkuscan.app/** ist die Produktseite (Funktionen, So geht's, Für Betriebe, FAQ). Angemeldete Nutzer kommen von dort direkt ins Portal.

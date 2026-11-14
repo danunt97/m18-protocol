@@ -283,7 +283,8 @@
     <li><b>Verbinden</b> tippen und <b>M18-Bridge-…</b> wählen.</li><li><b>Akku auslesen</b> – alles Weitere wie auf der Brücke selbst.</li></ol>
   <button class="btn primary big" id="blebig" style="margin-top:12px">Verbinden</button><div id="blemsg"></div>
   <p class="hint">iPhone: diese Seite in der kostenlosen App <b>Bluefy</b> öffnen (Safari kann kein Bluetooth). Android: <b>Chrome</b>.
-    Das WLAN der Brücke wird nicht gebraucht – das Handy behält sein Internet. Konto und Flotte (Tab Flotte) gehen auch ohne Brücke.</p></div>
+    Das WLAN der Brücke wird nicht gebraucht – das Handy behält sein Internet. Konto und Flotte (Tab Flotte) gehen auch ohne Brücke.</p>
+  ${window.M18_DEMO ? "" : '<p class="hint" style="margin-top:6px">Noch kein Modul? <a href="/app/?demo" style="color:var(--orange,#ff7a00);font-weight:700">Demo ausprobieren</a> – mit Beispiel-Akkus, ohne Anmeldung.</p>'}</div>
 <div class="card" id="bleauth" hidden><h2>Passwort der Brücke</h2><label>Passwort</label><input id="blepw" type="password" autocomplete="current-password">
   <button class="btn primary" id="blepwgo" style="margin-top:10px">Anmelden</button><div id="blepwerr" class="hint" style="color:var(--crit)"></div></div>`);
     document.getElementById("blebig").onclick = connect;
