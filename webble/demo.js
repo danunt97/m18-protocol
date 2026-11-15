@@ -158,8 +158,13 @@
     for (let k = n - 1; k >= 0; k--) {
       const ts = now() - (k * 32 + 1 + i) * DAY, older = Object.assign({}, b, { cycles: Math.max(0, b.cycles - k * 9), charges: Math.max(1, b.charges - k * 12) });
       const s = scanOf(older, ts);
+      // older read-outs were better: worn batteries lose a few points a month, new ones hardly any
+      const drift = { b2: 3.2, b6: 4.1, b1: 0.6, b3: 1.3, b5: 0.9, b4: 0.2, b7: 1.1, b8: 0 }[b.key] || 0;
+      s.health = Math.min(100, Math.round(s.health + k * drift + (k ? (i % 3 - 1) * 0.6 : 0)));
+      s.status = s.health >= 75 ? "good" : s.health >= 50 ? "watch" : s.health >= 35 ? "weak" : "crit";
       DB.readings.push({ id: uid("r"), org_id: ORG, battery_id: id, measured_at: iso(ts), health: s.health, status: s.status, source: k % 2 ? "bridge" : "app-ble",
-        location: b.loc, comment: k == 0 && b.key == "b6" ? "Hält nur noch kurz – austauschen" : null, pack_v: s.pack_v, scan: s });
+        location: b.loc, comment: k == 0 && b.key == "b6" ? "Hält nur noch kurz – austauschen" : null, pack_v: s.pack_v,
+        imbalance_mv: s.imbalance_mv, cycles: s.cycles, scan: s });
     }
   });
   const overview = () => DB.bats.map(b => { const rs = DB.readings.filter(r => r.battery_id == b.id).sort((x, y) => y.measured_at.localeCompare(x.measured_at)), l = rs[0] || {};
@@ -179,7 +184,7 @@
       if (!bat) { bat = { id: uid("bat"), org_id: ORG, eserial: s.eserial, type_code: s.type_code, model: s.model, capacity_ah: s.capacity_ah, name: null,
         location: m.loc || null, comment: null, retired: false, group_id: null, created_at: iso(now()) }; DB.bats.push(bat); }
       const r = { id: uid("r"), org_id: ORG, battery_id: bat.id, measured_at: iso(m.ts || now()), health: s.health, status: s.status, source: b.p_source || "app-ble",
-        location: m.loc || null, comment: m.comment || null, pack_v: s.pack_v, scan: s };
+        location: m.loc || null, comment: m.comment || null, pack_v: s.pack_v, imbalance_mv: s.imbalance_mv, cycles: s.cycles, scan: s };
       DB.readings.push(r); return [200, { ok: true, duplicate: false, reading_id: r.id, battery_id: bat.id }];
     }
     if (p.endsWith("/rpc/bridge_register")) return [200, { ok: true, token: "demo-token" }];

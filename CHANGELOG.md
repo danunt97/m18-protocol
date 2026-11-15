@@ -37,6 +37,12 @@
   Login im selben Browser bleibt unberührt (eigener Speicherbereich „demo.*“). Oranger Balken „DEMO … Demo beenden“.
   „Demo ansehen“ auf der Startseite, „Demo ausprobieren“ auf der Kaufseite und im Verbinden-Kasten der App.
 - Konto-Menü: „Admin-Bereich“ für Admins (Link auf akkuscan.app/admin/).
+- **Akku-Fenster in der Flotte neu aufgebaut:** oben die **Übersicht** (Zustand mit Ring, letzte Messung, Veränderung seit der ersten Messung,
+  Vollzyklen, Zell-Spreizung, Anzahl Messungen) und eine klare Aussage zum Trend – z. B. „Hat in 3 Monaten 11 Punkte verloren (≈ 42 pro Jahr).
+  Bei diesem Tempo in ca. 2 Monaten im Bereich ‚Schwach‘“ oder „Stabil“. Darunter das Diagramm **Zustand im Verlauf** mit den Bereichen
+  Gut / Beobachten / Schwach / Kritisch (Punkt antippen zeigt Wert und Datum), darunter die **Messungen** als kompakte Liste.
+  Name, Gruppe, Typ, Standort und Notiz stecken hinter dem Knopf **⋯** oben rechts („Name & Details bearbeiten“, „Letzte Messung im Detail“).
+- Demo: Beispiel-Akkus mit realistischem Verlauf (abgenutzte Akkus verlieren sichtbar Punkte, neue kaum).
 
 ## Eigene Domain: akkuscan.app
 - **https://akkuscan.app/** ist die Produktseite (Funktionen, So geht's, Für Betriebe, FAQ). Angemeldete Nutzer kommen von dort direkt ins Portal.

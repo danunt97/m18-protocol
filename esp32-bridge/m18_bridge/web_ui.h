@@ -105,7 +105,22 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .ghd .gname[data-ge]:hover{background:rgba(255,255,255,.06)}.ghd .gname .pen{color:var(--faint);font-size:13px}
 .ghd .gsub{display:flex;flex-wrap:wrap;align-items:center;gap:4px 0}.ghd .gsub .n{margin-left:0}
 .qname{border-color:rgba(255,122,0,.5)}.qname .two{gap:10px}
-.sheet .shd .bi{flex:none;width:54px;height:69px}.badge.crit{background:rgba(255,59,59,.14)}
+.sheet .shd .bi{flex:none;width:54px;height:69px}
+.shtools{display:flex;gap:6px;align-self:flex-start}.btn.icon{width:38px;height:38px;padding:0;font-size:18px;line-height:1;border-radius:50%}
+.sheet .shd .btn{margin-left:0}
+.bmenu{display:flex;flex-direction:column;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;margin:-4px 0 12px}
+.bmenu .btn{justify-content:flex-start}
+.bov{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}@media(max-width:520px){.bov{grid-template-columns:1fr}}
+.bhero{display:flex;align-items:center;gap:14px}.bhero .gauge{width:96px;height:96px}
+.bstats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.bstats .stat{padding:8px 10px}.bstats .v{font-size:18px}
+.trend{font-size:13.5px;line-height:1.45;border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:8px 0 0}
+.trend.good{border-color:var(--good)}.trend.watch{border-color:var(--watch)}.trend.crit{border-color:var(--crit)}
+.trend.good,.trend.watch,.trend.crit{color:var(--text)}
+.tchart{position:relative;overflow:hidden}.tchart svg{display:block;max-width:100%}
+.ttip{position:absolute;pointer-events:none;background:#000;color:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;line-height:1.35;white-space:nowrap}
+.mlist{display:flex;flex-direction:column}.mrow{display:flex;align-items:center;gap:10px;padding:7px 2px;border-top:1px solid var(--line);cursor:pointer;font-size:13px}
+.mrow:first-child{border-top:0}.mrow:hover{background:rgba(255,255,255,.03)}.mrow .badge{margin:0;min-width:38px;text-align:center}
+.mrow .mt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mrow .hint{font-size:12px}.mrow .chev{color:var(--faint)}.badge.crit{background:rgba(255,59,59,.14)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:640px){.two{grid-template-columns:1fr}}
 details.rg{border-top:1px solid var(--line)}details.rg summary{cursor:pointer;padding:10px 0;font-weight:600}
 .reg{display:grid;grid-template-columns:1fr auto;gap:10px;padding:5px 0;border-top:1px solid var(--line);align-items:center}
@@ -761,29 +776,84 @@ async function fleetMove(id,gid){const b=FLEET.bats.find(x=>x.id==id);if(!b||(b.
 function sheet(html){$("#sheetin").innerHTML=html;$("#sheet").hidden=false;document.body.style.overflow="hidden";}
 function sheetClose(){$("#sheet").hidden=true;document.body.style.overflow="";}
 $("#sheet").onclick=e=>{if(e.target.id=="sheet")sheetClose();};
+/* Battery sheet: overview and health trend first, then the read-outs; name, group, type, location and note behind "⋯". */
+const STLN={good:"Gut",watch:"Beobachten",weak:"Schwach",crit:"Kritisch",unknown:"Unbekannt"};
+function trendText(rs){const pts=rs.filter(r=>r.health!=null);if(pts.length<2)return {cls:"",t:"Erst eine Messung – der Verlauf entsteht mit jeder weiteren Messung."};
+  const a=pts[0],z=pts[pts.length-1],d=z.health-a.health,days=(new Date(z.measured_at)-new Date(a.measured_at))/864e5,mon=Math.max(1,Math.round(days/30.4));
+  const span=days<45?Math.max(1,Math.round(days))+" Tag"+(Math.round(days)==1?"":"en"):mon+" Monat"+(mon==1?"":"en");
+  if(d<=-3){const perY=days>=30?d/(days/365):null;let t=`Hat in ${span} <b>${-d} Punkte</b> verloren`+(perY!=null?` (≈ ${Math.round(-perY)} pro Jahr)`:"")+".";
+    const nx=z.health>=75?[75,"Beobachten"]:z.health>=50?[50,"Schwach"]:z.health>=35?[35,"Kritisch"]:null;
+    if(perY&&perY<0&&nx){const m=Math.max(1,Math.round((z.health-nx[0])/(-perY)*12));
+      if(m<=60)t+=` Bei diesem Tempo in ca. <b>${m<24?m+" Monat"+(m==1?"":"en"):Math.round(m/12)+" Jahren"}</b> im Bereich „${nx[1]}“ (unter ${nx[0]}).`;}
+    return {cls:d<=-10?"crit":"watch",t};}
+  if(d>=3)return {cls:"good",t:`In ${span} um ${d} Punkte besser – meist Messschwankung (z. B. Temperatur, Ladezustand).`};
+  return {cls:"good",t:`Stabil: in ${span} praktisch unverändert (${d>0?"+":""}${d} Punkte).`};}
+function trendChart(el,rs){const pts=rs.filter(r=>r.health!=null);const W=Math.max(260,el.clientWidth||320),H=170,L=30,R=78,T=12,B=24;
+  if(!pts.length){el.innerHTML="";return;}
+  const t=pts.map(r=>new Date(r.measured_at).getTime()),t0=Math.min(...t),t1=Math.max(...t),span=t1-t0||1;
+  const X=i=>pts.length==1?L+(W-L-R)/2:L+(t[i]-t0)/span*(W-L-R),Y=v=>T+(100-v)/100*(H-T-B);
+  const zone=(hi,lo,c,lab)=>`<rect x="${L}" y="${Y(hi)}" width="${W-L-R}" height="${Y(lo)-Y(hi)}" fill="var(--${c})" fill-opacity=".07"/>
+    <text x="${W-R+8}" y="${(Y(hi)+Y(lo))/2+3.5}" font-size="10.5" font-weight="600" fill="var(--${c})">${lab}</text>`;
+  const refs=zone(100,75,"good","Gut")+zone(75,50,"watch","Beobachten")+zone(50,35,"weak","Schwach")+zone(35,0,"crit","Kritisch");
+  const grid=[0,25,50,75,100].map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/>
+    <text x="${L-6}" y="${Y(v)+3.5}" text-anchor="end" font-size="10" fill="var(--faint)">${v}</text>`).join("");
+  const line=pts.length>1?`<polyline fill="none" stroke="var(--text)" stroke-opacity=".85" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${pts.map((r,i)=>X(i).toFixed(1)+","+Y(r.health).toFixed(1)).join(" ")}"/>`:"";
+  const dots=pts.map((r,i)=>`<circle cx="${X(i)}" cy="${Y(r.health)}" r="4.5" fill="var(--${r.status||"muted"})" stroke="var(--panel)" stroke-width="2"/>
+    <circle cx="${X(i)}" cy="${Y(r.health)}" r="15" fill="transparent" data-i="${i}" style="cursor:pointer"/>`).join("");
+  const dfmt=x=>new Date(x).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"2-digit"});
+  el.innerHTML=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Zustand im Verlauf">${refs}${grid}${line}${dots}
+    <text x="${L}" y="${H-6}" font-size="10" fill="var(--faint)">${dfmt(t0)}</text>${pts.length>1?`<text x="${W-R}" y="${H-6}" text-anchor="end" font-size="10" fill="var(--faint)">${dfmt(t1)}</text>`:""}</svg>
+    <div class="ttip" hidden></div>`;
+  const tip=el.querySelector(".ttip");
+  el.querySelectorAll("[data-i]").forEach(c=>{const show=()=>{const r=pts[+c.dataset.i];
+      tip.innerHTML=`<b>${r.health}</b> · ${esc(STLN[r.status]||"")}<br>${fdt2(r.measured_at)}`;tip.hidden=false;
+      const x=+c.getAttribute("cx"),y=+c.getAttribute("cy");tip.style.left=Math.min(W-tip.offsetWidth-2,Math.max(0,x-tip.offsetWidth/2))+"px";tip.style.top=Math.max(0,y-tip.offsetHeight-12)+"px";};
+    c.onpointerenter=show;c.onclick=show;c.onpointerleave=()=>{tip.hidden=true;};});}
 async function batSheet(id){const b=FLEET.bats.find(x=>x.id==id);if(!b)return;
-  sheet(`<div class="shd">${batIcon(b)}<span style="min-width:0">${batName(b)}<span class="hint">${esc(b.model||"")} · Seriennr. ${esc(b.eserial)}</span></span>
-      <button class="btn" id="shx">Schließen</button></div>
-    <div class="card"><h2>Akku</h2><div class="two"><div><label style="margin-top:0">Name</label><input id="bn" maxlength="60" placeholder="z. B. Bus 1 – Akku 3" value="${esc(b.name||"")}"></div>
+  const unknownType=/^unbekannt/i.test(b.model||"")||b.capacity_ah==null;
+  sheet(`<div class="shd">${batIcon(b)}<span style="min-width:0;flex:1">${batName(b)}<span class="hint">${esc(b.model||"")} · Seriennr. ${esc(b.eserial)}</span></span>
+      <span class="shtools"><button class="btn icon" id="bmore" aria-label="Bearbeiten" title="Bearbeiten">⋯</button><button class="btn icon" id="shx" aria-label="Schließen" title="Schließen">✕</button></span></div>
+    <div class="bmenu" id="bmenu" hidden><button class="btn" id="bedit">✎ Name &amp; Details bearbeiten</button><button class="btn" id="blast">Letzte Messung im Detail</button></div>
+    <div class="card" id="bform" hidden><h2>Bearbeiten</h2><div class="two"><div><label style="margin-top:0">Name</label><input id="bn" maxlength="60" placeholder="z. B. Bus 1 – Akku 3" value="${esc(b.name||"")}"></div>
       <div><label style="margin-top:0">Gruppe</label><select id="bg"><option value="">Ohne Gruppe</option>${FLEET.groups.map(g=>`<option value="${g.id}" ${g.id==b.group_id?"selected":""}>${esc(g.name)}</option>`).join("")}</select></div></div>
-      ${/^unbekannt/i.test(b.model||"")||b.capacity_ah==null?`<label>Akku-Typ <span class="warn">– unbekannt, bitte vom Etikett ablesen</span></label>
+      ${unknownType?`<label>Akku-Typ <span class="warn">– unbekannt, bitte vom Etikett ablesen</span></label>
         <select id="bt"><option value="">nicht festgelegt</option>${BTYPES.map(t=>`<option value="${esc(t[0])}|${t[1]}">${esc(t[0])}</option>`).join("")}</select>`:""}
       <label>Standort</label><input id="bl" maxlength="60" placeholder="z. B. Transporter 1, Halle 2" value="${esc(b.location||"")}">
       <label>Notiz</label><textarea id="bc" rows="2" maxlength="500" placeholder="z. B. gekauft 2023, Gehäuse gerissen">${esc(b.comment||"")}</textarea>
-      <button class="btn primary" id="bsave" style="margin-top:12px">Speichern</button> <span class="hint" id="bmsg"></span></div>
-    <div class="card"><h2>Messverlauf</h2><div id="brs"><p class="hint" style="margin:0">Lade …</p></div></div><div id="cread"></div>`);
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center"><button class="btn primary" id="bsave">Speichern</button><button class="btn" id="bcancel">Abbrechen</button><span class="hint" id="bmsg" style="margin:0"></span></div></div>
+    ${unknownType?'<div class="box info" style="margin:0 0 14px">Akku-Typ unbekannt – über <b>⋯ → Bearbeiten</b> vom Etikett ablesen und eintragen, dann stimmen Kapazität und Zyklen.</div>':""}
+    <div class="card" id="bover"><h2>Übersicht</h2><p class="hint" style="margin:0">Lade …</p></div>
+    <div class="card"><h2>Zustand im Verlauf</h2><div class="tchart" id="btrend"></div><p class="trend" id="btxt"></p></div>
+    <div class="card"><h2>Messungen</h2><div id="brs"><p class="hint" style="margin:0">Lade …</p></div></div><div id="cread"></div>`);
   $("#shx").onclick=sheetClose;
+  const menu=$("#bmenu");$("#bmore").onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden;};
+  const openForm=()=>{menu.hidden=true;$("#bform").hidden=false;$("#bn").focus();$("#bform").scrollIntoView({behavior:"smooth",block:"nearest"});};
+  $("#bedit").onclick=openForm;$("#bcancel").onclick=()=>{$("#bform").hidden=true;};
   $("#bsave").onclick=async()=>{$("#bsave").disabled=true;const body={name:$("#bn").value.trim()||null,group_id:$("#bg").value||null,location:$("#bl").value.trim()||null,comment:$("#bc").value.trim()||null};
     if($("#bt")&&$("#bt").value){const [m,ah]=$("#bt").value.split("|");body.model=m;body.capacity_ah=+ah;}
-    try{await sb(`/rest/v1/batteries?id=eq.${id}`,{method:"PATCH",body});Object.assign(b,body);$("#bmsg").textContent="✓ Gespeichert";fleetRender();
-      const nb=$(".sheet .shd b");if(nb)nb.outerHTML=batName(b);}
-    catch(e){$("#bmsg").textContent="Fehler: "+e.message;}finally{$("#bsave").disabled=false;}};
-  try{const rs=await sb(`/rest/v1/readings?battery_id=eq.${id}&select=id,measured_at,health,status,source,location,comment&order=measured_at.desc&limit=200`);
-    $("#brs").innerHTML=rs.length?`<div class="nets" style="margin-top:0">${rs.map(r=>`<div class="net" data-r="${r.id}">
-      <span>${fdt2(r.measured_at)} <span class="hint">· ${esc(SRCN[r.source]||r.source)}${r.location?" · "+esc(r.location):""}</span>${r.comment?`<br><span class="hint">${esc(r.comment)}</span>`:""}</span>
-      <span class="badge ${r.status||"unknown"}">${r.health!=null?r.health:"–"}</span></div>`).join("")}</div>`:'<p class="hint" style="margin:0">Noch keine Messungen.</p>';
-    $$("#brs [data-r]").forEach(n=>n.onclick=()=>cloudReading(n.dataset.r));}
-  catch(e){$("#brs").innerHTML=`<div class="box err">${esc(e.message)}</div>`;}}
+    try{await sb(`/rest/v1/batteries?id=eq.${id}`,{method:"PATCH",body});Object.assign(b,body);fleetRender();batSheet(id);}
+    catch(e){$("#bmsg").textContent="Fehler: "+e.message;$("#bsave").disabled=false;}};
+  let rs=[];
+  try{rs=await sb(`/rest/v1/readings?battery_id=eq.${id}&select=id,measured_at,health,status,source,location,comment,imbalance_mv,cycles,pack_v&order=measured_at.desc&limit=200`);}
+  catch(e){$("#brs").innerHTML=`<div class="box err">${esc(e.message)}</div>`;$("#bover").innerHTML="";return;}
+  const asc=rs.slice().reverse(),z=rs[0]||{},a=asc[0]||{},tr=trendText(asc),hs=asc.filter(r=>r.health!=null);
+  const d=hs.length>1?hs[hs.length-1].health-hs[0].health:null,imb=z.imbalance_mv!=null?z.imbalance_mv:null;
+  $("#blast").onclick=()=>{menu.hidden=true;if(z.id)cloudReading(z.id);};
+  $("#bover").innerHTML=`<h2>Übersicht</h2>${rs.length?`<div class="bov">
+      <div class="bhero">${gauge(z.health,z.status||"unknown")}<span><span class="badge ${z.status||"unknown"}">${esc(STLN[z.status]||"Unbekannt")}</span>
+        <span class="hint" style="display:block;margin-top:6px">zuletzt ${fdt2(z.measured_at)}${z.location?" · "+esc(z.location):""}</span></span></div>
+      <div class="bstats">
+        <div class="stat"><div class="k">Veränderung</div><div class="v ${d==null?"":d<=-10?"crit":d<=-3?"watch":"good"}">${d==null?"–":(d>0?"+":"")+d}<small> Pkt.</small></div></div>
+        <div class="stat"><div class="k">Vollzyklen</div><div class="v">${z.cycles!=null?Math.round(z.cycles):"–"}</div></div>
+        <div class="stat"><div class="k">Zell-Spreizung</div><div class="v ${imb==null?"":imb>80?"crit":imb>40?"watch":""}">${imb!=null?imb:"–"}<small> mV</small></div></div>
+        <div class="stat"><div class="k">Messungen</div><div class="v">${rs.length}</div></div></div></div>
+      <p class="trend ${tr.cls}" style="margin-top:12px">${tr.t}</p>`:'<p class="hint" style="margin:0">Noch keine Messungen.</p>'}`;
+  $("#btxt").innerHTML=hs.length>1?`Erste Messung ${fdt2(a.measured_at)}: <b>${hs[0].health}</b> · letzte: <b>${hs[hs.length-1].health}</b>`:"";
+  trendChart($("#btrend"),asc);
+  $("#brs").innerHTML=rs.length?`<div class="mlist">${rs.map(r=>`<div class="mrow" data-r="${r.id}"><span class="badge ${r.status||"unknown"}">${r.health!=null?r.health:"–"}</span>
+      <span class="mt">${fdt2(r.measured_at)}<span class="hint"> · ${esc(SRCN[r.source]||r.source)}${r.location?" · "+esc(r.location):""}${r.comment?" · "+esc(r.comment):""}</span></span><span class="chev">›</span></div>`).join("")}</div>`
+    :'<p class="hint" style="margin:0">Noch keine Messungen.</p>';
+  $$("#brs [data-r]").forEach(n=>n.onclick=()=>cloudReading(n.dataset.r));}
 async function cloudReading(id){const el=$("#cread");el.innerHTML='<p class="hint">Lade …</p>';
   try{const r=(await sb(`/rest/v1/readings?id=eq.${id}&select=scan,measured_at,location,comment,source`))[0];
     const prev=$("#result").innerHTML;render(r.scan,fdt2(r.measured_at));const html=$("#result").innerHTML;$("#result").innerHTML=prev;
@@ -793,7 +863,7 @@ async function cloudReading(id){const el=$("#cread");el.innerHTML='<p class="hin
       <button class="btn" id="rsave" style="margin-top:10px">Speichern</button> <span class="hint" id="rmsg"></span></div>`+html;
     $("#rsave").onclick=async()=>{$("#rsave").disabled=true;const body={location:$("#rl").value.trim()||null,comment:$("#rc").value.trim()||null};
       try{await sb(`/rest/v1/readings?id=eq.${id}`,{method:"PATCH",body});$("#rmsg").textContent="✓ Gespeichert";
-        const row=$(`#brs [data-r="${id}"] span`);if(row)row.innerHTML=`${fdt2(r.measured_at)} <span class="hint">· ${esc(SRCN[r.source]||r.source)}${body.location?" · "+esc(body.location):""}</span>${body.comment?`<br><span class="hint">${esc(body.comment)}</span>`:""}`;}
+        const row=$(`#brs [data-r="${id}"] .mt`);if(row)row.innerHTML=`${fdt2(r.measured_at)}<span class="hint"> · ${esc(SRCN[r.source]||r.source)}${body.location?" · "+esc(body.location):""}${body.comment?" · "+esc(body.comment):""}</span>`;}
       catch(e){$("#rmsg").textContent="Fehler: "+e.message;}finally{$("#rsave").disabled=false;}};
     el.scrollIntoView({behavior:"smooth"});}
   catch(e){el.innerHTML=`<div class="box err">${esc(e.message)}</div>`;}}
