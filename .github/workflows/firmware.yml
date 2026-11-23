@@ -65,7 +65,13 @@ jobs:
           cp webble/app.html site/app/index.html
           cp webble/manifest.webmanifest webble/icon.svg site/app/
           cp webflash/index.html site/flasher/
+          # esptool of the installed core (2.0.17 ships esptool.py on Linux, 3.x an executable); else from pip
           ESPTOOL=$(find ~/.arduino15/packages/esp32/tools -name 'esptool' -type f -perm -u+x | head -1)
+          if [ -z "$ESPTOOL" ]; then
+            PYTOOL=$(find ~/.arduino15/packages/esp32/tools -name 'esptool.py' -type f | head -1)
+            if [ -n "$PYTOOL" ]; then ESPTOOL="python3 $PYTOOL"; else pip install -q esptool==4.8.1; ESPTOOL="python3 -m esptool"; fi
+          fi
+          echo "esptool: $ESPTOOL"
           BOOTAPP=$(find ~/.arduino15/packages/esp32/hardware -name boot_app0.bin | head -1)
           # pack <Build-Ordner> <Dateiname> <Flashgröße>
           pack() {
@@ -74,7 +80,7 @@ jobs:
               cp "$1/m18_bridge.ino.merged.bin" "site/flasher/firmware/$2.bin"
             else
               # Fallback: Bootloader + Partitionen + boot_app0 + App selbst zusammenfügen
-              "$ESPTOOL" --chip esp32s3 merge_bin -o "site/flasher/firmware/$2.bin" --flash_mode keep --flash_size "$3" \
+              $ESPTOOL --chip esp32s3 merge_bin -o "site/flasher/firmware/$2.bin" --flash_mode keep --flash_size "$3" \
                 0x0 "$1/m18_bridge.ino.bootloader.bin" 0x8000 "$1/m18_bridge.ino.partitions.bin" \
                 0xe000 "$BOOTAPP" 0x10000 "$1/m18_bridge.ino.bin"
             fi
