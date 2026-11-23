@@ -20,7 +20,10 @@
 // Arduino IDE settings for ESP32-S3-DevKitC-1 N16R8 (see README):
 //   Board "ESP32S3 Dev Module", Flash Size 16MB, PSRAM "OPI PSRAM",
 //   Partition Scheme "16M Flash (3MB APP/9.9MB FATFS)", USB CDC On Boot "Enabled".
-//   Arduino-ESP32 core 2.0.x or 3.x, no extra libraries.
+// ESP32-S3 SuperMini (own PCB): #define BOARD_SUPERMINI below, Flash Size 4MB, PSRAM "QSPI PSRAM",
+//   partition table from ../partitions/supermini-4mb.csv copied as partitions.csv next to the
+//   sketch, USB CDC On Boot "Enabled".
+//   Arduino-ESP32 core 2.0.x or 3.x, no extra libraries (the OLED driver is built in, m18_oled.h).
 
 #include <WiFi.h>
 #include <WiFiUdp.h>
@@ -49,11 +52,36 @@
 #include "m18_log.h"
 #include "m18_blewire.h"
 #include "supabase_ca.h"
+#include "m18_oled.h"
 #include "web_ui.h"
 
 #define FW_BUILD __DATE__ " " __TIME__
 
 // ----------------------------------------------------------------- settings
+// Board variant. Default: ESP32-S3-DevKitC-1 N16R8 with level shifter (hardware/aufsteckgehaeuse).
+// BOARD_SUPERMINI: own PCB (not public) with an ESP32-S3 SuperMini (ESP32-S3FH4R2,
+// 4 MB flash, 2 MB quad PSRAM). In the Arduino IDE uncomment the next line; the CI build
+// defines it itself.
+// #define BOARD_SUPERMINI
+#if defined(BOARD_SUPERMINI)
+#define BOARD_NAME "supermini"
+#define PIN_TX 7           // -> NPN/PNP high-side switch -> battery J2 (not inverting)
+#define PIN_RX 6           // <- two-NPN isolator <- battery J1 (not inverting)
+#define DEFAULT_LED_PIN 48 // WS2812 on the SuperMini (mostly hidden under the module)
+// RGB LED on the PCB (common anode, each colour via an NPN: high = on). Pinout of the
+// Lumetheus 5 mm RGB (R, A, G, B): pad 3 is green, pad 4 is blue. For a Dialight 521-8559F
+// (R, A, B, G) swap G and B.
+#define PIN_RGB_R 13       // -> Q5 -> pad 1
+#define PIN_RGB_G 11       // -> Q7 -> pad 3
+#define PIN_RGB_B 12       // -> Q6 -> pad 4
+#define PIN_CHG_EN 5       // charger connector J2 pin 5: low = do not charge (nothing fitted yet)
+// OLED socket J1 (GND, VCC 3V3, SCL, SDA), 4.7 kOhm pull-ups on the PCB. Optional: without a
+// display (no ACK on 0x3C/0x3D) everything works as before.
+#define PIN_OLED_SDA 8
+#define PIN_OLED_SCL 9
+#else
+#define BOARD_NAME "devkitc"
+#endif
 #ifndef PIN_TX
 #define PIN_TX 17          // -> level shifter -> battery J2
 #endif
@@ -448,10 +476,14 @@ uint32_t lastLedRgb = 0xFFFFFFFF, lastLedWrite = 0;
 enum ResultKind : uint8_t { RES_NONE = 0, RES_GOOD, RES_WATCH, RES_WEAK, RES_FAIL };
 uint8_t resultKind = RES_NONE;
 uint32_t resultUntil = 0;
+uint32_t resultScanNo = 0;             // display: read-out the last result belongs to (proc.scanCount())
+uint8_t resultScanKind = RES_NONE;
 #define RESULT_SHOW_MS 30000
 void showResult(uint8_t kind) {
   resultKind = kind;
   resultUntil = millis() + (kind == RES_FAIL ? 8000 : RESULT_SHOW_MS);
+  resultScanNo = proc.scanCount();       // the PC sends SHOW right after its SCAN
+  resultScanKind = kind;
 }
 uint8_t resultFromStatus(const String& st) {
   if (st == "good") return RES_GOOD;
@@ -470,7 +502,53 @@ void showScanResult(const String& json, bool ok) {
   showResult(k ? k : (uint8_t)RES_GOOD);
 }
 
+#if defined(PIN_RGB_R)
+// Discrete RGB LED on the SuperMini PCB: 8-bit PWM per colour, shows the same colour as the WS2812.
+static bool rgbReady = false;
+static void rgbBegin() {
+  const int pins[3] = {PIN_RGB_R, PIN_RGB_G, PIN_RGB_B};
+  for (int i = 0; i < 3; i++) {
+    gpio_hold_dis((gpio_num_t)pins[i]);
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+    ledcAttach(pins[i], 5000, 8);
+    ledcWrite(pins[i], 0);
+#else
+    ledcSetup(i + 4, 5000, 8);         // channels 4-6: keep clear of anything the core uses first
+    ledcAttachPin(pins[i], i + 4);
+    ledcWrite(i + 4, 0);
+#endif
+  }
+  rgbReady = true;
+}
+static void rgbWrite(uint8_t r, uint8_t g, uint8_t b) {
+  if (!rgbReady) return;
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  ledcWrite(PIN_RGB_R, r); ledcWrite(PIN_RGB_G, g); ledcWrite(PIN_RGB_B, b);
+#else
+  ledcWrite(4, r); ledcWrite(5, g); ledcWrite(6, b);
+#endif
+}
+static void rgbOffForSleep() {         // NPN bases low and held: no glowing LED in deep sleep
+  const int pins[3] = {PIN_RGB_R, PIN_RGB_G, PIN_RGB_B};
+  for (int i = 0; i < 3; i++) {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+    ledcDetach(pins[i]);
+#else
+    ledcDetachPin(pins[i]);
+#endif
+    pinMode(pins[i], OUTPUT);
+    digitalWrite(pins[i], LOW);
+    gpio_hold_en((gpio_num_t)pins[i]);
+  }
+}
+#endif
+
 static void ledWrite(int pin, uint8_t r, uint8_t g, uint8_t b) {
+#if defined(PIN_RGB_R)
+  // The 5 mm LED behind a 150-270 Ohm resistor is much dimmer than a WS2812 at the same value:
+  // scale it 4x (brightness 40 -> duty 160/255), otherwise "connected" green is barely visible.
+  rgbWrite((uint16_t)r * 4 > 255 ? 255 : r * 4, (uint16_t)g * 4 > 255 ? 255 : g * 4, (uint16_t)b * 4 > 255 ? 255 : b * 4);
+#endif
   if (pin < 0) return;
 #if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
   rgbLedWrite(pin, r, g, b);
@@ -494,6 +572,12 @@ static bool ledPinAllowed(int pin) {
   if (pin == -1) return true;
   if (pin < 1 || pin > 48) return false;
   if (pin == PIN_TX || pin == PIN_RX || pin == PIN_BOOT || pin == 19 || pin == 20 || pin == 43 || pin == 44) return false;
+#if defined(PIN_RGB_R)
+  if (pin == PIN_RGB_R || pin == PIN_RGB_G || pin == PIN_RGB_B || pin == PIN_CHG_EN) return false;
+#endif
+#if defined(PIN_OLED_SDA)
+  if (pin == PIN_OLED_SDA || pin == PIN_OLED_SCL) return false;
+#endif
   return !(pin >= 26 && pin <= 37);
 }
 
@@ -536,6 +620,163 @@ void ledLoop(uint32_t bootHeldMs) {
   led(0, 0, slow ? 255 : 30);                                            // setup mode
 }
 
+#if defined(PIN_OLED_SDA)
+// ------------------------------------------------------------------- OLED
+// 0.96" SSD1306 (128x64) on I2C. Drawing and layout: m18_oled.h. Optional: the bridge looks
+// for it every 10 s (0x3C, then 0x3D) and drops it after repeated write errors, so a display
+// plugged in or pulled out later is handled too. Only changed pages are sent.
+#include <Wire.h>
+
+class OledDriver {
+ public:
+  bool present = false;
+  uint8_t addr = 0;
+
+  void begin() {
+    Wire.begin(PIN_OLED_SDA, PIN_OLED_SCL, 400000);
+    Wire.setTimeOut(20);                       // never hang the loop on a stuck bus
+  }
+  bool probe() {
+    static const uint8_t addrs[] = {0x3C, 0x3D};
+    for (uint8_t a : addrs) {
+      Wire.beginTransmission(a);
+      if (Wire.endTransmission() == 0) { addr = a; return init(); }
+    }
+    return false;
+  }
+  void show(const m18::OledCanvas& c) {
+    if (!present) return;
+    for (int p = 0; p < m18::OledCanvas::PAGES; p++) {
+      const uint8_t* row = c.fb + p * m18::OledCanvas::W;
+      if (!full_ && !memcmp(row, sent_ + p * m18::OledCanvas::W, m18::OledCanvas::W)) continue;
+      const uint8_t win[] = {0x21, 0, 127, 0x22, (uint8_t)p, (uint8_t)p};   // column and page window
+      bool ok = cmds(win, sizeof(win));
+      for (int x = 0; ok && x < m18::OledCanvas::W; x += 32) {
+        Wire.beginTransmission(addr);
+        Wire.write(0x40);                        // data
+        Wire.write(row + x, 32);
+        ok = Wire.endTransmission() == 0;
+      }
+      if (!ok) { if (++fails_ >= 3) present = false; return; }
+      fails_ = 0;
+      memcpy(sent_ + p * m18::OledCanvas::W, row, m18::OledCanvas::W);
+    }
+    full_ = false;
+  }
+  void setContrast(uint8_t v) {
+    if (!present || v == contrast_) return;
+    const uint8_t c[] = {0x81, v};
+    if (cmds(c, sizeof(c))) contrast_ = v;
+  }
+  void off() {                                 // display and charge pump off (a few uA)
+    if (!present) return;
+    const uint8_t c[] = {0xAE, 0x8D, 0x10};
+    cmds(c, sizeof(c));
+  }
+
+ private:
+  uint8_t sent_[m18::OledCanvas::W * m18::OledCanvas::PAGES];
+  bool full_ = true;
+  int fails_ = 0;
+  uint8_t contrast_ = 0xCF;
+
+  bool cmds(const uint8_t* c, size_t n) {
+    Wire.beginTransmission(addr);
+    Wire.write(0x00);                          // command stream
+    Wire.write(c, n);
+    return Wire.endTransmission() == 0;
+  }
+  bool init() {
+    static const uint8_t seq[] = {
+      0xAE, 0xD5, 0x80, 0xA8, 0x3F, 0xD3, 0x00, 0x40, 0x8D, 0x14,   // off, clock, 64 rows, offset 0, charge pump on
+      0x20, 0x00, 0xA1, 0xC8, 0xDA, 0x12, 0x81, 0xCF, 0xD9, 0xF1,   // horizontal addressing, rotated 180 deg, contrast
+      0xDB, 0x40, 0xA4, 0xA6, 0x2E, 0xAF};                         // VCOMH, show RAM, normal, no scroll, on
+    present = cmds(seq, sizeof(seq));
+    full_ = true;
+    fails_ = 0;
+    contrast_ = 0xCF;
+    return present;
+  }
+};
+
+OledDriver oledDrv;
+m18::OledCanvas oledCanvas;
+m18::OledView oledView;
+uint32_t oledScanNo = 0, oledScanAt = 0, oledLastProbe = 0, oledLastDraw = 0;
+bool oledSeen = false, oledNoneLogged = false;
+#define OLED_DIM_MS 120000             // dim after 2 min without use (less OLED burn-in)
+
+static const char* verdictName(uint8_t k) {
+  switch (k) {
+    case RES_GOOD: return "good";
+    case RES_WATCH: return "watch";
+    case RES_WEAK: return "weak";
+    case RES_FAIL: return "fail";
+  }
+  return nullptr;
+}
+
+void oledLoop(uint32_t bootHeldMs) {
+  uint32_t now = millis();
+  if (!oledDrv.present) {
+    if (oledLastProbe && now - oledLastProbe < 10000) return;
+    oledLastProbe = now ? now : 1;
+    if (!oledDrv.probe()) {
+      if (oledSeen) { ev("SYS", 1, "Display antwortet nicht mehr"); oledSeen = false; }
+      else if (!oledNoneLogged) { ev("SYS", 0, "Kein Display an SDA GPIO%d / SCL GPIO%d", PIN_OLED_SDA, PIN_OLED_SCL); oledNoneLogged = true; }
+      return;
+    }
+    ev("SYS", 0, "Display gefunden (SSD1306, I2C-Adresse 0x%02X)", oledDrv.addr);
+    oledSeen = true;
+    oledLastDraw = 0;
+  }
+  if (oledLastDraw && now - oledLastDraw < 200) return;
+  oledLastDraw = now ? now : 1;
+
+  // new read-out (web page, PC or Wi-Fi)? The buffer is written while the battery line is held.
+  if (proc.scanCount() != oledScanNo && xSemaphoreTake(batMutex, 0) == pdTRUE) {
+    oledScanNo = proc.scanCount();
+    oledView.scan = m18::parseOledScan(proc.lastScanJson());
+    xSemaphoreGive(batMutex);
+    oledScanAt = now;
+  }
+
+  m18::OledView& v = oledView;
+  if (otaRunning) v.mode = m18::OledMode::OTA;
+  else if (bootHeldMs > 1500) v.mode = m18::OledMode::BOOT_HOLD;
+  else if (scanRunning) v.mode = m18::OledMode::SCANNING;
+  else if (!batLink.isIdle()) v.mode = m18::OledMode::PC;
+  else v.mode = m18::OledMode::IDLE;
+  v.progress = reader.progressPercent();
+  v.bootHeldMs = bootHeldMs;
+
+  bool sta = WiFi.status() == WL_CONNECTED;
+  v.ip[0] = v.apName[0] = 0;
+  if (sta) {
+    v.wifi = m18::OledWifi::CONNECTED;
+    v.rssi = WiFi.RSSI();
+    snprintf(v.ip, sizeof(v.ip), "%s", WiFi.localIP().toString().c_str());
+  } else if (apActive) {
+    v.wifi = m18::OledWifi::SETUP;
+    snprintf(v.apName, sizeof(v.apName), "%s", apName.c_str());
+    snprintf(v.ip, sizeof(v.ip), "%s", WiFi.softAPIP().toString().c_str());
+  } else {
+    v.wifi = wstate == WState::CONNECTING ? m18::OledWifi::CONNECTING : m18::OledWifi::OFFLINE;
+  }
+  if (wstate == WState::CONNECTING && !sta) v.wifi = m18::OledWifi::CONNECTING;
+
+  v.verdict = (oledScanNo && resultScanNo == oledScanNo) ? verdictName(resultScanKind) : nullptr;
+  v.ageS = oledScanNo ? (long)((now - oledScanAt) / 1000) : -1;
+  v.unlockS = (unlockUntil && (int32_t)(unlockUntil - now) > 0) ? (int)((unlockUntil - now) / 1000) : 0;
+  v.sleepInS = sleepInSeconds();
+
+  m18::renderOled(oledCanvas, v);
+  bool idle = v.mode == m18::OledMode::IDLE && now - lastUserActivity > OLED_DIM_MS;
+  oledDrv.setContrast(idle ? 0x01 : 0xCF);
+  oledDrv.show(oledCanvas);
+}
+#endif
+
 void goToSleep() {
   logf("Energiesparmodus: Tiefschlaf nach %u min ohne Nutzung. Aufwecken mit der BOOT-Taste.\n", (unsigned)sleepMin);
   evlog.flush();
@@ -547,6 +788,12 @@ void goToSleep() {
   gpio_hold_en((gpio_num_t)PIN_TX);             // ... and held low during deep sleep
   gpio_deep_sleep_hold_en();
   ledWrite(ledPin, 0, 0, 0);
+#if defined(PIN_RGB_R)
+  rgbOffForSleep();
+#endif
+#if defined(PIN_OLED_SDA)
+  oledDrv.off();                                // display off in deep sleep
+#endif
   MDNS.end();
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
@@ -796,7 +1043,7 @@ void updateInfo() {
               ",\"mac\":\"" + WiFi.macAddress() + "\",\"uptime_s\":" + String(millis() / 1000) +
               ",\"heap_kb\":" + String(ESP.getFreeHeap() / 1024) + ",\"min_heap_kb\":" + String(ESP.getMinFreeHeap() / 1024) +
               ",\"psram_kb\":" + String(ESP.getFreePsram() / 1024) + ",\"reset_reason\":\"" + resetReason() +
-              "\",\"build\":\"" FW_BUILD "\",\"led_pin\":" + String(ledPin) + ",\"led_brightness\":" + String(ledBright) +
+              "\",\"build\":\"" FW_BUILD "\",\"board\":\"" BOARD_NAME "\",\"led_pin\":" + String(ledPin) + ",\"led_brightness\":" + String(ledBright) +
               ",\"unlocked\":" + (unlocked() ? "true" : "false") + ",\"unlock_s\":" + String(unlockS) +
               ",\"setup_client\":" + (clientOnSetupAp() ? "true" : "false") +
               ",\"reading\":" + (scanRunning ? "true" : "false") + ",\"auth\":" + (webPass.length() ? "true" : "false") +
@@ -805,6 +1052,9 @@ void updateInfo() {
               ",\"brownouts\":" + String((unsigned long)brownouts) + ",\"tx_low\":" + (lowTxPower ? "true" : "false") +
               ",\"ble\":\"" + (bleOn ? apName : String("")) + "\",\"ble_connected\":" + (bleConnected ? "true" : "false") +
               ",\"cloud\":" + (cloudConfigured() ? "true" : "false");
+#if defined(PIN_OLED_SDA)
+  infoExtra += String(",\"display\":\"") + (oledDrv.present ? "ssd1306" : "none") + "\"";
+#endif
   uint32_t now = unixNow();
   if (now) {
     char b[32];
@@ -1694,6 +1944,21 @@ void setup() {
   port.begin();                                 // J2 low first - before anything else
   port.startUart();                             // UART with inverted (= low) TX idle
   pinMode(PIN_BOOT, INPUT_PULLUP);
+#if defined(PIN_CHG_EN)
+  pinMode(PIN_CHG_EN, OUTPUT);
+  digitalWrite(PIN_CHG_EN, LOW);                // charger (if ever fitted) stays off
+#endif
+#if defined(PIN_RGB_R)
+  rgbBegin();
+  for (int i = 0; i < 3; i++) {                 // power-on test: red, green, blue (also on the WS2812)
+    ledWrite(DEFAULT_LED_PIN, i == 0 ? 60 : 0, i == 1 ? 60 : 0, i == 2 ? 60 : 0);
+    delay(250);
+  }
+  ledWrite(DEFAULT_LED_PIN, 0, 0, 0);
+#endif
+#if defined(PIN_OLED_SDA)
+  oledDrv.begin();
+#endif
   batMutex = xSemaphoreCreateMutex();
   stateMutex = xSemaphoreCreateMutex();
   histMutex = xSemaphoreCreateMutex();
@@ -1841,5 +2106,8 @@ void loop() {
 
   static uint32_t lastLed = 0;
   if (millis() - lastLed > 40) { lastLed = millis(); ledLoop(held); }
+#if defined(PIN_OLED_SDA)
+  oledLoop(held);
+#endif
   delay(1);                                     // let lower-priority tasks (Wi-Fi, idle) run
 }

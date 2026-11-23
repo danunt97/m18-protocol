@@ -34,6 +34,46 @@ Ein **ESP32-S3-N16R8** sitzt zwischen dem Akku und der PC-Software und ersetzt d
 - **Versorgung:** über USB, oder im [Aufsteckgehäuse](../hardware/aufsteckgehaeuse/README.md) aus dem Akku über einen
   Step-down-Wandler (HW-411/LM2596, **auf 5,0 V eingestellt**) an den 5V-Pin. **Nie** B+ (18–21 V) direkt anschließen.
 
+## Variante: eigene Platine mit ESP32-S3 SuperMini
+
+Für die eigene Platine mit ESP32-S3 SuperMini (nicht öffentlich) gibt es eine eigene Firmware-Variante (`BOARD_SUPERMINI`).
+Die Logik bleibt gleich, nur Pins und Speicher sind anders:
+
+| | DevKitC-1 N16R8 | SuperMini (eigene Platine) |
+|---|---|---|
+| TX → J2 | GPIO17 (Pegelwandler) | **GPIO7** (NPN/PNP-Schalter auf B+, nicht invertierend) |
+| RX ← J1 | GPIO18 (1 kΩ) | **GPIO6** (Trennstufe mit zwei NPN, nicht invertierend) |
+| Status-LED | WS2812 an GPIO48/38 | WS2812 an GPIO48 **und** RGB-LED der Platine: rot GPIO13, grün GPIO11, blau GPIO12 (Pinfolge der Lumetheus-LED, gleiche Farben wie die WS2812, 4× heller angesteuert). Beim Einschalten kurz rot, grün, blau |
+| Laden (vorbereitet) | – | CHG_EN an GPIO5, bleibt Low |
+| Flash / PSRAM | 16 MB / 8 MB Octal | 4 MB / 2 MB Quad |
+| Partitionen | 3 MB App, 9,9 MB FAT | 2 × 1,875 MB App, 192 KB FAT (ca. 15–20 Messungen, die Cloud speichert den Rest), [`partitions/supermini-4mb.csv`](partitions/supermini-4mb.csv) |
+| Display (optional) | – | 0,96″-OLED SSD1306 an J1: SDA GPIO8, SCL GPIO9 (4,7-kΩ-Pull-ups auf der Platine), siehe [OLED-Anzeige](#oled-anzeige-eigene-platine) |
+
+Im Web-Flasher gibt es dafür einen eigenen Knopf. Die Update-Datei für die Weboberfläche heißt `m18-bruecke-supermini-update.bin`.
+
+Arduino IDE: in `m18_bridge.ino` die Zeile `// #define BOARD_SUPERMINI` aktivieren und `partitions/supermini-4mb.csv` als
+`partitions.csv` neben die `.ino` kopieren. Dann *Board* „ESP32S3 Dev Module“, *Flash Size* „4MB“, *PSRAM* „QSPI PSRAM“,
+*USB CDC On Boot* „Enabled“ einstellen. Das *Partition Scheme* ist egal, weil die `partitions.csv` Vorrang hat.
+**Core 2.0.17 verwenden:** Mit Bluetooth, Cloud-Upload und Display ist die App mit Core 2.0.17 ca. 1,8 MB groß, mit Core 3.x ca. 2,0 MB –
+das passt nicht in die 1,875-MB-App-Bereiche. Die CI baut den SuperMini deshalb mit 2.0.17, das DevKitC weiter mit 3.0.7.
+
+## OLED-Anzeige (eigene Platine)
+
+In der SuperMini-Variante zeigt ein **0,96″-OLED mit SSD1306** (128 × 64, I²C, Adresse 0x3C oder 0x3D, z. B. QIQIAZI) an der Buchse J1
+(GND, VCC 3V3, SCL, SDA) den Zustand. Eine zusätzliche Bibliothek braucht es nicht. Module mit **SH1106** (meist 1,3″) zeigen ein verschobenes Bild und werden nicht unterstützt.
+
+| Zeile | Inhalt |
+|---|---|
+| oben | „M18-Brücke“, rechts WLAN mit Signalbalken, „Setup“, „verbinde“ oder „offline“ |
+| Mitte | nach dem Auslesen: Akkutyp und Alter, **Pack-Spannung** groß, Zustand (Gut/Beobachten/Schwach) mit Gesundheit in %, Temperatur. Ist der Akku schwach, steht der Zustand hell hinterlegt |
+| | beim Lesen: Fortschrittsbalken. Bei einem Fehler „Lesen fehlgeschlagen“ mit dem Grund. Außerdem: PC verbunden, Firmware-Update, BOOT-Countdown, vor dem ersten Lesen „Bereit“ |
+| unten | IP-Adresse (im Einrichtungsmodus der Name des Setup-WLANs), „Entsperrt m:ss“ oder „Schlafe in … s“ |
+
+- Das Ergebnis gilt auch für Auslesen vom PC. Schickt die Akku-Verwaltung `SHOW <status>`, steht ihre Bewertung im Display.
+- **Ohne Display** läuft die Firmware unverändert. Die Brücke sucht alle 10 s nach dem Display (Protokoll: „Display gefunden“ bzw. „Kein Display …“), `INFO` meldet `"display"`.
+- Nach **2 min** ohne Nutzung wird das Display dunkel geschaltet, damit es weniger einbrennt. Im **Tiefschlaf** ist es aus (Display und Ladungspumpe, wenige µA).
+- Vorschau ohne Hardware: `./sim_bridge oled` (siehe [Tests](#tests-ohne-hardware)) gibt die Bildschirme als Text aus.
+
 ## Status-LED (Onboard-RGB-LED)
 
 Die WS2812-LED auf dem Board zeigt den Zustand. Ab Werk ist **GPIO48** eingestellt (DevKitC-1 v1.0 und die meisten
@@ -207,7 +247,7 @@ einer Woche leer. Deshalb geht sie nach einer einstellbaren Ruhezeit in den **Ti
 
 - Als Benutzung zählen Webseite, USB-Befehle und ein Handy im Einrichtungs-WLAN. **Nicht** dazu zählen die UDP-Suche und Anfragen mit dem Header
   `X-M18-Background: 1`; den setzt der automatische Abgleich der PC-Software.
-- Im Schlaf bleibt **J2 per Pin-Hold auf Low**, WLAN und LED sind aus.
+- Im Schlaf bleibt **J2 per Pin-Hold auf Low**, WLAN, LED und OLED sind aus.
 - **Aufwecken:** BOOT-Taste drücken oder den Akku ab- und wieder anstecken. Unter *Gerät → Letzter Neustart* steht dann „Aufgewacht aus dem Energiesparmodus“.
 - Step-down-Wandler und der Pull-up des Pegelwandlers an B+ ziehen auch im Schlaf noch einige mA. Nach Gebrauch abziehen oder einen Schalter einbauen.
 
@@ -419,6 +459,7 @@ Die Weboberfläche hat keine Anmeldung. Jeder im selben WLAN kann den Akku ausle
 | `m18_bridge/m18_bridge.ino` | Sketch: UART, USB, WLAN, Captive Portal, mDNS/UDP-Suche, Webserver, LED, BOOT-Taste |
 | `m18_bridge/m18_proto.h` | Akku-Protokoll (Reset/Sync, Rahmen, Prüfsumme, Bitspiegelung) |
 | `m18_bridge/m18_reader.h` | Direktes Auslesen und Dekodieren, Zustandsschätzung |
+| `m18_bridge/m18_oled.h` | OLED-Anzeige: Schrift, Bildspeicher, Layout (der I²C-Treiber steht im Sketch) |
 | `m18_bridge/m18_history.h` | Messungsspeicher (Datei pro Messung, Rotation, Übernahme-Markierung) |
 | `m18_bridge/m18_commands.h` | Textprotokoll |
 | `m18_bridge/web_ui.h` | Weboberfläche (HTML/JS im Flash, ohne Internet) |
@@ -436,6 +477,12 @@ g++ -std=c++17 -I esp32-bridge/m18_bridge esp32-bridge/test/sim_bridge.cpp -o si
 
 ```bash
 ./sim_bridge test
+```
+
+Die OLED-Bildschirme als Text ansehen:
+
+```bash
+./sim_bridge oled
 ```
 
 **Ende-zu-Ende-Test:**

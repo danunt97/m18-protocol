@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.14 – ESP32-S3 SuperMini mit OLED-Anzeige
+- **Neue Board-Variante `BOARD_SUPERMINI`** für die eigene Platine mit ESP32-S3 SuperMini (4 MB Flash, 2 MB PSRAM):
+  TX GPIO7, RX GPIO6, WS2812 an GPIO48 und eine 5-mm-RGB-LED (rot GPIO13, grün GPIO11, blau GPIO12), CHG_EN GPIO5 bleibt Low.
+  Im Web-Flasher gibt es dafür einen eigenen Knopf „ESP32-S3 SuperMini“ (`manifest-supermini.json`, `m18-bruecke-supermini*.bin`).
+- **OLED-Anzeige (optional):** 0,96″-SSD1306 an SDA GPIO8 / SCL GPIO9. Zeigt WLAN-Zustand, IP bzw. Setup-WLAN,
+  das letzte Ausleseergebnis (Modell, Spannung, Zustand, Temperatur), Fortschritt beim Auslesen und Update. Ohne Display läuft alles wie bisher;
+  im Tiefschlaf ist es aus. Eigener Treiber ohne Bibliothek (`m18_oled.h`), im Simulator testbar (`./sim_bridge oled`).
+- **RGB-LED:** 4× heller angesteuert als die WS2812 (bei Helligkeit 40 war „verbunden“-Grün kaum zu sehen) und beim Einschalten ein kurzer
+  Farbtest rot → grün → blau.
+- **Neue Partitionstabelle für 4 MB** (`partitions/supermini-4mb.csv`): 2 × 1,875 MB App, 192 KB Messungsspeicher. Gebaut mit Core 2.0.17,
+  weil die App mit Core 3.x nicht in den Bereich passt. **Wer schon eine ältere SuperMini-Testversion hat, muss einmal komplett mit „Gerät löschen“
+  neu flashen** – ein Update über die Weboberfläche geht wegen der neuen Aufteilung nicht.
+- DevKitC: unverändert (nur die INFO-Antwort meldet zusätzlich `"display"`).
+
 ## 1.13 – Flotte mit Gruppen, mehrere Akkus hintereinander
 - **Tab „Flotte“** (vorher „Cloud“): alle Akkus in farbigen Ordnern, z. B. „Firmenbus 1“, „Büro“, „Lager“.
   Gruppen mit Name und Farbe anlegen, umbenennen, löschen (die Akkus darin bleiben erhalten); Akkus am Griff ⠿ per Drag & Drop

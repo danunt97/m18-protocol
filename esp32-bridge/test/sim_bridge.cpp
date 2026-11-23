@@ -21,6 +21,7 @@
 
 #include "m18_commands.h"
 #include "m18_blewire.h"
+#include "m18_oled.h"
 
 using m18::rev8;
 
@@ -406,6 +407,36 @@ int selftest() {
     fs::remove_all(dir);
   }
 
+  {  // OLED display: values taken from SCAN, screens drawn without overflowing
+    uint32_t before = p.scanCount();
+    run(p, "SCAN");
+    expect(p.scanCount() == before + 1 ? "scan counted" : "not counted", "scan counted");
+    m18::OledScan os = m18::parseOledScan(p.lastScanJson());
+    expect(os.valid && os.ok ? "oled parse ok" : "oled parse fail", "oled parse ok");
+    expect(os.packV > 15 && os.packV < 22 ? "pack_v" : std::to_string(os.packV), "pack_v");
+    expect(os.model[0] && os.status[0] ? "model+status" : "missing", "model+status");
+    m18::OledScan bad = m18::parseOledScan("{\"ok\":false,\"trace\":[\"a\\\"b\"],\"error\":\"Akku antwortet nicht\"}");
+    expect(bad.valid && !bad.ok ? std::string(bad.error) : "bad parse", "Akku antwortet nicht");
+    expect(m18::parseOledScan("{}").valid ? "empty valid" : "empty", "empty");
+    const char* s = "ä°–x";
+    int g1 = m18::oledGlyph(s), g2 = m18::oledGlyph(s), g3 = m18::oledGlyph(s), g4 = m18::oledGlyph(s);
+    expect(g1 == 95 && g2 == 102 && g3 == '-' - 0x20 && g4 == 'x' - 0x20 && !*s ? "utf8" : "utf8 bad", "utf8");
+    bool fontOk = sizeof(m18::OLED_FONT) / 5 == 103;
+    for (auto& g : m18::OLED_FONT) for (uint8_t col : g) if (col & 0x80) fontOk = false;   // 7 rows only
+    expect(fontOk ? "font" : "font bad", "font");
+    m18::OledCanvas c;
+    m18::OledView v;
+    v.wifi = m18::OledWifi::CONNECTED; v.rssi = -55; strcpy(v.ip, "192.168.178.42");
+    v.scan = os; v.ageS = 300;
+    m18::renderOled(c, v);
+    int lit = 0;
+    for (uint8_t b : c.fb) lit += __builtin_popcount(b);
+    expect(lit > 300 ? "drawn" : std::to_string(lit), "drawn");
+    for (int m = 0; m <= 4; m++) { v.mode = (m18::OledMode)m; v.progress = 150; v.bootHeldMs = 6000; m18::renderOled(c, v); }
+    v.mode = m18::OledMode::IDLE; v.scan = bad; m18::renderOled(c, v);
+    expect(c.get(0, 12) ? "fail bar" : "no bar", "fail bar");
+  }
+
   bat.present = false;                                                   // battery unplugged
   expect(run(p, "SCAN"), "ERR {\"ok\":false,\"blocks_ok\":0", true);
   expect(run(p, "RESET"), "ERR NOACK");
@@ -444,10 +475,55 @@ int serve(const char* histDir) {
   return 0;
 }
 
+// "./sim_bridge oled": prints the display screens as text (# = lit pixel), to check the layout.
+static void printCanvas(const char* title, const m18::OledCanvas& c) {
+  std::printf("%s\n+%s+\n", title, std::string(128, '-').c_str());
+  for (int y = 0; y < 64; y++) {
+    std::string row;
+    for (int x = 0; x < 128; x++) row += c.get(x, y) ? '#' : ' ';
+    std::printf("|%s|\n", row.c_str());
+  }
+  std::printf("+%s+\n\n", std::string(128, '-').c_str());
+}
+
+int oledDemo() {
+  SimBattery bat;
+  m18::Link link(bat);
+  m18::Reader reader(link, bat);
+  m18::CommandProcessor p(link, reader);
+  run(p, "SCAN");
+  m18::OledCanvas c;
+  m18::OledView v;
+  v.wifi = m18::OledWifi::CONNECTED; v.rssi = -63; std::strcpy(v.ip, "192.168.178.42");
+  m18::renderOled(c, v); printCanvas("Bereit (noch nichts gelesen)", c);
+  v.mode = m18::OledMode::SCANNING; v.progress = 45;
+  m18::renderOled(c, v); printCanvas("Lesen", c);
+  v.mode = m18::OledMode::IDLE; v.scan = m18::parseOledScan(p.lastScanJson()); v.ageS = 420;
+  m18::renderOled(c, v); printCanvas("Ergebnis", c);
+  v.verdict = "weak";
+  m18::renderOled(c, v); printCanvas("Ergebnis, vom PC als schwach bewertet", c);
+  v.verdict = nullptr;
+  bat.present = false;
+  run(p, "SCAN");
+  v.scan = m18::parseOledScan(p.lastScanJson());
+  m18::renderOled(c, v); printCanvas("Lesen fehlgeschlagen", c);
+  v.wifi = m18::OledWifi::SETUP; std::strcpy(v.apName, "M18-Bruecke-3F2A"); v.scan = m18::OledScan(); v.unlockS = 0;
+  m18::renderOled(c, v); printCanvas("Einrichtung (Setup-WLAN)", c);
+  std::printf("%s\n", " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ äöüÄÖÜß°");
+  c.clear();
+  c.text(0, 0, " !\"#$%&'()*+,-./0123456789:;<=>?");
+  c.text(0, 10, "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_");
+  c.text(0, 20, "`abcdefghijklmnopqrstuvwxyz{|}~");
+  c.text(0, 30, "äöüÄÖÜß° 18,42 V");
+  printCanvas("Zeichensatz", c);
+  return 0;
+}
+
 int main(int argc, char** argv) {
   if (argc > 1 && !std::strcmp(argv[1], "serve")) {
     std::string dir = argc > 2 ? argv[2] : (fs::temp_directory_path() / ("m18serve_" + std::to_string(::getpid()))).string();
     return serve(dir.c_str());
   }
+  if (argc > 1 && !std::strcmp(argv[1], "oled")) return oledDemo();
   return selftest();
 }

@@ -45,6 +45,8 @@ class CommandProcessor {
 
   // Last SCAN result (JSON without "OK "), e.g. for the web UI.
   const char* lastScanJson() const { return scanBuf_; }
+  // Number of read-outs since start (USB, Wi-Fi or web page), e.g. to notice a new result.
+  uint32_t scanCount() const { return scanCount_; }
 
   std::string handle(const char* lineIn) {
     char line[128];
@@ -132,6 +134,7 @@ class CommandProcessor {
   uint32_t scan(bool store = true) {
     reader_.read();
     reader_.toJson(scanBuf_, sizeof(scanBuf_), clock_ ? clock_() : 0);
+    scanCount_ = scanCount_ + 1;
     if (!store || !reader_.ok() || !history_ || !history_->ready()) return 0;
     RecordMeta m;
     if (meta_) meta_(m);
@@ -181,7 +184,8 @@ class CommandProcessor {
   bool (*setTime_)(uint32_t) = NULL;
   void (*meta_)(RecordMeta&) = NULL;
   const char* infoExtra_ = NULL;
-  char scanBuf_[8192] = "{}";   // decoded read-out + raw blocks + trace
+  char scanBuf_[8192] = "{}";
+  volatile uint32_t scanCount_ = 0;   // decoded read-out + raw blocks + trace
 };
 
 }  // namespace m18
