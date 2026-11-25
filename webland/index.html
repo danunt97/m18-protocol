@@ -14,11 +14,10 @@
 <meta property="og:image" content="https://akkuscan.app/img/phone-akku.webp">
 <meta property="og:url" content="https://akkuscan.app/">
 <script>
-  /* Angemeldet? Dann direkt ins Portal. Links aus Bestätigungs-Mails gehören ebenfalls ins Portal. ?info zeigt diese Seite immer. */
+  /* Links aus Bestätigungs- und Passwort-Mails gehören ins Portal. Sonst zeigt akkuscan.app immer diese Seite –
+     angemeldet steht oben rechts „Meine Flotte“ (siehe Ende der Seite). */
   (function () {
     if (/access_token|error_description|type=recovery/.test(location.hash)) { location.replace("/app/" + location.hash); return; }
-    if (/[?&]info\b/.test(location.search)) return;
-    try { var s = JSON.parse(localStorage.getItem("m18.sb.sess")); if (s && s.rt) location.replace("/app/"); } catch (e) {}
   })();
 </script>
 <style>
@@ -300,5 +299,10 @@ footer .legal{flex-basis:100%;font-size:12.5px;line-height:1.5}
   <p class="legal">Milwaukee®, M18™ und FORGE™ sind Marken der Milwaukee Electric Tool Corporation. Akkuscan ist ein unabhängiges Produkt und steht in keiner Verbindung zu Milwaukee.
     Arbeiten an Lithium-Ionen-Akkus erfolgen auf eigene Verantwortung.</p>
 </div></footer>
+<script>
+  /* angemeldet: statt „Anmelden / App öffnen“ direkt „Meine Flotte“ */
+  try { var sess = JSON.parse(localStorage.getItem("m18.sb.sess"));
+    if (sess && sess.rt) document.querySelector(".hbtns").innerHTML = '<a class="btn red" href="/app/#konto">Meine Flotte</a>'; } catch (e) {}
+</script>
 </body>
 </html>

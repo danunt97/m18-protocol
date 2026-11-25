@@ -275,6 +275,11 @@
     const acct = document.getElementById("acct"), bar = '<span id="blebar"><span id="blestate"></span><button class="btn primary" id="blebtn">Verbinden</button></span>';
     if (acct) acct.insertAdjacentHTML("beforebegin", bar); else header.insertAdjacentHTML("beforeend", bar);
     document.getElementById("blebtn").onclick = () => ble.connected ? disconnect() : connect();
+    // logo and name lead back to the start page akkuscan.app
+    const logo = header.querySelector(".logo"), h1 = header.querySelector("h1");
+    if (logo && h1) { const a = document.createElement("a"); a.href = "/"; a.title = "Zur Startseite akkuscan.app";
+      a.style.cssText = "display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none";
+      logo.before(a); a.append(logo, h1); }
     const host = document.getElementById("hostline"); if (host) host.textContent = "Bluetooth-App";
     const pill = document.getElementById("pill"); if (pill) pill.hidden = true;
     document.querySelector("main").insertAdjacentHTML("afterbegin", `

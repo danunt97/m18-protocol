@@ -57,6 +57,8 @@
   Gut / Beobachten / Schwach / Kritisch (Punkt antippen zeigt Wert und Datum), darunter die **Messungen** als kompakte Liste.
   Name, Gruppe, Typ, Standort und Notiz stecken hinter dem Knopf **⋯** oben rechts („Name & Details bearbeiten“, „Letzte Messung im Detail“).
 - Demo: Beispiel-Akkus mit realistischem Verlauf (abgenutzte Akkus verlieren sichtbar Punkte, neue kaum).
+- **akkuscan.app zeigt immer die Startseite**, auch angemeldet (bisher ging es angemeldet sofort in die App). Angemeldet steht oben rechts
+  „Meine Flotte“. Links aus Bestätigungs- und Passwort-Mails führen weiterhin direkt in die App. In der App führen Logo und Name zurück zur Startseite.
 
 ## Eigene Domain: akkuscan.app
 - **https://akkuscan.app/** ist die Produktseite (Funktionen, So geht's, Für Betriebe, FAQ). Angemeldete Nutzer kommen von dort direkt ins Portal.
